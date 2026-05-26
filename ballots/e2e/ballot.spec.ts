@@ -79,7 +79,8 @@ test.describe('Judge ballot view', () => {
     await page.goto(`${BASE}#dashboard`);
 
     await expect(page.locator('text=Submitted Ballots')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('button:has-text("View")')).toBeVisible({ timeout: 5000 });
+    // The seeded debate has date 2024-01-15 — card should be clickable
+    await expect(page.locator('text=2024-01-15')).toBeVisible({ timeout: 5000 });
   });
 
   test('judge can view submitted ballot as read-only', async ({ page }) => {
