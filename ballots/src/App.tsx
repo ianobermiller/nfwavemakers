@@ -7,6 +7,7 @@ import { BallotForm } from './components/BallotForm.tsx';
 import { BallotView } from './components/BallotView.tsx';
 import { DebateView } from './components/DebateView.tsx';
 import { AdminDebates } from './components/AdminDebates.tsx';
+import { AdminBallots } from './components/AdminBallots.tsx';
 import type { Role } from './types.ts';
 
 export function App(): React.JSX.Element {
@@ -66,6 +67,10 @@ function AuthenticatedApp({ userId }: { userId: string }): React.JSX.Element {
 
   if (segment === 'admin' && role === 'admin') {
     return <AdminDebates />;
+  }
+
+  if (segment === 'admin-ballots' && role === 'admin') {
+    return <AdminBallots />;
   }
 
   if (segment === 'judge') {
