@@ -3,6 +3,7 @@ import { id } from '@instantdb/react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useAutosize } from '../hooks/useAutosize.ts';
+import { PageHeader } from './PageHeader.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import {
@@ -297,21 +298,18 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow shrink-0">
-        <button
-          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
-          onClick={() => navigate('dashboard')}
-        >
-          ← Back
-        </button>
-        <span className="font-bold text-base">Ballot</span>
-        <button
-          className="text-white border border-white/40 rounded-lg px-3 py-1 text-xs cursor-pointer bg-transparent hover:bg-white/10 transition-colors"
-          onClick={() => setGuideOpen((o) => !o)}
-        >
-          Speaker Guide
-        </button>
-      </div>
+      <PageHeader
+        title="Ballot"
+        onBack={() => navigate('dashboard')}
+        action={
+          <button
+            className="text-white border border-white/40 rounded-lg px-3 py-1 text-xs cursor-pointer bg-transparent hover:bg-white/10 transition-colors"
+            onClick={() => setGuideOpen((o) => !o)}
+          >
+            Speaker Guide
+          </button>
+        }
+      />
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-28">
         {/* Ballot metadata */}

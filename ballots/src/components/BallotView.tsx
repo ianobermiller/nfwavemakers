@@ -2,6 +2,7 @@ import { db } from '../db.ts';
 import { POSITIONS, POSITION_LABELS, SCORE_CATEGORIES } from '../types.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { formatSpeakerName } from '../utils.ts';
+import { PageHeader } from './PageHeader.tsx';
 
 interface Props {
   ballotId: string;
@@ -53,14 +54,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   if (!isSpeaker && !isJudge) {
     return (
       <div className="flex flex-col min-h-screen">
-        <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center px-4 sticky top-0 z-10 shadow">
-          <button
-            className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
-            onClick={() => navigate('dashboard')}
-          >
-            ← Back
-          </button>
-        </div>
+        <PageHeader onBack={() => navigate('dashboard')} />
         <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             You don't have access to this ballot.
@@ -76,16 +70,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow shrink-0">
-        <button
-          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
-          onClick={() => navigate('dashboard')}
-        >
-          ← Back
-        </button>
-        <span className="font-bold text-base">Ballot</span>
-        <span className="w-24" />
-      </div>
+      <PageHeader title="Ballot" onBack={() => navigate('dashboard')} />
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-12">
         {/* Compact metadata line */}

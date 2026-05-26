@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { PageHeader } from './PageHeader.tsx';
 import { POSITIONS, POSITION_LABELS, SCORE_CATEGORIES } from '../types.ts';
 import { formatSpeakerName, formatTeam } from '../utils.ts';
 
@@ -11,16 +12,7 @@ export function AdminBallots(): React.JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow shrink-0">
-        <button
-          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
-          onClick={() => navigate('dashboard')}
-        >
-          ← Back
-        </button>
-        <span className="font-bold text-base">All Ballots</span>
-        <span className="w-16" />
-      </div>
+      <PageHeader title="All Ballots" onBack={() => navigate('dashboard')} />
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-12">
         <div className="flex gap-2 mb-5">

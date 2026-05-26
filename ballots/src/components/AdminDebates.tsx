@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { id, type TransactionChunk } from '@instantdb/react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { PageHeader } from './PageHeader.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import { formatTeam } from '../utils.ts';
 
@@ -129,16 +130,7 @@ export function AdminDebates(): React.JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow">
-        <button
-          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
-          onClick={() => navigate('dashboard')}
-        >
-          ← Back
-        </button>
-        <span className="font-bold text-base">Manage Debates</span>
-        <span className="w-16" />
-      </div>
+      <PageHeader title="Manage Debates" onBack={() => navigate('dashboard')} />
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-12">
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-6 shadow-sm flex flex-col gap-4">
