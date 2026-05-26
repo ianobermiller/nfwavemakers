@@ -4,6 +4,7 @@ import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useAutosize } from '../hooks/useAutosize.ts';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
+import { StudentPicker } from './StudentPicker.tsx';
 import {
   POSITIONS,
   POSITION_LABELS,
@@ -56,6 +57,10 @@ function makeNewIds(): BallotIds {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyTxChunk = TransactionChunk<any, any>;
 
+function computeTotal(sp: SpeakerFormState): number {
+  return SCORE_CATEGORIES.reduce((sum, cat) => sum + (sp[cat.key] ?? 0), 0);
+}
+
 function AutoTextarea({
   value,
   onChange,
@@ -76,93 +81,6 @@ function AutoTextarea({
       placeholder={placeholder}
       rows={1}
     />
-  );
-}
-
-function StudentPicker({
-  value,
-  onChange,
-  students,
-  id: inputId,
-}: {
-  value: string;
-  onChange: (id: string) => void;
-  students: Array<{ id: string; name?: string | null }>;
-  id: string;
-}): React.JSX.Element {
-  const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const selected = students.find((s) => s.id === value);
-  const displayText = open ? query : (selected?.name ?? selected?.id ?? '');
-
-  const filtered = query.trim()
-    ? students.filter((s) => (s.name ?? s.id).toLowerCase().includes(query.toLowerCase()))
-    : students;
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery('');
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  return (
-    <div ref={containerRef} className="relative">
-      <input
-        id={inputId}
-        type="text"
-        value={displayText}
-        placeholder="Search students…"
-        autoComplete="off"
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-      />
-      {open && (
-        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          <button
-            type="button"
-            className="w-full text-left px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer border-none bg-transparent"
-            onClick={() => {
-              onChange('');
-              setOpen(false);
-              setQuery('');
-            }}
-          >
-            — Clear selection —
-          </button>
-          {filtered.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors ${
-                value === s.id
-                  ? 'bg-nf-blue-light dark:bg-slate-700 font-semibold text-nf-blue dark:text-nf-blue-d'
-                  : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100'
-              }`}
-              onClick={() => {
-                onChange(s.id);
-                setOpen(false);
-                setQuery('');
-              }}
-            >
-              {s.name ?? s.id}
-            </button>
-          ))}
-          {filtered.length === 0 && (
-            <p className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">No students found</p>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -214,6 +132,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   const [rfd, setRfd] = useState('');
   const [speakers, setSpeakers] = useState<Record<Position, SpeakerFormState>>(makeEmptySpeakers);
   const [ids, setIds] = useState<BallotIds>(makeNewIds);
+  const [rankOrder, setRankOrder] = useState<Position[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -284,6 +203,14 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
         };
       }
 
+      // Reconstruct rank order from saved rank values.
+      const ranked = (existing.speakerEvals ?? [])
+        .filter((ev) => ev.rank != null && newSpeakers[ev.position as Position]?.userId)
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+        .map((ev) => ev.position as Position)
+        .filter((pos) => POSITIONS.includes(pos));
+      setRankOrder(ranked);
+
       setIds(newIds);
       setWinner((existing.winner as Winner | undefined) ?? undefined);
       setRfd(existing.reasonForDecision ?? '');
@@ -309,6 +236,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
     currentRfd: string,
     currentSpeakers: Record<Position, SpeakerFormState>,
     currentIds: BallotIds,
+    currentRankOrder: Position[],
     submittedAt?: number,
   ): AnyTxChunk[] {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -329,11 +257,13 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
     for (const pos of POSITIONS) {
       const sp = currentSpeakers[pos];
       const evalId = currentIds.evalIds[pos];
+      const rankIdx = currentRankOrder.indexOf(pos);
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const evalChunk = db.tx.speakerEvals[evalId]!;
       txs.push(
         evalChunk.update({
           position: pos,
+          rank: rankIdx >= 0 ? rankIdx + 1 : null,
           delivery: sp.delivery ?? null,
           organization: sp.organization ?? null,
           evidenceAndSupport: sp.evidenceAndSupport ?? null,
@@ -353,10 +283,16 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   }
 
   const scheduleSave = useCallback(
-    (w: Winner | undefined, r: string, sp: Record<Position, SpeakerFormState>, i: BallotIds) => {
+    (
+      w: Winner | undefined,
+      r: string,
+      sp: Record<Position, SpeakerFormState>,
+      i: BallotIds,
+      ro: Position[],
+    ) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
-        void db.transact(buildTxs(w, r, sp, i));
+        void db.transact(buildTxs(w, r, sp, i, ro));
       }, 500);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -365,26 +301,47 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
 
   function updateWinner(w: Winner): void {
     setWinner(w);
-    scheduleSave(w, rfd, speakers, ids);
+    scheduleSave(w, rfd, speakers, ids, rankOrder);
   }
 
   function updateRfd(r: string): void {
     setRfd(r);
-    scheduleSave(winner, r, speakers, ids);
+    scheduleSave(winner, r, speakers, ids, rankOrder);
   }
 
   function updateSpeaker(pos: Position, patch: Partial<SpeakerFormState>): void {
     setSpeakers((prev) => {
       const next = { ...prev, [pos]: { ...prev[pos], ...patch } };
-      scheduleSave(winner, rfd, next, ids);
+      scheduleSave(winner, rfd, next, ids, rankOrder);
+      return next;
+    });
+    if ('userId' in patch && !patch.userId) {
+      setRankOrder((ro) => ro.filter((p) => p !== pos));
+    }
+  }
+
+  function assignRank(pos: Position, newRank: number): void {
+    setRankOrder((prev) => {
+      const next = prev.filter((p) => p !== pos);
+      next.splice(newRank - 1, 0, pos);
+      scheduleSave(winner, rfd, speakers, ids, next);
       return next;
     });
   }
 
-  const allScored = POSITIONS.every((pos) =>
+  function suggestByPoints(): void {
+    const active = POSITIONS.filter((pos) => speakers[pos].userId !== '');
+    const sorted = [...active].sort((a, b) => computeTotal(speakers[b]) - computeTotal(speakers[a]));
+    setRankOrder(sorted);
+    scheduleSave(winner, rfd, speakers, ids, sorted);
+  }
+
+  const activePositions = POSITIONS.filter((pos) => speakers[pos].userId !== '');
+  const allScored = activePositions.every((pos) =>
     SCORE_CATEGORIES.every((cat) => speakers[pos][cat.key] !== undefined),
   );
-  const canSubmit = winner !== undefined && allScored;
+  const allRanked = activePositions.length > 0 && rankOrder.length === activePositions.length;
+  const canSubmit = winner !== undefined && allScored && allRanked;
 
   async function submit(): Promise<void> {
     if (!canSubmit || !winner) return;
@@ -393,7 +350,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
-    await db.transact(buildTxs(winner, rfd, speakers, ids, Date.now()));
+    await db.transact(buildTxs(winner, rfd, speakers, ids, rankOrder, Date.now()));
     navigate('dashboard');
   }
 
@@ -403,7 +360,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
     <div className="flex flex-col min-h-screen">
       <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow shrink-0">
         <button
-          className="text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
+          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
           onClick={() => navigate('dashboard')}
         >
           ← Back
@@ -478,10 +435,9 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
                 {side === 'aff' ? 'Affirmative' : 'Negative'}
               </h2>
               {([`${side}1`, `${side}2`] as const).map((pos) => {
-                const total = SCORE_CATEGORIES.reduce((sum, cat) => {
-                  const v = speakers[pos][cat.key];
-                  return sum + (v ?? 0);
-                }, 0);
+                const hasUser = speakers[pos].userId !== '';
+                const total = computeTotal(speakers[pos]);
+                const currentRank = rankOrder.indexOf(pos) + 1;
                 return (
                   <div
                     key={pos}
@@ -495,38 +451,75 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
                         {total > 0 ? total : '0'}
                       </span>
                     </div>
-                    <StudentPicker
-                      id={`speaker-${pos}`}
-                      value={speakers[pos].userId}
-                      onChange={(uid) => updateSpeaker(pos, { userId: uid })}
-                      students={students}
-                    />
-                    <div className="flex flex-col gap-1.5">
-                      {SCORE_CATEGORIES.map((cat) => (
-                        <ScoreRow
-                          key={cat.key}
-                          name={`${pos}-${cat.key}`}
-                          label={cat.label}
-                          value={speakers[pos][cat.key]}
-                          onChange={(v) => updateSpeaker(pos, { [cat.key]: v })}
-                          onLabelClick={() => {
-                            setGuideCategory(cat.label);
-                            setGuideOpen(true);
-                          }}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <StudentPicker
+                          id={`speaker-${pos}`}
+                          value={speakers[pos].userId}
+                          onChange={(uid) => updateSpeaker(pos, { userId: uid })}
+                          students={students}
                         />
-                      ))}
+                      </div>
+                      {hasUser && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-xs text-slate-400 dark:text-slate-500">Rank</span>
+                          <select
+                            className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer"
+                            value={currentRank || ''}
+                            onChange={(e) => {
+                              const n = parseInt(e.target.value, 10);
+                              if (!isNaN(n)) assignRank(pos, n);
+                            }}
+                          >
+                            <option value="">—</option>
+                            {Array.from({ length: activePositions.length }, (_, i) => i + 1).map((n) => (
+                              <option key={n} value={n}>{n}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
-                    <AutoTextarea
-                      value={speakers[pos].notes}
-                      onChange={(v) => updateSpeaker(pos, { notes: v })}
-                      placeholder="Notes…"
-                    />
+                    {hasUser && (
+                      <>
+                        <div className="flex flex-col gap-1.5">
+                          {SCORE_CATEGORIES.map((cat) => (
+                            <ScoreRow
+                              key={cat.key}
+                              name={`${pos}-${cat.key}`}
+                              label={cat.label}
+                              value={speakers[pos][cat.key]}
+                              onChange={(v) => updateSpeaker(pos, { [cat.key]: v })}
+                              onLabelClick={() => {
+                                setGuideCategory(cat.label);
+                                setGuideOpen(true);
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <AutoTextarea
+                          value={speakers[pos].notes}
+                          onChange={(v) => updateSpeaker(pos, { notes: v })}
+                          placeholder="Notes…"
+                        />
+                      </>
+                    )}
                   </div>
                 );
               })}
             </div>
           ))}
         </div>
+        {activePositions.length > 1 && (
+          <div className="flex justify-end mt-1">
+            <button
+              type="button"
+              className="text-xs text-slate-400 dark:text-slate-500 hover:text-nf-accent dark:hover:text-nf-accent cursor-pointer bg-transparent border-none"
+              onClick={suggestByPoints}
+            >
+              Auto-rank by points
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sticky submit */}
@@ -542,7 +535,9 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
           <p className="text-xs text-slate-400 dark:text-slate-500">
             {winner === undefined
               ? 'Select a winner to submit.'
-              : 'Score all 6 areas for all 4 speakers to submit.'}
+              : !allScored
+              ? 'Score all 6 areas for each speaker to submit.'
+              : 'Assign a rank to each speaker to submit.'}
           </p>
         )}
       </div>

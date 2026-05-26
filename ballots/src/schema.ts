@@ -18,6 +18,7 @@ export const schema = i.schema({
     }),
     speakerEvals: i.entity({
       position: i.string(), // 'aff1' | 'aff2' | 'neg1' | 'neg2'
+      rank: i.number().optional(), // 1 = best speaker overall
       delivery: i.number().optional(), // 1–5
       organization: i.number().optional(), // 1–5
       evidenceAndSupport: i.number().optional(), // 1–5
