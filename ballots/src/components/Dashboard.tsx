@@ -136,36 +136,40 @@ function StudentDashboard({ userId }: { userId: string }): React.JSX.Element {
 
   const evals = (data?.speakerEvals ?? []).filter((e) => e.ballot?.submittedAt != null);
 
-  const byDebate = new Map<string, typeof evals>();
+  // Group by debateId when available, fall back to ballotId so standalone ballots still appear.
+  const byGroup = new Map<string, typeof evals>();
   for (const e of evals) {
-    const debateId = e.ballot?.debate?.id;
-    if (!debateId) continue;
-    const arr = byDebate.get(debateId) ?? [];
+    const key = e.ballot?.debate?.id ?? e.ballot?.id;
+    if (!key) continue;
+    const arr = byGroup.get(key) ?? [];
     arr.push(e);
-    byDebate.set(debateId, arr);
+    byGroup.set(key, arr);
   }
 
   return (
     <div>
       <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">My Feedback</h2>
       {isLoading && <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>}
-      {!isLoading && byDebate.size === 0 && (
+      {!isLoading && byGroup.size === 0 && (
         <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
           No submitted ballots yet.
         </p>
       )}
       <div className="flex flex-col gap-3">
-        {[...byDebate.entries()].map(([debateId, evs]) => {
-          const debate = evs[0]?.ballot?.debate;
+        {[...byGroup.entries()].map(([groupKey, evs]) => {
+          const ballot = evs[0]?.ballot;
+          const debate = ballot?.debate;
+          const displayDate = debate?.date ?? (ballot?.submittedAt != null ? new Date(ballot.submittedAt).toLocaleDateString() : '—');
+          const viewRoute = debate?.id ? `debate/${debate.id}` : `ballot/${ballot?.id}`;
           return (
             <div
-              key={debateId}
+              key={groupKey}
               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3"
             >
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <strong className="text-sm text-slate-800 dark:text-slate-100">
-                    {debate?.date ?? '—'}
+                    {displayDate}
                   </strong>
                   {debate?.room && (
                     <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
@@ -175,7 +179,7 @@ function StudentDashboard({ userId }: { userId: string }): React.JSX.Element {
                 </div>
                 <button
                   className="text-sm text-nf-accent underline cursor-pointer bg-transparent border-none"
-                  onClick={() => navigate(`debate/${debateId}`)}
+                  onClick={() => navigate(viewRoute)}
                 >
                   View full ballot →
                 </button>
