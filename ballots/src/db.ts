@@ -1,7 +1,7 @@
 import { init } from '@instantdb/react';
 import { schema } from './schema.ts';
 
-const APP_ID = import.meta.env['VITE_INSTANT_APP_ID'] as string;
+const APP_ID = (import.meta.env['VITE_INSTANT_APP_ID'] as string | undefined) ?? 'ce44861c-b584-47fc-ae12-63c526a44beb';
 
 export const db = init({ appId: APP_ID, schema });
 export type { InstaQLEntity } from '@instantdb/react';
