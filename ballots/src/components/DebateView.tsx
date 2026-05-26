@@ -1,6 +1,7 @@
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { POSITIONS, POSITION_LABELS, SCORE_CATEGORIES } from '../types.ts';
+import { formatSpeakerName } from '../utils.ts';
 
 interface Props {
   debateId: string;
@@ -45,7 +46,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
       <div className="flex flex-col min-h-screen">
         <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center px-4 sticky top-0 z-10 shadow">
           <button
-            className="text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
+            className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
             onClick={() => navigate('dashboard')}
           >
             ← Back
@@ -66,7 +67,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
     <div className="flex flex-col min-h-screen">
       <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow">
         <button
-          className="text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
+          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
           onClick={() => navigate('dashboard')}
         >
           ← Back
@@ -147,7 +148,8 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                         className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl p-4 mb-3"
                       >
                         <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-100 mb-3">
-                          {POSITION_LABELS[pos]} — {ev.speaker?.name ?? 'Unknown'}
+                          {POSITION_LABELS[pos]} —{' '}
+                          {ev.speaker?.name ? formatSpeakerName(ev.speaker.name) : 'Unknown'}
                         </h4>
                         <div className="flex flex-col gap-1 mb-3">
                           {SCORE_CATEGORIES.map((cat) => {

@@ -1,6 +1,7 @@
 import { db } from '../db.ts';
 import { POSITIONS, POSITION_LABELS, SCORE_CATEGORIES } from '../types.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { formatSpeakerName } from '../utils.ts';
 
 interface Props {
   ballotId: string;
@@ -54,7 +55,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
       <div className="flex flex-col min-h-screen">
         <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center px-4 sticky top-0 z-10 shadow">
           <button
-            className="text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
+            className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
             onClick={() => navigate('dashboard')}
           >
             ← Back
@@ -77,7 +78,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
     <div className="flex flex-col min-h-screen">
       <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow shrink-0">
         <button
-          className="text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
+          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
           onClick={() => navigate('dashboard')}
         >
           ← Back
@@ -156,7 +157,12 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
                         {POSITION_LABELS[pos]}
                         {ev?.speaker?.name && (
                           <span className="ml-2 normal-case font-normal text-slate-700 dark:text-slate-200">
-                            {ev.speaker.name}
+                            {formatSpeakerName(ev.speaker.name)}
+                          </span>
+                        )}
+                        {ev?.rank != null && (
+                          <span className="ml-2 normal-case font-normal text-slate-400 dark:text-slate-500">
+                            · Ranked #{ev.rank}
                           </span>
                         )}
                       </h3>
