@@ -12,8 +12,6 @@ export default async function globalSetup(): Promise<void> {
 
   const adminDb = init({ appId: app.id, adminToken: app.adminToken });
 
-  // Push permissions so $users is readable by all authenticated users.
-  // (Same rules as instant.perms.ts — duplicated here to keep the temp test app consistent.)
   await adminDb.updateRules({
     rules: {
       $users: { allow: { view: 'auth.id != null', create: 'false', update: 'auth.id == data.id', delete: 'false' } },
@@ -23,11 +21,9 @@ export default async function globalSetup(): Promise<void> {
     },
   });
 
-  // Create a student user and a judge (parent) user, and store their tokens.
   const studentToken = await adminDb.auth.createToken('student@test.com');
   const judgeToken = await adminDb.auth.createToken('judge@test.com');
 
-  // Resolve the user IDs so we can set roles via transact.
   const { user: studentUser } = await adminDb.auth.getUser({ email: 'student@test.com' });
   const { user: judgeUser } = await adminDb.auth.getUser({ email: 'judge@test.com' });
 
@@ -38,7 +34,48 @@ export default async function globalSetup(): Promise<void> {
     adminDb.tx.$users[judgeUser.id]!.update({ name: 'Bob Judge', role: 'parent' }),
   ]);
 
+  // Seed a debate with Alice as aff speaker and Bob as judge, plus a submitted ballot.
+  const debateId = crypto.randomUUID();
+  const ballotId = crypto.randomUUID();
+  const evalAff1Id = crypto.randomUUID();
+
+  await adminDb.transact([
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.debates[debateId]!.update({ date: '2024-01-15', room: 'A1', resolution: 'Resolved: Test resolution.' }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.debates[debateId]!.link({ affTeam: studentUser.id }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.debates[debateId]!.link({ judges: judgeUser.id }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.ballots[ballotId]!.update({
+      winner: 'aff',
+      reasonForDecision: 'Affirmative had stronger evidence.',
+      submittedAt: Date.now(),
+    }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.ballots[ballotId]!.link({ debate: debateId }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.ballots[ballotId]!.link({ judge: judgeUser.id }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.speakerEvals[evalAff1Id]!.update({
+      position: 'aff1',
+      delivery: 4,
+      organization: 4,
+      evidenceAndSupport: 5,
+      refutation: 3,
+      crossExamination: 4,
+      conduct: 5,
+      notes: 'Strong opening. Good eye contact.',
+    }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.speakerEvals[evalAff1Id]!.link({ ballot: ballotId }),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    adminDb.tx.speakerEvals[evalAff1Id]!.link({ speaker: studentUser.id }),
+  ]);
+
   process.env['E2E_STUDENT_TOKEN'] = studentToken;
   process.env['E2E_JUDGE_TOKEN'] = judgeToken;
   process.env['E2E_STUDENT_NAME'] = 'Alice Student';
+  process.env['E2E_DEBATE_ID'] = debateId;
+  process.env['E2E_BALLOT_ID'] = ballotId;
 }

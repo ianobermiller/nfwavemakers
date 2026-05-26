@@ -48,7 +48,8 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   const evals = ballot.speakerEvals ?? [];
 
   const isSpeaker = evals.some((e) => e.speaker?.id === currentUserId);
-  if (!isSpeaker) {
+  const isJudge = judge?.id === currentUserId;
+  if (!isSpeaker && !isJudge) {
     return (
       <div className="flex flex-col min-h-screen">
         <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center px-4 sticky top-0 z-10 shadow">
