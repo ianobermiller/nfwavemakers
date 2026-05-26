@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { id, type TransactionChunk } from '@instantdb/react';
+import { id } from '@instantdb/react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useAutosize } from '../hooks/useAutosize.ts';
@@ -13,6 +13,14 @@ import {
   type SpeakerFormState,
   type Winner,
 } from '../types.ts';
+import {
+  buildBallotTxs,
+  canSubmitBallot,
+  getActivePositions,
+  isAllScored,
+  makeNewBallotIds,
+  type BallotIds,
+} from '../services/ballot.ts';
 
 interface Props {
   debateId?: string;
@@ -41,21 +49,6 @@ function makeEmptySpeakers(): Record<Position, SpeakerFormState> {
     neg2: makeEmptySpeaker(),
   };
 }
-
-interface BallotIds {
-  ballotId: string;
-  evalIds: Record<Position, string>;
-}
-
-function makeNewIds(): BallotIds {
-  return {
-    ballotId: id(),
-    evalIds: { aff1: id(), aff2: id(), neg1: id(), neg2: id() },
-  };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyTxChunk = TransactionChunk<any, any>;
 
 function computeTotal(sp: SpeakerFormState): number {
   return SCORE_CATEGORIES.reduce((sum, cat) => sum + (sp[cat.key] ?? 0), 0);
@@ -131,7 +124,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   const [winner, setWinner] = useState<Winner | undefined>(undefined);
   const [rfd, setRfd] = useState('');
   const [speakers, setSpeakers] = useState<Record<Position, SpeakerFormState>>(makeEmptySpeakers);
-  const [ids, setIds] = useState<BallotIds>(makeNewIds);
+  const [ids, setIds] = useState<BallotIds>(makeNewBallotIds);
   const [rankOrder, setRankOrder] = useState<Position[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -231,57 +224,6 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
     setInitialized(true);
   }, [debateId, debateData, existingData, initialized]);
 
-  function buildTxs(
-    currentWinner: Winner | undefined,
-    currentRfd: string,
-    currentSpeakers: Record<Position, SpeakerFormState>,
-    currentIds: BallotIds,
-    currentRankOrder: Position[],
-    submittedAt?: number,
-  ): AnyTxChunk[] {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const ballotChunk = db.tx.ballots[currentIds.ballotId]!;
-    const txs: AnyTxChunk[] = [
-      ballotChunk.update({
-        winner: currentWinner ?? null,
-        reasonForDecision: currentRfd || null,
-        ...(submittedAt !== undefined ? { submittedAt } : {}),
-      }),
-      ballotChunk.link({ judge: judgeId }),
-    ];
-
-    if (debateId) {
-      txs.push(ballotChunk.link({ debate: debateId }));
-    }
-
-    for (const pos of POSITIONS) {
-      const sp = currentSpeakers[pos];
-      const evalId = currentIds.evalIds[pos];
-      const rankIdx = currentRankOrder.indexOf(pos);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const evalChunk = db.tx.speakerEvals[evalId]!;
-      txs.push(
-        evalChunk.update({
-          position: pos,
-          rank: rankIdx >= 0 ? rankIdx + 1 : null,
-          delivery: sp.delivery ?? null,
-          organization: sp.organization ?? null,
-          evidenceAndSupport: sp.evidenceAndSupport ?? null,
-          refutation: sp.refutation ?? null,
-          crossExamination: sp.crossExamination ?? null,
-          conduct: sp.conduct ?? null,
-          notes: sp.notes || null,
-        }),
-      );
-      txs.push(evalChunk.link({ ballot: currentIds.ballotId }));
-      if (sp.userId) {
-        txs.push(evalChunk.link({ speaker: sp.userId }));
-      }
-    }
-
-    return txs;
-  }
-
   const scheduleSave = useCallback(
     (
       w: Winner | undefined,
@@ -292,7 +234,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
     ) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
-        void db.transact(buildTxs(w, r, sp, i, ro));
+        void db.transact(buildBallotTxs(w, r, sp, i, ro, judgeId, debateId));
       }, 500);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -336,12 +278,9 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
     scheduleSave(winner, rfd, speakers, ids, sorted);
   }
 
-  const activePositions = POSITIONS.filter((pos) => speakers[pos].userId !== '');
-  const allScored = activePositions.every((pos) =>
-    SCORE_CATEGORIES.every((cat) => speakers[pos][cat.key] !== undefined),
-  );
-  const allRanked = activePositions.length > 0 && rankOrder.length === activePositions.length;
-  const canSubmit = winner !== undefined && allScored && allRanked;
+  const activePositions = getActivePositions(speakers);
+  const allScored = isAllScored(speakers);
+  const canSubmit = canSubmitBallot(speakers, winner, rankOrder);
 
   async function submit(): Promise<void> {
     if (!canSubmit || !winner) return;
@@ -350,7 +289,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
-    await db.transact(buildTxs(winner, rfd, speakers, ids, rankOrder, Date.now()));
+    await db.transact(buildBallotTxs(winner, rfd, speakers, ids, rankOrder, judgeId, debateId, Date.now()));
     navigate('dashboard');
   }
 
