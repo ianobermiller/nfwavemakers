@@ -161,35 +161,28 @@ function StudentDashboard({ userId }: { userId: string }): React.JSX.Element {
           const debate = ballot?.debate;
           const displayDate = debate?.date ?? (ballot?.submittedAt != null ? new Date(ballot.submittedAt).toLocaleDateString() : '—');
           const viewRoute = debate?.id ? `debate/${debate.id}` : `ballot/${ballot?.id}`;
+          // Dedupe judges across multiple speakerEvals for the same ballot.
+          const judgeNames = [...new Set(evs.map((ev) => ev.ballot?.judge?.name).filter(Boolean))];
           return (
-            <div
+            <button
               key={groupKey}
-              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1 text-left cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all"
+              onClick={() => navigate(viewRoute)}
             >
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <strong className="text-sm text-slate-800 dark:text-slate-100">
-                    {displayDate}
-                  </strong>
-                  {debate?.room && (
-                    <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-                      · Room {debate.room}
-                    </span>
-                  )}
-                </div>
-                <button
-                  className="text-sm text-nf-accent underline cursor-pointer bg-transparent border-none"
-                  onClick={() => navigate(viewRoute)}
-                >
-                  View full ballot →
-                </button>
-              </div>
-              {evs.map((ev) => (
-                <p key={ev.id} className="text-xs text-slate-500 dark:text-slate-400 italic">
-                  Judge: {ev.ballot?.judge?.name ?? '—'}
-                </p>
+              <strong className="text-sm text-slate-800 dark:text-slate-100">
+                {displayDate}
+                {debate?.room && (
+                  <span className="font-normal text-slate-500 dark:text-slate-400 ml-2">
+                    · Room {debate.room}
+                  </span>
+                )}
+              </strong>
+              {judgeNames.map((name) => (
+                <span key={name} className="text-xs text-slate-500 dark:text-slate-400 italic">
+                  Judge: {name}
+                </span>
               ))}
-            </div>
+            </button>
           );
         })}
       </div>
