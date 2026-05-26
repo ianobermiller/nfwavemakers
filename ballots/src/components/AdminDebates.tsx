@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { id, type TransactionChunk } from '@instantdb/react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { useAutosize } from '../hooks/useAutosize.ts';
+import { StudentPicker } from './StudentPicker.tsx';
+import { formatTeam } from '../utils.ts';
 
 interface DebateForm {
   debateId: string;
@@ -30,27 +31,6 @@ function makeEmpty(): DebateForm {
   };
 }
 
-function ResolutionTextarea({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}): React.JSX.Element {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useAutosize(ref, value);
-  return (
-    <textarea
-      ref={ref}
-      className="textarea-autosize"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Resolved: …"
-      rows={1}
-    />
-  );
-}
-
 export function AdminDebates(): React.JSX.Element {
   const [form, setForm] = useState<DebateForm>(makeEmpty);
   const [saving, setSaving] = useState(false);
@@ -68,7 +48,7 @@ export function AdminDebates(): React.JSX.Element {
 
   const allUsers = usersData?.$users ?? [];
   const students = allUsers.filter((u) => u.role === 'student');
-  const parents = allUsers.filter((u) => u.role === 'parent');
+  const parents = allUsers.filter((u) => u.role === 'parent' || u.role === 'admin');
   const debates = debatesData?.debates ?? [];
 
   function patch(p: Partial<DebateForm>): void {
@@ -151,7 +131,7 @@ export function AdminDebates(): React.JSX.Element {
     <div className="flex flex-col min-h-screen">
       <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow">
         <button
-          className="text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
+          className="self-stretch flex items-center px-2 text-white/80 hover:text-white cursor-pointer bg-transparent border-none text-sm"
           onClick={() => navigate('dashboard')}
         >
           ← Back
@@ -188,14 +168,6 @@ export function AdminDebates(): React.JSX.Element {
             </div>
           </div>
 
-          <div>
-            <label htmlFor="debate-resolution">Resolution (optional)</label>
-            <ResolutionTextarea
-              value={form.resolution}
-              onChange={(v) => patch({ resolution: v })}
-            />
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d mb-3">
@@ -204,33 +176,21 @@ export function AdminDebates(): React.JSX.Element {
               <div className="flex flex-col gap-2">
                 <div>
                   <label htmlFor="aff1">1st Speaker</label>
-                  <select
+                  <StudentPicker
                     id="aff1"
                     value={form.aff1}
-                    onChange={(e) => patch({ aff1: e.target.value })}
-                  >
-                    <option value="">— Select —</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name ?? s.id}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => patch({ aff1: v })}
+                    students={students}
+                  />
                 </div>
                 <div>
                   <label htmlFor="aff2">2nd Speaker</label>
-                  <select
+                  <StudentPicker
                     id="aff2"
                     value={form.aff2}
-                    onChange={(e) => patch({ aff2: e.target.value })}
-                  >
-                    <option value="">— Select —</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name ?? s.id}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => patch({ aff2: v })}
+                    students={students}
+                  />
                 </div>
               </div>
             </div>
@@ -242,33 +202,21 @@ export function AdminDebates(): React.JSX.Element {
               <div className="flex flex-col gap-2">
                 <div>
                   <label htmlFor="neg1">1st Speaker</label>
-                  <select
+                  <StudentPicker
                     id="neg1"
                     value={form.neg1}
-                    onChange={(e) => patch({ neg1: e.target.value })}
-                  >
-                    <option value="">— Select —</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name ?? s.id}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => patch({ neg1: v })}
+                    students={students}
+                  />
                 </div>
                 <div>
                   <label htmlFor="neg2">2nd Speaker</label>
-                  <select
+                  <StudentPicker
                     id="neg2"
                     value={form.neg2}
-                    onChange={(e) => patch({ neg2: e.target.value })}
-                  >
-                    <option value="">— Select —</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name ?? s.id}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => patch({ neg2: v })}
+                    students={students}
+                  />
                 </div>
               </div>
             </div>
@@ -347,9 +295,10 @@ export function AdminDebates(): React.JSX.Element {
                       {d.resolution}
                     </span>
                   )}
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
-                    Aff: {(d.affTeam ?? []).map((u) => u.name ?? '?').join(', ') || '—'} · Neg:{' '}
-                    {(d.negTeam ?? []).map((u) => u.name ?? '?').join(', ') || '—'}
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    <span className="text-aff dark:text-aff-d font-semibold">{formatTeam(d.affTeam ?? [])}</span>
+                    <span className="text-slate-400 dark:text-slate-500 mx-1">vs</span>
+                    <span className="text-neg dark:text-neg-d font-semibold">{formatTeam(d.negTeam ?? [])}</span>
                   </span>
                 </div>
                 <button
