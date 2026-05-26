@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
 
 export function useHashRoute(): string {
-  const [hash, setHash] = useState(() => window.location.hash.slice(1) || 'dashboard');
+  const [path, setPath] = useState(() => window.location.pathname.slice(1) || 'dashboard');
 
   useEffect(() => {
     const handler = (): void => {
-      setHash(window.location.hash.slice(1) || 'dashboard');
+      setPath(window.location.pathname.slice(1) || 'dashboard');
     };
-    window.addEventListener('hashchange', handler);
+    window.addEventListener('popstate', handler);
     return () => {
-      window.removeEventListener('hashchange', handler);
+      window.removeEventListener('popstate', handler);
     };
   }, []);
 
-  return hash;
+  return path;
 }
 
 export function navigate(path: string): void {
-  window.location.hash = path;
+  history.pushState(null, '', '/' + path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
 }

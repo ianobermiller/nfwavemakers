@@ -5,6 +5,9 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    historyApiFallback: true,
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
