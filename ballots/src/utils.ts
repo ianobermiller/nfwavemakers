@@ -1,3 +1,9 @@
+import { SCORE_CATEGORIES, type SpeakerScores } from './types.ts';
+
+export function scoringTotal(scores: Partial<Record<keyof SpeakerScores, number | null | undefined>>): number {
+  return SCORE_CATEGORIES.reduce((sum, cat) => sum + (scores[cat.key] ?? 0), 0);
+}
+
 /** "Alice Smith" → "Smith, A" */
 export function formatSpeakerName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);

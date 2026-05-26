@@ -14,6 +14,7 @@ import {
   type SpeakerFormState,
   type Winner,
 } from '../types.ts';
+import { scoringTotal } from '../utils.ts';
 import {
   buildBallotTxs,
   canSubmitBallot,
@@ -51,9 +52,6 @@ function makeEmptySpeakers(): Record<Position, SpeakerFormState> {
   };
 }
 
-function computeTotal(sp: SpeakerFormState): number {
-  return SCORE_CATEGORIES.reduce((sum, cat) => sum + (sp[cat.key] ?? 0), 0);
-}
 
 function AutoTextarea({
   value,
@@ -274,7 +272,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
 
   function suggestByPoints(): void {
     const active = POSITIONS.filter((pos) => speakers[pos].userId !== '');
-    const sorted = [...active].sort((a, b) => computeTotal(speakers[b]) - computeTotal(speakers[a]));
+    const sorted = [...active].sort((a, b) => scoringTotal(speakers[b]) - scoringTotal(speakers[a]));
     setRankOrder(sorted);
     scheduleSave(winner, rfd, speakers, ids, sorted);
   }
@@ -373,7 +371,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
               </h2>
               {([`${side}1`, `${side}2`] as const).map((pos) => {
                 const hasUser = speakers[pos].userId !== '';
-                const total = computeTotal(speakers[pos]);
+                const total = scoringTotal(speakers[pos]);
                 const currentRank = rankOrder.indexOf(pos) + 1;
                 return (
                   <div

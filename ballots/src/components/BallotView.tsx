@@ -1,8 +1,9 @@
 import { db } from '../db.ts';
-import { POSITIONS, POSITION_LABELS, SCORE_CATEGORIES } from '../types.ts';
+import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { formatSpeakerName } from '../utils.ts';
+import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { PageHeader } from './PageHeader.tsx';
+import { ScoringRows } from './ScoringRows.tsx';
 
 interface Props {
   ballotId: string;
@@ -128,10 +129,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
               </h2>
               {([`${side}1`, `${side}2`] as const).map((pos) => {
                 const ev = evalsByPosition[pos];
-                const total = SCORE_CATEGORIES.reduce((sum, c) => {
-                  const v = ev?.[c.key as keyof typeof ev];
-                  return sum + (typeof v === 'number' ? v : 0);
-                }, 0);
+                const total = scoringTotal(ev ?? {});
                 return (
                   <div
                     key={pos}
@@ -158,22 +156,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
                       )}
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      {SCORE_CATEGORIES.map((cat) => {
-                        const val = ev?.[cat.key as keyof typeof ev];
-                        return (
-                          <div
-                            key={cat.key}
-                            className="flex items-center justify-between py-0.5 border-b border-slate-100 dark:border-slate-700 last:border-b-0"
-                          >
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                              {cat.label}
-                            </span>
-                            <span className="text-xs font-bold text-nf-blue dark:text-nf-blue-d min-w-4 text-right">
-                              {typeof val === 'number' ? val : '—'}
-                            </span>
-                          </div>
-                        );
-                      })}
+                      <ScoringRows scores={ev ?? {}} />
                     </div>
                     {ev?.notes && (
                       <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap">

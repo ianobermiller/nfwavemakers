@@ -1,8 +1,9 @@
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { POSITIONS, POSITION_LABELS, SCORE_CATEGORIES } from '../types.ts';
+import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName } from '../utils.ts';
 import { PageHeader } from './PageHeader.tsx';
+import { ScoringRows } from './ScoringRows.tsx';
 
 interface Props {
   debateId: string;
@@ -123,10 +124,6 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                   {([`${side}1`, `${side}2`] as const).map((pos) => {
                     const ev = evalsByPos[pos];
                     if (!ev) return null;
-                    const total = SCORE_CATEGORIES.reduce((sum, c) => {
-                      const v = ev[c.key as keyof typeof ev];
-                      return sum + (typeof v === 'number' ? v : 0);
-                    }, 0);
                     return (
                       <div
                         key={pos}
@@ -137,30 +134,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                           {ev.speaker?.name ? formatSpeakerName(ev.speaker.name) : 'Unknown'}
                         </h4>
                         <div className="flex flex-col gap-1 mb-3">
-                          {SCORE_CATEGORIES.map((cat) => {
-                            const val = ev[cat.key as keyof typeof ev];
-                            return (
-                              <div
-                                key={cat.key}
-                                className="flex items-center justify-between py-1 border-b border-slate-100 dark:border-slate-700 text-sm last:border-b-0"
-                              >
-                                <span className="text-slate-500 dark:text-slate-400 text-xs">
-                                  {cat.label}
-                                </span>
-                                <span className="font-bold text-nf-blue dark:text-nf-blue-d min-w-6 text-right">
-                                  {typeof val === 'number' ? val : '—'}
-                                </span>
-                              </div>
-                            );
-                          })}
-                          <div className="flex items-center justify-between py-1 text-sm">
-                            <span className="font-bold text-slate-700 dark:text-slate-200 text-xs">
-                              Total
-                            </span>
-                            <span className="font-bold text-nf-blue dark:text-nf-blue-d min-w-6 text-right">
-                              {total}
-                            </span>
-                          </div>
+                          <ScoringRows scores={ev} showTotal />
                         </div>
                         {ev.notes && (
                           <div className="bg-white dark:bg-slate-800 rounded-lg px-3 py-2">
