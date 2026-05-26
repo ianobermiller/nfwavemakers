@@ -1,0 +1,8 @@
+{
+  "name": "nfwavemakers",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm ci --prefix ballots && npm run build --prefix ballots && node _build.mjs"
+  }
+}
