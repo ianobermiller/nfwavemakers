@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react';
 
+const BASE = '/ballots';
+
+function getRoute(): string {
+  const pathname = window.location.pathname;
+  const relative = pathname.startsWith(BASE + '/')
+    ? pathname.slice(BASE.length + 1)
+    : pathname.startsWith(BASE)
+      ? ''
+      : pathname.slice(1);
+  return relative || 'dashboard';
+}
+
 export function useHashRoute(): string {
-  const [path, setPath] = useState(() => window.location.pathname.slice(1) || 'dashboard');
+  const [path, setPath] = useState(getRoute);
 
   useEffect(() => {
     const handler = (): void => {
-      setPath(window.location.pathname.slice(1) || 'dashboard');
+      setPath(getRoute());
     };
     window.addEventListener('popstate', handler);
     return () => {
@@ -17,6 +29,6 @@ export function useHashRoute(): string {
 }
 
 export function navigate(path: string): void {
-  history.pushState(null, '', '/' + path);
+  history.pushState(null, '', BASE + '/' + path);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
