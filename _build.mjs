@@ -13,6 +13,6 @@ await cp('ballots/dist', '_site/ballots', { recursive: true });
 
 // Root-level _redirects: SPA fallback for /ballots/* routes
 // (Cloudflare Pages only reads _redirects from the output root)
-await writeFile('_site/_redirects', '/ballots/*  /ballots/index.html  200\n');
+await writeFile('_site/_redirects', '/ballots/*  /ballots/  200\n');
 
 console.log('Build complete → _site/');
