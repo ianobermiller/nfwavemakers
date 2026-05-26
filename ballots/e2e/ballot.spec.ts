@@ -2,27 +2,17 @@ import { test, expect, type Page } from '@playwright/test';
 
 const BASE = 'http://localhost:5174';
 
-async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto(BASE);
-  await page.fill('#email', email);
-  await page.click('button:has-text("Send Magic Code")');
-  // In a real test environment, retrieve the code via InstantDB admin API.
-  // For now, verify the code-entry screen appears.
-  await expect(page.locator('text=We sent a 6-digit code')).toBeVisible();
-}
+type InstantDb = { auth: { signInWithToken: (token: string) => Promise<void> } };
 
-async function signInWithCode(page: Page, email: string, code: string): Promise<void> {
+async function signInWithToken(page: Page, token: string): Promise<void> {
   await page.goto(BASE);
-  await page.fill('#email', email);
-  await page.click('button:has-text("Send Magic Code")');
-  await page.fill('#code', code);
-  await page.click('button:has-text("Sign In")');
-}
-
-async function completeProfile(page: Page, name: string, role: 'student' | 'parent' | 'admin'): Promise<void> {
-  await page.fill('#name', name);
-  await page.check(`input[value="${role}"]`);
-  await page.click('button:has-text("Continue")');
+  await page.waitForFunction(() => (window as Record<string, unknown>)['__db'] !== undefined);
+  await page.evaluate(async (t: string) => {
+    const db = (window as Record<string, unknown>)['__db'] as InstantDb;
+    await db.auth.signInWithToken(t);
+  }, token);
+  // Wait for auth state to propagate and redirect away from auth screen.
+  await page.waitForURL((url) => url.hash !== '' || url.pathname !== '/');
 }
 
 test.describe('Auth flow', () => {
@@ -33,35 +23,50 @@ test.describe('Auth flow', () => {
   });
 
   test('shows code input after sending magic code', async ({ page }) => {
-    await signIn(page, 'test@example.com');
+    await page.goto(BASE);
+    await page.fill('#email', 'test@example.com');
+    await page.click('button:has-text("Send Magic Code")');
     await expect(page.locator('#code')).toBeVisible();
   });
 
   test('back link returns to email screen', async ({ page }) => {
-    await signIn(page, 'test@example.com');
+    await page.goto(BASE);
+    await page.fill('#email', 'test@example.com');
+    await page.click('button:has-text("Send Magic Code")');
     await page.click('button:has-text("Use a different email")');
     await expect(page.locator('#email')).toBeVisible();
   });
 });
 
-test.describe('Profile setup', () => {
-  test('profile setup form has name + role fields', async ({ page }) => {
-    // We can't easily sign in with magic code in automated tests without
-    // intercepting email. These tests document the expected UI shape.
-    await page.goto(BASE);
-    // The profile setup screen is gated behind auth.
-    // Verify the auth screen is present.
-    await expect(page.locator('h1:has-text("NF Wavemakers Ballots")')).toBeVisible();
-  });
-});
+test.describe('Student picker', () => {
+  test('judge can search for and find a student', async ({ page }) => {
+    const judgeToken = process.env['E2E_JUDGE_TOKEN'];
+    const studentName = process.env['E2E_STUDENT_NAME'];
+    if (!judgeToken || !studentName) throw new Error('Missing e2e env vars — run full test suite with globalSetup');
 
-test.describe('Speaker Point Guide', () => {
-  test('guide toggle button is visible on mobile', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await signInWithToken(page, judgeToken);
+
+    // Profile may need to be set for judge — if profile setup is shown, skip it
+    // (global-setup already set the role via admin API, so we just dismiss if present)
+    const profileSetup = page.locator('text=Choose your role');
+    if (await profileSetup.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await page.fill('#name', 'Bob Judge');
+      await page.click('button[data-role="parent"]');
+      await page.click('button:has-text("Continue")');
+    }
+
+    // Navigate to the judge / ballot form
     await page.goto(`${BASE}#judge`);
-    // Without auth, we land on the auth page. The guide toggle only appears in BallotForm.
-    // This test verifies the app loads without JS errors.
-    await expect(page.locator('body')).toBeVisible();
+    await page.waitForSelector('input[placeholder="Search students…"]', { timeout: 5000 });
+
+    // Focus the first student picker and type the student's name
+    const picker = page.locator('input[placeholder="Search students…"]').first();
+    await picker.click();
+    await picker.fill(studentName.split(' ')[0] ?? studentName);
+
+    // The student should appear in the dropdown — not "No students found"
+    await expect(page.locator(`button:has-text("${studentName}")`).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=No students found')).not.toBeVisible();
   });
 });
 
@@ -70,16 +75,15 @@ test.describe('Routing', () => {
     const routes = ['', '#dashboard', '#judge', '#admin'];
     for (const route of routes) {
       await page.goto(`${BASE}/${route}`);
-      // Verify no unhandled JS errors (page loads at minimum)
       await expect(page.locator('body')).toBeVisible();
     }
   });
 });
 
 test.describe('Mobile layout', () => {
-  test('app renders on iPhone viewport', async ({ page }) => {
+  test('app renders auth screen on iPhone viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(BASE);
-    await expect(page.locator('.auth-card')).toBeVisible();
+    await expect(page.locator('#email')).toBeVisible();
   });
 });

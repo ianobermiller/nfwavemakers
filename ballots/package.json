@@ -16,6 +16,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@instantdb/admin": "^1.0.39",
     "@instantdb/platform": "^1.0.39",
     "@playwright/test": "^1.49.0",
     "@tailwindcss/vite": "^4.3.0",
