@@ -53,8 +53,10 @@ export default async function globalSetup(): Promise<void> {
   const studentToken = await adminDb.auth.createToken('student@test.com');
   const judgeToken = await adminDb.auth.createToken('judge@test.com');
 
-  const { user: studentUser } = await adminDb.auth.getUser({ email: 'student@test.com' });
-  const { user: judgeUser } = await adminDb.auth.getUser({ email: 'judge@test.com' });
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const studentUser = (await adminDb.auth.getUser({ email: 'student@test.com' }))!;
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const judgeUser = (await adminDb.auth.getUser({ email: 'judge@test.com' }))!;
 
   await adminDb.transact([
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
