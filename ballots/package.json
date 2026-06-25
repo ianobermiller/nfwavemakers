@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "types": "tsc",
     "lint": "oxlint src",
     "format": "oxfmt src",
+    "knip": "knip",
+    "check": "run-p --print-label types lint knip",
+    "check:push": "run-p --print-label types lint knip test:e2e",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -23,6 +27,8 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "knip": "^6.14.2",
+    "npm-run-all2": "^8.0.4",
     "oxfmt": "^0.51.0",
     "oxlint": "^0.16.0",
     "tailwindcss": "^4.3.0",

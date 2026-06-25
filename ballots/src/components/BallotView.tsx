@@ -1,6 +1,7 @@
 import { db } from '../db.ts';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { usePermissions } from '../hooks/usePermissions.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { PageHeader } from './PageHeader.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
@@ -50,9 +51,8 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   const judge = ballot.judge;
   const evals = ballot.speakerEvals ?? [];
 
-  const isSpeaker = evals.some((e) => e.speaker?.id === currentUserId);
-  const isJudge = judge?.id === currentUserId;
-  if (!isSpeaker && !isJudge) {
+  const can = usePermissions(currentUserId);
+  if (!can.canViewBallot(judge?.id, evals.map((e) => e.speaker?.id))) {
     return (
       <div className="flex flex-col min-h-screen">
         <PageHeader onBack={() => navigate('dashboard')} />

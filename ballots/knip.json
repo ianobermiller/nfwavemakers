@@ -1,0 +1,3 @@
+{
+  "ignore": ["instant.schema.ts", "instant.perms.ts"]
+}

@@ -10,6 +10,47 @@ import { AdminDebates } from './components/AdminDebates.tsx';
 import { AdminBallots } from './components/AdminBallots.tsx';
 import type { Role } from './types.ts';
 
+interface RouteCtx {
+  param: string;
+  userId: string;
+  role: Role;
+  name: string;
+}
+
+const ROUTES: Array<{
+  segment: string;
+  requiredRole?: Role;
+  requiresParam?: boolean;
+  render: (ctx: RouteCtx) => React.JSX.Element;
+}> = [
+  {
+    segment: 'admin',
+    requiredRole: 'admin',
+    render: () => <AdminDebates />,
+  },
+  {
+    segment: 'admin-ballots',
+    requiredRole: 'admin',
+    render: () => <AdminBallots />,
+  },
+  {
+    segment: 'judge',
+    render: ({ param, userId, name }) => (
+      <BallotForm {...(param ? { debateId: param } : {})} judgeId={userId} judgeName={name} />
+    ),
+  },
+  {
+    segment: 'ballot',
+    requiresParam: true,
+    render: ({ param, userId }) => <BallotView ballotId={param} currentUserId={userId} />,
+  },
+  {
+    segment: 'debate',
+    requiresParam: true,
+    render: ({ param, userId }) => <DebateView debateId={param} currentUserId={userId} />,
+  },
+];
+
 export function App(): React.JSX.Element {
   const { isLoading, user, error } = db.useAuth();
 
@@ -63,32 +104,13 @@ function AuthenticatedApp({ userId }: { userId: string }): React.JSX.Element {
     return <ProfileSetup userId={userId} />;
   }
 
-  const [segment, param] = hash.split('/');
+  const [segment, param = ''] = hash.split('/');
 
-  if (segment === 'admin' && role === 'admin') {
-    return <AdminDebates />;
-  }
-
-  if (segment === 'admin-ballots' && role === 'admin') {
-    return <AdminBallots />;
-  }
-
-  if (segment === 'judge') {
-    return (
-      <BallotForm
-        {...(param !== undefined ? { debateId: param } : {})}
-        judgeId={userId}
-        judgeName={name}
-      />
-    );
-  }
-
-  if (segment === 'ballot' && param) {
-    return <BallotView ballotId={param} currentUserId={userId} />;
-  }
-
-  if (segment === 'debate' && param) {
-    return <DebateView debateId={param} currentUserId={userId} />;
+  for (const route of ROUTES) {
+    if (route.segment !== segment) continue;
+    if (route.requiredRole && role !== route.requiredRole) continue;
+    if (route.requiresParam && !param) continue;
+    return route.render({ param, userId, role, name });
   }
 
   return <Dashboard userId={userId} role={role} name={name} />;

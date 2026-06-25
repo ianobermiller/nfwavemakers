@@ -1,28 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { id } from '@instantdb/react';
-import { db } from '../db.ts';
+import { useState } from 'react';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { useAutosize } from '../hooks/useAutosize.ts';
+import { useBallotDraft } from '../hooks/useBallotDraft.ts';
+import { AutoTextarea } from './AutoTextarea.tsx';
 import { PageHeader } from './PageHeader.tsx';
+import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
-import { StudentPicker } from './StudentPicker.tsx';
-import {
-  POSITIONS,
-  POSITION_LABELS,
-  SCORE_CATEGORIES,
-  type Position,
-  type SpeakerFormState,
-  type Winner,
-} from '../types.ts';
-import { scoringTotal } from '../utils.ts';
-import {
-  buildBallotTxs,
-  canSubmitBallot,
-  getActivePositions,
-  isAllScored,
-  makeNewBallotIds,
-  type BallotIds,
-} from '../services/ballot.ts';
+import type { Winner } from '../types.ts';
 
 interface Props {
   debateId?: string;
@@ -30,269 +13,11 @@ interface Props {
   judgeName: string;
 }
 
-function makeEmptySpeaker(): SpeakerFormState {
-  return {
-    userId: '',
-    delivery: undefined,
-    organization: undefined,
-    evidenceAndSupport: undefined,
-    refutation: undefined,
-    crossExamination: undefined,
-    conduct: undefined,
-    notes: '',
-  };
-}
-
-function makeEmptySpeakers(): Record<Position, SpeakerFormState> {
-  return {
-    aff1: makeEmptySpeaker(),
-    aff2: makeEmptySpeaker(),
-    neg1: makeEmptySpeaker(),
-    neg2: makeEmptySpeaker(),
-  };
-}
-
-
-function AutoTextarea({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-}): React.JSX.Element {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useAutosize(ref, value);
-  return (
-    <textarea
-      ref={ref}
-      className="textarea-autosize"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={1}
-    />
-  );
-}
-
-function ScoreRow({
-  label,
-  name,
-  value,
-  onChange,
-  onLabelClick,
-}: {
-  label: string;
-  name: string;
-  value: number | undefined;
-  onChange: (v: number) => void;
-  onLabelClick: () => void;
-}): React.JSX.Element {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <button
-        type="button"
-        onClick={onLabelClick}
-        className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 cursor-pointer bg-transparent border-none p-0 text-left hover:text-nf-accent dark:hover:text-nf-accent transition-colors"
-      >
-        {label}
-      </button>
-      <div className="flex gap-1" role="radiogroup" aria-label={label}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <label key={n} className={`score-btn ${value === n ? 'active' : ''}`}>
-            <input
-              className="sr-only"
-              type="radio"
-              name={`${name}-${n}`}
-              value={n}
-              checked={value === n}
-              onChange={() => onChange(n)}
-            />
-            {n}
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props): React.JSX.Element {
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideCategory, setGuideCategory] = useState<string | undefined>(undefined);
-  const [winner, setWinner] = useState<Winner | undefined>(undefined);
-  const [rfd, setRfd] = useState('');
-  const [speakers, setSpeakers] = useState<Record<Position, SpeakerFormState>>(makeEmptySpeakers);
-  const [ids, setIds] = useState<BallotIds>(makeNewBallotIds);
-  const [rankOrder, setRankOrder] = useState<Position[]>([]);
-  const [initialized, setInitialized] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data: usersData } = db.useQuery({ $users: {} });
-  const students = (usersData?.$users ?? []).filter((u) => u.role === 'student');
-
-  const { data: debateData } = db.useQuery(
-    debateId
-      ? {
-          debates: {
-            $: { where: { id: debateId } },
-            affTeam: {},
-            negTeam: {},
-          },
-        }
-      : null,
-  );
-
-  const { data: existingData } = db.useQuery(
-    debateId
-      ? {
-          ballots: {
-            $: { where: { 'judge.id': judgeId, 'debate.id': debateId } },
-            speakerEvals: { speaker: {} },
-          },
-        }
-      : {
-          ballots: {
-            $: { where: { 'judge.id': judgeId } },
-            speakerEvals: { speaker: {} },
-          },
-        },
-  );
-
-  useEffect(() => {
-    if (initialized) return;
-
-    const debate = debateData?.debates?.[0];
-    const existingBallots = existingData?.ballots ?? [];
-    const existing = debateId
-      ? existingBallots[0]
-      : existingBallots.find((b) => b.submittedAt == null);
-
-    if (debateId && !debate) return;
-    if (existingData === undefined) return;
-
-    if (existing) {
-      const newIds: BallotIds = {
-        ballotId: existing.id,
-        evalIds: { aff1: id(), aff2: id(), neg1: id(), neg2: id() },
-      };
-      const newSpeakers = makeEmptySpeakers();
-
-      for (const ev of existing.speakerEvals ?? []) {
-        const pos = ev.position as Position;
-        if (!POSITIONS.includes(pos)) continue;
-        newIds.evalIds[pos] = ev.id;
-        newSpeakers[pos] = {
-          userId: ev.speaker?.id ?? '',
-          delivery: ev.delivery ?? undefined,
-          organization: ev.organization ?? undefined,
-          evidenceAndSupport: ev.evidenceAndSupport ?? undefined,
-          refutation: ev.refutation ?? undefined,
-          crossExamination: ev.crossExamination ?? undefined,
-          conduct: ev.conduct ?? undefined,
-          notes: ev.notes ?? '',
-        };
-      }
-
-      // Reconstruct rank order from saved rank values.
-      const ranked = (existing.speakerEvals ?? [])
-        .filter((ev) => ev.rank != null && newSpeakers[ev.position as Position]?.userId)
-        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
-        .map((ev) => ev.position as Position)
-        .filter((pos) => POSITIONS.includes(pos));
-      setRankOrder(ranked);
-
-      setIds(newIds);
-      setWinner((existing.winner as Winner | undefined) ?? undefined);
-      setRfd(existing.reasonForDecision ?? '');
-      setSpeakers(newSpeakers);
-    } else if (debate) {
-      setSpeakers((prev) => {
-        const next = { ...prev };
-        const affTeam = debate.affTeam ?? [];
-        const negTeam = debate.negTeam ?? [];
-        if (affTeam[0]) next.aff1 = { ...makeEmptySpeaker(), userId: affTeam[0].id };
-        if (affTeam[1]) next.aff2 = { ...makeEmptySpeaker(), userId: affTeam[1].id };
-        if (negTeam[0]) next.neg1 = { ...makeEmptySpeaker(), userId: negTeam[0].id };
-        if (negTeam[1]) next.neg2 = { ...makeEmptySpeaker(), userId: negTeam[1].id };
-        return next;
-      });
-    }
-
-    setInitialized(true);
-  }, [debateId, debateData, existingData, initialized]);
-
-  const scheduleSave = useCallback(
-    (
-      w: Winner | undefined,
-      r: string,
-      sp: Record<Position, SpeakerFormState>,
-      i: BallotIds,
-      ro: Position[],
-    ) => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        void db.transact(buildBallotTxs(w, r, sp, i, ro, judgeId, debateId));
-      }, 500);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [debateId, judgeId],
-  );
-
-  function updateWinner(w: Winner): void {
-    setWinner(w);
-    scheduleSave(w, rfd, speakers, ids, rankOrder);
-  }
-
-  function updateRfd(r: string): void {
-    setRfd(r);
-    scheduleSave(winner, r, speakers, ids, rankOrder);
-  }
-
-  function updateSpeaker(pos: Position, patch: Partial<SpeakerFormState>): void {
-    setSpeakers((prev) => {
-      const next = { ...prev, [pos]: { ...prev[pos], ...patch } };
-      scheduleSave(winner, rfd, next, ids, rankOrder);
-      return next;
-    });
-    if ('userId' in patch && !patch.userId) {
-      setRankOrder((ro) => ro.filter((p) => p !== pos));
-    }
-  }
-
-  function assignRank(pos: Position, newRank: number): void {
-    setRankOrder((prev) => {
-      const next = prev.filter((p) => p !== pos);
-      next.splice(newRank - 1, 0, pos);
-      scheduleSave(winner, rfd, speakers, ids, next);
-      return next;
-    });
-  }
-
-  function suggestByPoints(): void {
-    const active = POSITIONS.filter((pos) => speakers[pos].userId !== '');
-    const sorted = [...active].sort((a, b) => scoringTotal(speakers[b]) - scoringTotal(speakers[a]));
-    setRankOrder(sorted);
-    scheduleSave(winner, rfd, speakers, ids, sorted);
-  }
-
-  const activePositions = getActivePositions(speakers);
-  const allScored = isAllScored(speakers);
-  const canSubmit = canSubmitBallot(speakers, winner, rankOrder);
-
-  async function submit(): Promise<void> {
-    if (!canSubmit || !winner) return;
-    setSubmitting(true);
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current);
-      saveTimer.current = null;
-    }
-    await db.transact(buildBallotTxs(winner, rfd, speakers, ids, rankOrder, judgeId, debateId, Date.now()));
-    navigate('dashboard');
-  }
-
-  const debate = debateData?.debates?.[0];
+  const draft = useBallotDraft({ debateId, judgeId });
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -301,6 +26,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
         onBack={() => navigate('dashboard')}
         action={
           <button
+            type="button"
             className="text-white border border-white/40 rounded-lg px-3 py-1 text-xs cursor-pointer bg-transparent hover:bg-white/10 transition-colors"
             onClick={() => setGuideOpen((o) => !o)}
           >
@@ -310,16 +36,15 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
       />
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-28">
-        {/* Ballot metadata */}
-        {debate && (
+        {draft.debate && (
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3">
-            <span>{debate.date}</span>
+            <span>{draft.debate.date}</span>
             <span>·</span>
-            <span>Room {debate.room}</span>
-            {debate.resolution && (
+            <span>Room {draft.debate.room}</span>
+            {draft.debate.resolution && (
               <>
                 <span>·</span>
-                <span className="truncate">{debate.resolution}</span>
+                <span className="truncate">{draft.debate.resolution}</span>
               </>
             )}
           </div>
@@ -332,7 +57,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
               <label
                 key={side}
                 className={`inline-flex items-center gap-2 px-4 py-2 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors ${
-                  winner === side
+                  draft.winner === side
                     ? side === 'aff'
                       ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'
                       : 'border-neg bg-neg-bg dark:border-neg-d dark:bg-neg-bg-d text-neg dark:text-neg-d'
@@ -344,15 +69,19 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
                   type="radio"
                   name="winner"
                   value={side}
-                  checked={winner === side}
-                  onChange={() => updateWinner(side)}
+                  checked={draft.winner === side}
+                  onChange={() => draft.updateWinner(side as Winner)}
                 />
                 {side === 'aff' ? 'Affirmative wins' : 'Negative wins'}
               </label>
             ))}
           </div>
           <div className="mt-3">
-            <AutoTextarea value={rfd} onChange={updateRfd} placeholder="Reason for decision…" />
+            <AutoTextarea
+              value={draft.rfd}
+              onChange={draft.updateRfd}
+              placeholder="Reason for decision…"
+            />
           </div>
         </div>
 
@@ -369,87 +98,32 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
               >
                 {side === 'aff' ? 'Affirmative' : 'Negative'}
               </h2>
-              {([`${side}1`, `${side}2`] as const).map((pos) => {
-                const hasUser = speakers[pos].userId !== '';
-                const total = scoringTotal(speakers[pos]);
-                const currentRank = rankOrder.indexOf(pos) + 1;
-                return (
-                  <div
-                    key={pos}
-                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 flex flex-col gap-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        {POSITION_LABELS[pos]}
-                      </h3>
-                      <span className={`text-sm font-bold text-nf-blue dark:text-nf-blue-d transition-opacity ${total > 0 ? 'opacity-100' : 'opacity-0'}`}>
-                        {total > 0 ? total : '0'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <StudentPicker
-                          id={`speaker-${pos}`}
-                          value={speakers[pos].userId}
-                          onChange={(uid) => updateSpeaker(pos, { userId: uid })}
-                          students={students}
-                        />
-                      </div>
-                      {hasUser && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-xs text-slate-400 dark:text-slate-500">Rank</span>
-                          <select
-                            className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer"
-                            value={currentRank || ''}
-                            onChange={(e) => {
-                              const n = parseInt(e.target.value, 10);
-                              if (!isNaN(n)) assignRank(pos, n);
-                            }}
-                          >
-                            <option value="">—</option>
-                            {Array.from({ length: activePositions.length }, (_, i) => i + 1).map((n) => (
-                              <option key={n} value={n}>{n}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                    {hasUser && (
-                      <>
-                        <div className="flex flex-col gap-1.5">
-                          {SCORE_CATEGORIES.map((cat) => (
-                            <ScoreRow
-                              key={cat.key}
-                              name={`${pos}-${cat.key}`}
-                              label={cat.label}
-                              value={speakers[pos][cat.key]}
-                              onChange={(v) => updateSpeaker(pos, { [cat.key]: v })}
-                              onLabelClick={() => {
-                                setGuideCategory(cat.label);
-                                setGuideOpen(true);
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <AutoTextarea
-                          value={speakers[pos].notes}
-                          onChange={(v) => updateSpeaker(pos, { notes: v })}
-                          placeholder="Notes…"
-                        />
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+              {([`${side}1`, `${side}2`] as const).map((pos) => (
+                <SpeakerEvalCard
+                  key={pos}
+                  pos={pos}
+                  speaker={draft.speakers[pos]}
+                  students={draft.students}
+                  activeCount={draft.activePositions.length}
+                  currentRank={draft.rankOrder.indexOf(pos) + 1}
+                  onUpdate={(patch) => draft.updateSpeaker(pos, patch)}
+                  onRank={(rank) => draft.assignRank(pos, rank)}
+                  onGuideOpen={(category) => {
+                    setGuideCategory(category);
+                    setGuideOpen(true);
+                  }}
+                />
+              ))}
             </div>
           ))}
         </div>
-        {activePositions.length > 1 && (
+
+        {draft.activePositions.length > 1 && (
           <div className="flex justify-end mt-1">
             <button
               type="button"
               className="text-xs text-slate-400 dark:text-slate-500 hover:text-nf-accent dark:hover:text-nf-accent cursor-pointer bg-transparent border-none"
-              onClick={suggestByPoints}
+              onClick={draft.suggestByPoints}
             >
               Auto-rank by points
             </button>
@@ -461,23 +135,27 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
       <div className="fixed bottom-0 inset-x-0 z-20 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 px-4 py-3 flex flex-col items-center gap-1.5 max-w-4xl mx-auto">
         <button
           className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-bold rounded-xl cursor-pointer disabled:opacity-40 transition-colors"
-          disabled={!canSubmit || submitting}
-          onClick={() => void submit()}
+          disabled={!draft.canSubmit || draft.submitting}
+          onClick={() => void draft.submit()}
         >
-          {submitting ? 'Submitting…' : 'Submit Ballot'}
+          {draft.submitting ? 'Submitting…' : 'Submit Ballot'}
         </button>
-        {!canSubmit && (
+        {!draft.canSubmit && (
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            {winner === undefined
+            {draft.winner === undefined
               ? 'Select a winner to submit.'
-              : !allScored
-              ? 'Score all 6 areas for each speaker to submit.'
-              : 'Assign a rank to each speaker to submit.'}
+              : !draft.allScored
+                ? 'Score all 6 areas for each speaker to submit.'
+                : 'Assign a rank to each speaker to submit.'}
           </p>
         )}
       </div>
 
-      <SpeakerPointGuide isOpen={guideOpen} onClose={() => setGuideOpen(false)} focusCategory={guideCategory} />
+      <SpeakerPointGuide
+        isOpen={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        focusCategory={guideCategory}
+      />
     </div>
   );
 }
