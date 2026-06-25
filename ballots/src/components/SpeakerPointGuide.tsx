@@ -54,7 +54,10 @@ export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): Re
         {SPEAKER_GUIDE_ROWS.map((row, i) => {
           const isExpanded = openIndex === i;
           return (
-            <div key={row.category} className="border-b border-slate-100 dark:border-slate-700 last:border-b-0">
+            <div
+              key={row.category}
+              className="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+            >
               <button
                 type="button"
                 onClick={() => toggle(i)}
@@ -63,14 +66,16 @@ export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): Re
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {row.category}
                 </span>
-                <span className={`text-slate-400 dark:text-slate-500 text-xs transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                <span
+                  className={`text-slate-400 dark:text-slate-500 text-xs transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                >
                   ▾
                 </span>
               </button>
               {isExpanded && (
                 <div className="px-5 pb-4 flex flex-col gap-3">
                   {row.scores.map((desc, j) => (
-                    <div key={j} className="flex gap-2.5 items-start">
+                    <div key={desc} className="flex gap-2.5 items-start">
                       <span className="shrink-0 w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold flex items-center justify-center mt-0.5">
                         {j + 1}
                       </span>

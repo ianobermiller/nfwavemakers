@@ -12,12 +12,40 @@ export default async function globalSetup(): Promise<void> {
 
   const adminDb = init({ appId: app.id, adminToken: app.adminToken });
 
-  await adminDb.updateRules({
-    rules: {
-      $users: { allow: { view: 'auth.id != null', create: 'false', update: 'auth.id == data.id', delete: 'false' } },
-      debates: { allow: { view: 'auth.id != null', create: 'auth.id != null', update: 'auth.id != null', delete: 'auth.id != null' } },
-      ballots: { allow: { view: 'auth.id != null', create: 'auth.id != null', update: 'auth.id != null', delete: 'auth.id != null' } },
-      speakerEvals: { allow: { view: 'auth.id != null', create: 'auth.id != null', update: 'auth.id != null', delete: 'auth.id != null' } },
+  await platform.pushPerms(app.id, {
+    perms: {
+      $users: {
+        allow: {
+          view: 'auth.id != null',
+          create: 'false',
+          update: 'auth.id == data.id',
+          delete: 'false',
+        },
+      },
+      debates: {
+        allow: {
+          view: 'auth.id != null',
+          create: 'auth.id != null',
+          update: 'auth.id != null',
+          delete: 'auth.id != null',
+        },
+      },
+      ballots: {
+        allow: {
+          view: 'auth.id != null',
+          create: 'auth.id != null',
+          update: 'auth.id != null',
+          delete: 'auth.id != null',
+        },
+      },
+      speakerEvals: {
+        allow: {
+          view: 'auth.id != null',
+          create: 'auth.id != null',
+          update: 'auth.id != null',
+          delete: 'auth.id != null',
+        },
+      },
     },
   });
 
@@ -41,7 +69,11 @@ export default async function globalSetup(): Promise<void> {
 
   await adminDb.transact([
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.debates[debateId]!.update({ date: '2024-01-15', room: 'A1', resolution: 'Resolved: Test resolution.' }),
+    adminDb.tx.debates[debateId]!.update({
+      date: '2024-01-15',
+      room: 'A1',
+      resolution: 'Resolved: Test resolution.',
+    }),
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     adminDb.tx.debates[debateId]!.link({ affTeam: studentUser.id }),
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
