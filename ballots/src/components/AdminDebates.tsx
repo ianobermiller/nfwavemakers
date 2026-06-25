@@ -4,6 +4,7 @@ import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageHeader } from './PageHeader.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
+import { JudgePicker } from './JudgePicker.tsx';
 import { formatTeam } from '../utils.ts';
 
 interface DebateForm {
@@ -54,15 +55,6 @@ export function AdminDebates(): React.JSX.Element {
 
   function patch(p: Partial<DebateForm>): void {
     setForm((f) => ({ ...f, ...p }));
-  }
-
-  function toggleJudge(judgeId: string): void {
-    setForm((f) => ({
-      ...f,
-      judges: f.judges.includes(judgeId)
-        ? f.judges.filter((j) => j !== judgeId)
-        : [...f.judges, judgeId],
-    }));
   }
 
   function loadDebate(debate: (typeof debates)[number]): void {
@@ -216,28 +208,11 @@ export function AdminDebates(): React.JSX.Element {
 
           <div>
             <label>Judges</label>
-            {parents.length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500">No parent accounts yet.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {parents.map((p) => (
-                  <label
-                    key={p.id}
-                    className="flex items-center gap-3 px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      className="w-auto cursor-pointer accent-nf-blue"
-                      checked={form.judges.includes(p.id)}
-                      onChange={() => toggleJudge(p.id)}
-                    />
-                    <span className="text-sm text-slate-700 dark:text-slate-200">
-                      {p.name ?? p.id}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <JudgePicker
+              value={form.judges}
+              onChange={(judges) => patch({ judges })}
+              judges={parents}
+            />
           </div>
 
           {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -263,9 +238,7 @@ export function AdminDebates(): React.JSX.Element {
 
         <section>
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">Debates</h2>
-          {isLoading && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-          )}
+          {isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
           {!isLoading && debates.length === 0 && (
             <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
               No debates yet.
@@ -288,9 +261,13 @@ export function AdminDebates(): React.JSX.Element {
                     </span>
                   )}
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    <span className="text-aff dark:text-aff-d font-semibold">{formatTeam(d.affTeam ?? [])}</span>
+                    <span className="text-aff dark:text-aff-d font-semibold">
+                      {formatTeam(d.affTeam ?? [])}
+                    </span>
                     <span className="text-slate-400 dark:text-slate-500 mx-1">vs</span>
-                    <span className="text-neg dark:text-neg-d font-semibold">{formatTeam(d.negTeam ?? [])}</span>
+                    <span className="text-neg dark:text-neg-d font-semibold">
+                      {formatTeam(d.negTeam ?? [])}
+                    </span>
                   </span>
                 </div>
                 <button
