@@ -9,7 +9,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 15_000 },
   use: {
-    baseURL: 'http://localhost:5174',
+    baseURL: 'http://localhost:5174/ballots/',
     trace: 'on-first-retry',
   },
   projects: [
@@ -24,7 +24,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'vite --port 5174',
-    url: 'http://localhost:5174',
+    url: 'http://localhost:5174/ballots/',
     reuseExistingServer: false,
     // No VITE_INSTANT_APP_ID here — globalSetup sets process.env before
     // the webServer starts, so the child process inherits the correct value.
