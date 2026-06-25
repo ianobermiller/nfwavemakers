@@ -756,6 +756,15 @@ footer a:hover { color: #9bb8d8; }
   .age-note   { background: rgba(59,158,221,.1); color: var(--text); }
   .region-tag { background: rgba(59,158,221,.1); }
 
+  /* Exclusive camp block */
+  .camp-exclusive {
+    background: #1a2b42;
+    border-left-color: var(--blue-mid);
+  }
+  .camp-exclusive-name { color: var(--text); }
+  .camp-costs { border-top-color: rgba(255,255,255,.07); }
+  .camp-costs li strong { color: var(--text); }
+
   /* Achievement place badges */
   .place        { background: #253346; color: var(--text-muted); }
   .place.gold   { background: #332200; color: #e0a020; }
