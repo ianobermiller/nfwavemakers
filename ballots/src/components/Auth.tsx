@@ -9,11 +9,17 @@ export function Auth(): React.JSX.Element {
   const [loading, setLoading] = useState(false);
 
   async function sendCode(): Promise<void> {
-    if (!email.trim()) return;
+    const value = email.trim();
+    if (!value) return;
     setLoading(true);
     setError('');
     try {
-      await db.auth.sendMagicCode({ email: email.trim() });
+      // If it doesn't look like an email, treat it as a dev refresh token.
+      if (!value.includes('@')) {
+        await db.auth.signInWithToken(value);
+        return;
+      }
+      await db.auth.sendMagicCode({ email: value });
       setCodeSent(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to send code');
@@ -53,7 +59,7 @@ export function Auth(): React.JSX.Element {
               <label htmlFor="email">Email address</label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void sendCode()}
@@ -73,7 +79,8 @@ export function Auth(): React.JSX.Element {
         ) : (
           <>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              We sent a 6-digit code to <strong className="text-slate-700 dark:text-slate-200">{email}</strong>.
+              We sent a 6-digit code to{' '}
+              <strong className="text-slate-700 dark:text-slate-200">{email}</strong>.
             </p>
             <div>
               <label htmlFor="code">Verification code</label>
