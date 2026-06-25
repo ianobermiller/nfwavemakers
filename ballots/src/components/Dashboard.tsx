@@ -1,4 +1,5 @@
 import { db } from '../db.ts';
+import { navigate } from '../hooks/useHashRoute.ts';
 import type { Role } from '../types.ts';
 import { AdminDashboard } from './dashboard/AdminDashboard.tsx';
 import { ParentDashboard } from './dashboard/ParentDashboard.tsx';
@@ -16,12 +17,20 @@ export function Dashboard({ userId, role, name }: Props): React.JSX.Element {
     <div className="flex flex-col min-h-screen">
       <div className="bg-nf-blue dark:bg-slate-900 text-white h-14 flex items-center justify-between px-4 sticky top-0 z-10 shadow">
         <span className="font-bold text-base">NF Wavemakers Ballots</span>
-        <button
-          className="text-white/80 hover:text-white text-sm cursor-pointer bg-transparent border-none underline"
-          onClick={() => db.auth.signOut()}
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            className="text-white/80 hover:text-white text-sm cursor-pointer bg-transparent border-none underline"
+            onClick={() => navigate('profile')}
+          >
+            Edit profile
+          </button>
+          <button
+            className="text-white/80 hover:text-white text-sm cursor-pointer bg-transparent border-none underline"
+            onClick={() => db.auth.signOut()}
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-20">

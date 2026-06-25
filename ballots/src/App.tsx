@@ -8,6 +8,7 @@ import { BallotView } from './components/BallotView.tsx';
 import { DebateView } from './components/DebateView.tsx';
 import { AdminDebates } from './components/AdminDebates.tsx';
 import { AdminBallots } from './components/AdminBallots.tsx';
+import { ProfileEdit } from './components/ProfileEdit.tsx';
 import type { Role } from './types.ts';
 
 interface RouteCtx {
@@ -23,6 +24,12 @@ const ROUTES: Array<{
   requiresParam?: boolean;
   render: (ctx: RouteCtx) => React.JSX.Element;
 }> = [
+  {
+    segment: 'profile',
+    render: ({ userId, name, role }) => (
+      <ProfileEdit userId={userId} currentName={name} currentRole={role} />
+    ),
+  },
   {
     segment: 'admin',
     requiredRole: 'admin',
