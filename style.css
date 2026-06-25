@@ -313,6 +313,10 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 .schedule-block-wide {
   margin-bottom: 1.5rem;
 }
+.schedule-block-wide + .schedule-block-wide,
+.schedule-grid + .schedule-block-wide {
+  margin-top: 2rem;
+}
 .schedule-subhead {
   font-size: 1.1rem;
   font-weight: 700;
@@ -408,6 +412,9 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 .tournament-region {
   margin-top: 1.25rem;
 }
+.tournament-region:first-child {
+  margin-top: 0;
+}
 .tournament-region + .tournament-region {
   margin-top: 1.75rem;
   padding-top: 1.5rem;
@@ -440,6 +447,7 @@ nav a.nav-cta:hover { background: #2e8bc7; }
   display: flex;
   flex-direction: column;
   gap: .65rem;
+  margin-top: 1.25rem;
 }
 .event-list li {
   display: flex;
@@ -502,7 +510,7 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 .place.gold   { background: #fef3c7; color: #92600a; }
 .place.silver { background: #e2e8f0; color: #4a5568; }
 .place.bronze { background: #fde8d8; color: #9a3412; }
-.achievement-desc { font-size: .88rem; color: var(--text-muted); line-height: 1.5; }
+.achievement-desc { font-size: .88rem; color: var(--text-muted); line-height: 1.5; margin-top: .75rem; }
 
 /* ── FAQ ── */
 .faq-list {
@@ -550,6 +558,7 @@ nav a.nav-cta:hover { background: #2e8bc7; }
   max-width: none;
 }
 .faq-item > p + ul, .faq-item > ul + p { border-top: none; padding-top: 0; }
+.faq-item > ul + p { margin-top: .75rem; }
 .faq-costs {
   list-style: none;
   display: flex;
@@ -574,6 +583,13 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 .section-contact { background: var(--blue-dark); color: var(--white); }
 .section-contact h2 { color: var(--white); }
 .section-contact > .container > p { color: #9bb8d8; }
+
+.contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-bottom: 1.5rem;
+}
 
 .contact-card {
   background: rgba(255,255,255,.07);
@@ -617,6 +633,7 @@ footer {
 }
 footer a { color: #6a8aaa; }
 footer a:hover { color: #9bb8d8; }
+.footer-web { color: #354d66; font-size: .78rem; }
 
 /* ── Verse Banner ── */
 .verse-banner {
@@ -666,24 +683,9 @@ footer a:hover { color: #9bb8d8; }
 }
 
 /* ── About group photo ── */
-.about-group {
-  margin: 2rem 0 0;
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-.about-group img {
-  width: 100%;
-  max-height: 420px;
-  object-fit: cover;
-  object-position: center 20%;
-  display: block;
-}
-
 /* ── Gallery ── */
-.section-gallery { background: var(--bg-alt); }
 .gallery-featured {
-  margin: 1.5rem 0 0;
+  margin: 2rem 0 0;
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
