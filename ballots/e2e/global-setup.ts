@@ -1,6 +1,19 @@
 import { PlatformApi } from '@instantdb/platform';
 import { init } from '@instantdb/admin';
+import type { User } from '@instantdb/admin';
 import { schema } from '../src/schema.ts';
+
+type AdminDb = ReturnType<typeof init>;
+
+async function requireUser(adminDb: AdminDb, email: string): Promise<User> {
+  const user = await adminDb.auth.getUser({ email });
+  if (!user) throw new Error(`User not found: ${email}`);
+  return user;
+}
+
+function row<T>(collection: Record<string, T | undefined>, id: string): T {
+  return collection[id] as T;
+}
 
 export default async function globalSetup(): Promise<void> {
   const platform = new PlatformApi({});
@@ -53,16 +66,12 @@ export default async function globalSetup(): Promise<void> {
   const studentToken = await adminDb.auth.createToken('student@test.com');
   const judgeToken = await adminDb.auth.createToken('judge@test.com');
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const studentUser = (await adminDb.auth.getUser({ email: 'student@test.com' }))!;
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const judgeUser = (await adminDb.auth.getUser({ email: 'judge@test.com' }))!;
+  const studentUser = await requireUser(adminDb, 'student@test.com');
+  const judgeUser = await requireUser(adminDb, 'judge@test.com');
 
   await adminDb.transact([
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.$users[studentUser.id]!.update({ name: 'Alice Student', role: 'student' }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.$users[judgeUser.id]!.update({ name: 'Bob Judge', role: 'parent' }),
+    row(adminDb.tx.$users, studentUser.id).update({ name: 'Alice Student', role: 'student' }),
+    row(adminDb.tx.$users, judgeUser.id).update({ name: 'Bob Judge', role: 'parent' }),
   ]);
 
   // Seed a debate with Alice as aff speaker and Bob as judge, plus a submitted ballot.
@@ -71,28 +80,21 @@ export default async function globalSetup(): Promise<void> {
   const evalAff1Id = crypto.randomUUID();
 
   await adminDb.transact([
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.debates[debateId]!.update({
+    row(adminDb.tx.debates, debateId).update({
       date: '2024-01-15',
       room: 'A1',
       resolution: 'Resolved: Test resolution.',
     }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.debates[debateId]!.link({ affTeam: studentUser.id }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.debates[debateId]!.link({ judges: judgeUser.id }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.ballots[ballotId]!.update({
+    row(adminDb.tx.debates, debateId).link({ affTeam: studentUser.id }),
+    row(adminDb.tx.debates, debateId).link({ judges: judgeUser.id }),
+    row(adminDb.tx.ballots, ballotId).update({
       winner: 'aff',
       reasonForDecision: 'Affirmative had stronger evidence.',
       submittedAt: Date.now(),
     }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.ballots[ballotId]!.link({ debate: debateId }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.ballots[ballotId]!.link({ judge: judgeUser.id }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.speakerEvals[evalAff1Id]!.update({
+    row(adminDb.tx.ballots, ballotId).link({ debate: debateId }),
+    row(adminDb.tx.ballots, ballotId).link({ judge: judgeUser.id }),
+    row(adminDb.tx.speakerEvals, evalAff1Id).update({
       position: 'aff1',
       delivery: 4,
       organization: 4,
@@ -102,10 +104,8 @@ export default async function globalSetup(): Promise<void> {
       conduct: 5,
       notes: 'Strong opening. Good eye contact.',
     }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.speakerEvals[evalAff1Id]!.link({ ballot: ballotId }),
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    adminDb.tx.speakerEvals[evalAff1Id]!.link({ speaker: studentUser.id }),
+    row(adminDb.tx.speakerEvals, evalAff1Id).link({ ballot: ballotId }),
+    row(adminDb.tx.speakerEvals, evalAff1Id).link({ speaker: studentUser.id }),
   ]);
 
   process.env['E2E_STUDENT_TOKEN'] = studentToken;
