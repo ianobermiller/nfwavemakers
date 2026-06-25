@@ -336,9 +336,9 @@ nav a.nav-cta:hover { background: #2e8bc7; }
   margin-bottom: 1rem;
 }
 .schedule-block p { color: var(--text-muted); font-size: .93rem; margin-bottom: 1rem; }
-.schedule-block .camp-exclusive p { color: var(--white); }
-.schedule-block .camp-exclusive .camp-exclusive-detail { color: #cfe0f5; }
-.schedule-block .camp-exclusive .camp-costs { color: #cfe0f5; }
+.schedule-block .camp-exclusive p { color: var(--text-muted); }
+.schedule-block .camp-exclusive .camp-exclusive-detail { color: var(--text-muted); }
+.schedule-block .camp-exclusive .camp-costs { color: var(--text-muted); }
 
 .schedule-table {
   width: 100%;
@@ -356,37 +356,35 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 .schedule-table tr:last-child td { border-bottom: none; }
 
 .camp-exclusive {
-  background: linear-gradient(135deg, #1a4b8c 0%, #2563b0 100%);
+  background: #eef4fb;
+  border-left: 3px solid var(--blue-mid);
   border-radius: var(--radius);
-  padding: 1.25rem 1.4rem;
+  padding: 1.1rem 1.25rem;
   margin-bottom: 1rem;
-  color: var(--white);
 }
 .camp-exclusive-badge {
   display: inline-block;
   font-size: .72rem;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: .07em;
   text-transform: uppercase;
-  background: var(--wave);
-  color: var(--white);
-  padding: .2rem .6rem;
-  border-radius: 99px;
-  margin-bottom: .6rem;
+  color: var(--blue-mid);
+  margin-bottom: .45rem;
 }
 .camp-exclusive-name {
   font-size: 1rem;
   font-weight: 700;
+  color: var(--blue-dark);
   margin-bottom: .25rem;
 }
 .camp-exclusive-detail {
   font-size: .82rem;
-  color: #cfe0f5;
+  color: var(--text-muted);
   margin-bottom: .75rem;
 }
 .camp-exclusive-desc {
   font-size: .88rem;
-  color: var(--white);
+  color: var(--text-muted);
   line-height: 1.5;
   margin-bottom: .85rem;
 }
@@ -396,12 +394,12 @@ nav a.nav-cta:hover { background: #2e8bc7; }
   flex-direction: column;
   gap: .3rem;
   font-size: .83rem;
-  color: #cfe0f5;
+  color: var(--text-muted);
   padding: 0;
-  border-top: 1px solid rgba(255,255,255,.15);
+  border-top: 1px solid #d0dcea;
   padding-top: .75rem;
 }
-.camp-costs li strong { color: var(--white); }
+.camp-costs li strong { color: var(--blue-dark); }
 
 .schedule-note {
   font-size: .88rem;
