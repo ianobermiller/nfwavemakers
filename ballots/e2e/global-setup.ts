@@ -11,8 +11,9 @@ export default async function globalSetup(): Promise<void> {
   console.log(`[e2e] Using temporary InstantDB app: ${app.id}`);
 
   const adminDb = init({ appId: app.id, adminToken: app.adminToken });
+  const authedPlatform = new PlatformApi({ auth: { token: app.adminToken } });
 
-  await platform.pushPerms(app.id, {
+  await authedPlatform.pushPerms(app.id, {
     perms: {
       $users: {
         allow: {
