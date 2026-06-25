@@ -277,6 +277,7 @@ nav a.nav-cta:hover { background: #2e8bc7; }
   transition: transform .35s ease;
 }
 .card-has-photo:hover .card-photo { transform: scale(1.04); }
+.card-photo-center { object-position: center center; }
 .card-body {
   padding: 1.25rem 1.5rem 1.5rem;
   flex: 1;
