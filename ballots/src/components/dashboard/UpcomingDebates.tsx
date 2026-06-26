@@ -35,7 +35,7 @@ export function UpcomingDebates(): React.JSX.Element {
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {d.date}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Room {d.room}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{d.room}</span>
               </div>
               <span className="text-xs text-slate-600 dark:text-slate-300">
                 <span className="text-aff dark:text-aff-d font-semibold">{affStr}</span>

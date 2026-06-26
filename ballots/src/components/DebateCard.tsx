@@ -4,6 +4,7 @@ import { formatTeam } from '../utils.ts';
 
 interface DebateCardProps {
   debateId: string;
+  judgeId?: string;
   badge?: React.ReactNode;
   isExpanded?: boolean;
   onClick: () => void;
@@ -14,6 +15,7 @@ interface DebateCardProps {
 
 export function DebateCard({
   debateId,
+  judgeId,
   badge,
   isExpanded,
   onClick,
@@ -27,9 +29,23 @@ export function DebateCard({
       affTeam: {},
       negTeam: {},
     },
+    ...(judgeId != null && {
+      ballots: {
+        $: { where: { 'debate.id': debateId, 'judge.id': judgeId } },
+      },
+    }),
   });
 
   const debate = data?.debates[0];
+  const ballot = data?.ballots?.[0];
+  const winnerBadge =
+    judgeId != null
+      ? ballot?.winner === 'aff'
+        ? 'Affirmative wins'
+        : ballot?.winner === 'neg'
+          ? 'Negative wins'
+          : '—'
+      : null;
   const hasTeams = (debate?.affTeam?.length ?? 0) > 0 || (debate?.negTeam?.length ?? 0) > 0;
   const hasChevron = isExpanded !== undefined;
 
@@ -49,9 +65,12 @@ export function DebateCard({
           <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
             {debate?.date}
           </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Room {debate?.room}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{debate?.room}</span>
           {badge != null && (
             <span className="text-xs text-slate-400 dark:text-slate-500">{badge}</span>
+          )}
+          {winnerBadge != null && (
+            <span className="text-xs text-slate-400 dark:text-slate-500">{winnerBadge}</span>
           )}
         </div>
         {debate?.resolution && (

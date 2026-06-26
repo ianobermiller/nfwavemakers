@@ -70,7 +70,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
     <PageLayout>
       <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
         {debate?.date
-          ? `Ballot — ${debate.date}${debate.room ? `, Room ${debate.room}` : ''}`
+          ? `Ballot — ${debate.date}${debate.room ? `, ${debate.room}` : ''}`
           : 'Ballot'}
       </h1>
 
@@ -80,7 +80,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
         {judge && (debate?.date || debate?.room) && <span>·</span>}
         {debate?.date && <span>{debate.date}</span>}
         {debate?.date && debate?.room && <span>·</span>}
-        {debate?.room && <span>Room {debate.room}</span>}
+        {debate?.room && <span>{debate.room}</span>}
         {debate?.resolution && (
           <>
             <span>·</span>

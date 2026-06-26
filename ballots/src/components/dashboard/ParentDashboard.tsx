@@ -58,24 +58,24 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
           </h2>
           <div className="flex flex-col gap-3">
             {submittedBallots.map((b) => {
-              const winnerText =
-                b.winner === 'aff'
-                  ? 'Affirmative wins'
-                  : b.winner === 'neg'
-                    ? 'Negative wins'
-                    : '—';
               if (b.debate) {
                 return (
                   <DebateCard
                     key={b.id}
                     debateId={b.debate.id}
-                    badge={winnerText}
+                    judgeId={userId}
                     onClick={() => navigate(`ballot/${b.id}`)}
                   />
                 );
               }
               const displayDate =
                 b.submittedAt != null ? new Date(b.submittedAt).toLocaleDateString() : '—';
+              const winnerText =
+                b.winner === 'aff'
+                  ? 'Affirmative wins'
+                  : b.winner === 'neg'
+                    ? 'Negative wins'
+                    : '—';
               return (
                 <button
                   key={b.id}

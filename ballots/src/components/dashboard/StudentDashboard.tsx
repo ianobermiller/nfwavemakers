@@ -52,7 +52,7 @@ export function StudentDashboard({ userId }: { userId: string }): React.JSX.Elem
                 {displayDate}
                 {debate?.room && (
                   <span className="font-normal text-slate-500 dark:text-slate-400 ml-2">
-                    · Room {debate.room}
+                    · {debate.room}
                   </span>
                 )}
               </strong>

@@ -42,7 +42,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3">
             <span>{draft.debate.date}</span>
             <span>·</span>
-            <span>Room {draft.debate.room}</span>
+            <span>{draft.debate.room}</span>
             {draft.debate.resolution && (
               <>
                 <span>·</span>

@@ -235,7 +235,7 @@ function ByStudent(): React.JSX.Element {
                       </span>
                       {debate?.room && (
                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                          Room {debate.room}
+                          {debate.room}
                         </span>
                       )}
                       {judgeNames.map((jn) => (
