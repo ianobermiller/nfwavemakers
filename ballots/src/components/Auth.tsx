@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { db } from '../db.ts';
+import { Input } from './ui/Input.tsx';
 
 export function Auth(): React.JSX.Element {
   const [email, setEmail] = useState('');
@@ -57,7 +58,7 @@ export function Auth(): React.JSX.Element {
           <>
             <div>
               <label htmlFor="email">Email address</label>
-              <input
+              <Input
                 id="email"
                 type="text"
                 value={email}
@@ -84,7 +85,7 @@ export function Auth(): React.JSX.Element {
             </p>
             <div>
               <label htmlFor="code">Verification code</label>
-              <input
+              <Input
                 id="code"
                 type="text"
                 inputMode="numeric"

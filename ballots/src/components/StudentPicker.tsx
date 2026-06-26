@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Input } from './ui/Input.tsx';
 
 interface Props {
   id: string;
@@ -39,7 +40,7 @@ export function StudentPicker({
 
   return (
     <div ref={containerRef} className="relative">
-      <input
+      <Input
         id={inputId}
         type="text"
         value={displayText}

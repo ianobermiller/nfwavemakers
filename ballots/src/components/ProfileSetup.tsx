@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { db } from '../db.ts';
 import type { Role } from '../types.ts';
+import { Input } from './ui/Input.tsx';
 
 interface Props {
   userId: string;
@@ -42,7 +43,7 @@ export function ProfileSetup({ userId }: Props): React.JSX.Element {
 
         <div>
           <label htmlFor="name">Full name</label>
-          <input
+          <Input
             id="name"
             type="text"
             value={name}

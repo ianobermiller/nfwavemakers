@@ -7,6 +7,7 @@ import {
 import { scoringTotal } from '../utils.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
+import { Select } from './ui/Select.tsx';
 
 interface ScoreRowProps {
   label: string;
@@ -102,8 +103,10 @@ export function SpeakerEvalCard({
         {hasUser && (
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-xs text-slate-400 dark:text-slate-500">Rank</span>
-            <select
-              className="w-auto text-xs px-1.5"
+            <Select
+              style={{ width: 'auto' }}
+              className="text-xs py-1 px-1.5"
+              aria-label={'Rank for ' + POSITION_LABELS[pos]}
               value={currentRank || ''}
               onChange={(e) => {
                 const n = parseInt(e.target.value, 10);
@@ -116,7 +119,7 @@ export function SpeakerEvalCard({
                   {n}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
       </div>
