@@ -100,7 +100,7 @@ export function SpeakerEvalCard({
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-xs text-slate-400 dark:text-slate-500">Rank</span>
             <select
-              className="text-xs border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer"
+              className="w-auto text-xs px-1.5"
               value={currentRank || ''}
               onChange={(e) => {
                 const n = parseInt(e.target.value, 10);
