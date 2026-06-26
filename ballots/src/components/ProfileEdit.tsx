@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { PageHeader } from './PageHeader.tsx';
+import { AppBar } from './AppBar.tsx';
 import type { Role } from '../types.ts';
 
 interface Props {
@@ -39,7 +39,7 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader title="Edit Profile" onBack={() => navigate('dashboard')} />
+      <AppBar />
 
       <div className="flex-1 max-w-sm mx-auto w-full px-4 py-8 flex flex-col gap-4">
         <div>

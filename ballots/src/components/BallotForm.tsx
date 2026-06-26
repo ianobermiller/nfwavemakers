@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useBallotDraft } from '../hooks/useBallotDraft.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
-import { PageHeader } from './PageHeader.tsx';
+import { AppBar } from './AppBar.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
 import type { Winner } from '../types.ts';
@@ -21,21 +21,24 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader
-        title="Ballot"
-        onBack={() => navigate('dashboard')}
-        action={
+      <AppBar />
+
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-28">
+        <div className="flex items-center justify-between mb-3">
+          <button
+            className="text-sm text-nf-blue dark:text-nf-blue-d font-medium cursor-pointer bg-transparent border-none p-0 hover:underline"
+            onClick={() => navigate('dashboard')}
+          >
+            ← Dashboard
+          </button>
           <button
             type="button"
-            className="text-white border border-white/40 rounded-lg px-3 py-1 text-xs cursor-pointer bg-transparent hover:bg-white/10 transition-colors"
+            className="text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1 cursor-pointer bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             onClick={() => setGuideOpen((o) => !o)}
           >
             Speaker Guide
           </button>
-        }
-      />
-
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-28">
+        </div>
         {draft.debate && (
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3">
             <span>{draft.debate.date}</span>

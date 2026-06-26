@@ -1,8 +1,7 @@
 import { db } from '../db.ts';
-import { navigate } from '../hooks/useHashRoute.ts';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName } from '../utils.ts';
-import { PageHeader } from './PageHeader.tsx';
+import { AppBar } from './AppBar.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 
 interface Props {
@@ -25,7 +24,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
 
   if (isLoading) {
     return (
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
         <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
       </div>
     );
@@ -34,7 +33,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   const debate = data?.debates?.[0];
   if (!debate) {
     return (
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
         <p className="text-slate-500 dark:text-slate-400 text-sm">Debate not found.</p>
       </div>
     );
@@ -46,8 +45,8 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   if (!isMember) {
     return (
       <div className="flex flex-col min-h-screen">
-        <PageHeader onBack={() => navigate('dashboard')} />
-        <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+        <AppBar />
+        <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             You don't have access to this debate.
           </p>
@@ -60,9 +59,9 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader title="Debate" onBack={() => navigate('dashboard')} />
+      <AppBar />
 
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-12">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pb-12">
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-6 flex flex-col gap-1 text-sm">
           <div>
             <strong>Date:</strong> {debate.date}

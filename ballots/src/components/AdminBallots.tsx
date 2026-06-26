@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { db } from '../db.ts';
-import { navigate } from '../hooks/useHashRoute.ts';
-import { PageHeader } from './PageHeader.tsx';
+import { AppBar } from './AppBar.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName, formatTeam, scoringTotal } from '../utils.ts';
@@ -13,7 +12,7 @@ export function AdminBallots(): React.JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader title="All Ballots" onBack={() => navigate('dashboard')} />
+      <AppBar />
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-12">
         <div className="flex gap-2 mb-5">

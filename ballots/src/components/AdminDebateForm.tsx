@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { id, type TransactionChunk } from '@instantdb/react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { PageHeader } from './PageHeader.tsx';
+import { AppBar } from './AppBar.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import { JudgePicker } from './JudgePicker.tsx';
 
@@ -132,8 +132,8 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
   if (isEditing && !initialized) {
     return (
       <div className="flex flex-col min-h-screen">
-        <PageHeader title="Edit Debate" onBack={() => navigate('admin')} />
-        <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+        <AppBar />
+        <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
           <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
         </div>
       </div>
@@ -142,12 +142,9 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader
-        title={isEditing ? 'Edit Debate' : 'New Debate'}
-        onBack={() => navigate('admin')}
-      />
+      <AppBar />
 
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-12">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pb-12">
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div>

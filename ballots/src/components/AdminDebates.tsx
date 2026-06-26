@@ -1,6 +1,6 @@
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { PageHeader } from './PageHeader.tsx';
+import { AppBar } from './AppBar.tsx';
 import { formatTeam } from '../utils.ts';
 
 export function AdminDebates(): React.JSX.Element {
@@ -17,20 +17,18 @@ export function AdminDebates(): React.JSX.Element {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader
-        title="Manage Debates"
-        onBack={() => navigate('dashboard')}
-        action={
+      <AppBar />
+
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pb-12">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Debates</h2>
           <button
-            className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold rounded-lg cursor-pointer border-none transition-colors"
+            className="px-3 py-1.5 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white text-sm font-semibold rounded-lg cursor-pointer border-none transition-colors"
             onClick={() => navigate('admin/new')}
           >
             + New
           </button>
-        }
-      />
-
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-12">
+        </div>
         {isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
         {!isLoading && debates.length === 0 && (
           <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">

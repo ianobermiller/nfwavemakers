@@ -1,9 +1,8 @@
 import { db } from '../db.ts';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
-import { navigate } from '../hooks/useHashRoute.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
-import { PageHeader } from './PageHeader.tsx';
+import { AppBar } from './AppBar.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 
 interface Props {
@@ -25,7 +24,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
   if (isLoading) {
     return (
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
         <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
       </div>
     );
@@ -34,14 +33,14 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   const ballot = data?.ballots?.[0];
   if (!ballot) {
     return (
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
         <p className="text-slate-500 dark:text-slate-400 text-sm">Ballot not found.</p>
       </div>
     );
   }
   if (!ballot.submittedAt) {
     return (
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
         <p className="text-slate-500 dark:text-slate-400 text-sm">Ballot not yet submitted.</p>
       </div>
     );
@@ -55,8 +54,8 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   if (!can.canViewBallot(judge?.id, evals.map((e) => e.speaker?.id))) {
     return (
       <div className="flex flex-col min-h-screen">
-        <PageHeader onBack={() => navigate('dashboard')} />
-        <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
+        <AppBar />
+        <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
           <p className="text-slate-500 dark:text-slate-400 text-sm">
             You don't have access to this ballot.
           </p>
@@ -71,7 +70,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeader title="Ballot" onBack={() => navigate('dashboard')} />
+      <AppBar />
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-12">
         {/* Compact metadata line */}
