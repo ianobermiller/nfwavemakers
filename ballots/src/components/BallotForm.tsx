@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from 'cnfast';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useBallotDraft } from '../hooks/useBallotDraft.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
@@ -59,13 +60,14 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
               {(['aff', 'neg'] as const).map((side) => (
                 <label
                   key={side}
-                  className={`inline-flex items-center gap-2 px-4 py-2 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors ${
+                  className={cn(
+                    'inline-flex items-center gap-2 px-4 py-2 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors',
                     draft.winner === side
                       ? side === 'aff'
                         ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'
                         : 'border-neg bg-neg-bg dark:border-neg-d dark:bg-neg-bg-d text-neg dark:text-neg-d'
-                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300'
-                  }`}
+                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300',
+                  )}
                 >
                   <input
                     className="sr-only"
@@ -94,11 +96,12 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
           {(['aff', 'neg'] as const).map((side) => (
             <div key={side}>
               <h2
-                className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-2 ${
+                className={cn(
+                  'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-2',
                   side === 'aff'
                     ? 'bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                    : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d'
-                }`}
+                    : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d',
+                )}
               >
                 {side === 'aff' ? 'Affirmative' : 'Negative'}
               </h2>

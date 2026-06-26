@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
+import { cn } from 'cnfast';
 
 interface Props {
   value: string[];
@@ -74,19 +75,21 @@ export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Eleme
                     type="button"
                     role="option"
                     aria-selected={selected}
-                    className={`w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 cursor-pointer border-none transition-colors ${
+                    className={cn(
+                      'w-full text-left px-3 py-2.5 text-sm flex items-center gap-2.5 cursor-pointer border-none transition-colors',
                       selected
                         ? 'bg-nf-blue-light dark:bg-slate-700 font-semibold text-nf-blue dark:text-nf-blue-d'
-                        : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100'
-                    }`}
+                        : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100',
+                    )}
                     onClick={() => toggleJudge(j.id)}
                   >
                     <span
-                      className={`w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-white text-xs ${
+                      className={cn(
+                        'w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center text-white text-xs',
                         selected
                           ? 'bg-nf-blue dark:bg-nf-blue-d border-nf-blue dark:border-nf-blue-d'
-                          : 'border-slate-300 dark:border-slate-500'
-                      }`}
+                          : 'border-slate-300 dark:border-slate-500',
+                      )}
                     >
                       {selected && '✓'}
                     </span>

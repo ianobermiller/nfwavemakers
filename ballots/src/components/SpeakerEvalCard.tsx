@@ -1,3 +1,4 @@
+import { cn } from 'cnfast';
 import {
   POSITION_LABELS,
   SCORE_CATEGORIES,
@@ -35,7 +36,7 @@ function ScoreRow({
       </button>
       <div className="flex gap-1" role="radiogroup" aria-label={label}>
         {[1, 2, 3, 4, 5].map((n) => (
-          <label key={n} className={`score-btn ${value === n ? 'active' : ''}`}>
+          <label key={n} className={cn('score-btn', value === n && 'active')}>
             <input
               className="sr-only"
               type="radio"
@@ -85,7 +86,10 @@ export function SpeakerEvalCard({
           {POSITION_LABELS[pos]}
         </h3>
         <span
-          className={`text-sm font-bold text-nf-blue dark:text-nf-blue-d transition-opacity ${total > 0 ? 'opacity-100' : 'opacity-0'}`}
+          className={cn(
+            'text-sm font-bold text-nf-blue dark:text-nf-blue-d transition-opacity',
+            total > 0 ? 'opacity-100' : 'opacity-0',
+          )}
         >
           {total > 0 ? total : '0'}
         </span>

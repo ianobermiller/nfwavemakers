@@ -1,3 +1,4 @@
+import { cn } from 'cnfast';
 import { db } from '../db.ts';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -94,13 +95,14 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
           {(['aff', 'neg'] as const).map((side) => (
             <span
               key={side}
-              className={`inline-flex items-center px-4 py-2 border-2 rounded-xl font-semibold text-sm ${
+              className={cn(
+                'inline-flex items-center px-4 py-2 border-2 rounded-xl font-semibold text-sm',
                 ballot.winner === side
                   ? side === 'aff'
                     ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'
                     : 'border-neg bg-neg-bg dark:border-neg-d dark:bg-neg-bg-d text-neg dark:text-neg-d'
-                  : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'
-              }`}
+                  : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500',
+              )}
             >
               {side === 'aff' ? 'Affirmative wins' : 'Negative wins'}
             </span>
@@ -118,11 +120,12 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
         {(['aff', 'neg'] as const).map((side) => (
           <div key={side}>
             <h2
-              className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-2 ${
+              className={cn(
+                'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-2',
                 side === 'aff'
                   ? 'bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                  : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d'
-              }`}
+                  : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d',
+              )}
             >
               {side === 'aff' ? 'Affirmative' : 'Negative'}
             </h2>

@@ -1,5 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useState } from 'react';
+import { cn } from 'cnfast';
 import { SPEAKER_GUIDE_ROWS } from '../types.ts';
 
 interface Props {
@@ -80,7 +81,10 @@ export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): Re
                       {row.category}
                     </span>
                     <span
-                      className={`text-slate-400 dark:text-slate-500 text-xs transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                      className={cn(
+                        'text-slate-400 dark:text-slate-500 text-xs transition-transform duration-200',
+                        isExpanded && 'rotate-180',
+                      )}
                     >
                       ▾
                     </span>

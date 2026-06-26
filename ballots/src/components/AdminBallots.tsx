@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from 'cnfast';
 import { db } from '../db.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
@@ -16,11 +17,12 @@ export function AdminBallots(): React.JSX.Element {
         {(['debate', 'student'] as const).map((t) => (
           <button
             key={t}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors ${
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors',
               view === t
                 ? 'bg-nf-blue dark:bg-nf-blue-d text-white border-nf-blue dark:border-nf-blue-d'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent'
-            }`}
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent',
+            )}
             onClick={() => setView(t)}
           >
             {t === 'debate' ? 'By Debate' : 'By Student'}
@@ -315,13 +317,14 @@ function BallotSummary({ ballot }: { ballot: BallotWithDetails }): React.JSX.Ele
           Judge: {ballot.judge?.name ?? '—'}
         </span>
         <span
-          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+          className={cn(
+            'text-xs font-semibold px-2 py-0.5 rounded-full',
             ballot.winner === 'aff'
               ? 'bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d'
               : ballot.winner === 'neg'
                 ? 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
-          }`}
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-500',
+          )}
         >
           {ballot.winner === 'aff'
             ? 'Aff wins'
@@ -339,11 +342,12 @@ function BallotSummary({ ballot }: { ballot: BallotWithDetails }): React.JSX.Ele
         {(['aff', 'neg'] as const).map((side) => (
           <div key={side}>
             <div
-              className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded mb-2 ${
+              className={cn(
+                'text-xs font-bold uppercase tracking-wider px-2 py-1 rounded mb-2',
                 side === 'aff'
                   ? 'bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                  : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d'
-              }`}
+                  : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d',
+              )}
             >
               {side === 'aff' ? 'Affirmative' : 'Negative'}
             </div>

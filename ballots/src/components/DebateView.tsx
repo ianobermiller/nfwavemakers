@@ -1,3 +1,4 @@
+import { cn } from 'cnfast';
 import { db } from '../db.ts';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName } from '../utils.ts';
@@ -106,11 +107,12 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
             {(['aff', 'neg'] as const).map((side) => (
               <div key={side} className="mb-4">
                 <h3
-                  className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-3 ${
+                  className={cn(
+                    'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-3',
                     side === 'aff'
                       ? 'bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                      : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d'
-                  }`}
+                      : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d',
+                  )}
                 >
                   {side === 'aff' ? 'Affirmative' : 'Negative'}
                 </h3>

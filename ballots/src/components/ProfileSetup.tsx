@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from 'cnfast';
 import { db } from '../db.ts';
 import type { Role } from '../types.ts';
 import { Input } from './ui/Input.tsx';
@@ -69,11 +70,12 @@ export function ProfileSetup({ userId }: Props): React.JSX.Element {
                 type="button"
                 onClick={() => setRole(r.value)}
                 aria-pressed={role === r.value}
-                className={`text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer ${
+                className={cn(
+                  'text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer',
                   role === r.value
                     ? 'border-nf-blue dark:border-nf-blue-d bg-nf-blue-light dark:bg-slate-700'
-                    : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
-                }`}
+                    : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500',
+                )}
               >
                 <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">
                   {r.label}

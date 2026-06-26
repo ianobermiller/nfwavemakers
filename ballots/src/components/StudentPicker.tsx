@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { cn } from 'cnfast';
 import { Input } from './ui/Input.tsx';
 
 interface Props {
@@ -110,11 +111,12 @@ export function StudentPicker({
             ref={(el) => {
               optionRefs.current[0] = el;
             }}
-            className={`w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors ${
+            className={cn(
+              'w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors text-slate-400',
               focusedIndex === 0
                 ? 'bg-slate-100 dark:bg-slate-700'
-                : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700'
-            } text-slate-400`}
+                : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700',
+            )}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -150,11 +152,13 @@ export function StudentPicker({
               ref={(el) => {
                 optionRefs.current[i + 1] = el;
               }}
-              className={`w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors ${
+              className={cn(
+                'w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors',
                 value === s.id
                   ? 'bg-nf-blue-light dark:bg-slate-700 font-semibold text-nf-blue dark:text-nf-blue-d'
-                  : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100'
-              } ${focusedIndex === i + 1 ? 'ring-2 ring-inset ring-nf-blue dark:ring-nf-blue-d' : ''}`}
+                  : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100',
+                focusedIndex === i + 1 && 'ring-2 ring-inset ring-nf-blue dark:ring-nf-blue-d',
+              )}
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
