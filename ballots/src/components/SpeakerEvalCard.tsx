@@ -104,7 +104,7 @@ export function SpeakerEvalCard({
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-xs text-slate-400 dark:text-slate-500">Rank</span>
             <Select
-              style={{ width: 'auto', padding: '0.25rem 0.375rem' }}
+              style={{ width: 'auto' }}
               className="text-xs"
               aria-label={'Rank for ' + POSITION_LABELS[pos]}
               value={currentRank || ''}
