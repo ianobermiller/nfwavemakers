@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { db } from '../db.ts';
 import { navigate } from './useHashRoute.ts';
 import { useDebouncedSave } from './useDebouncedSave.ts';
@@ -49,12 +49,7 @@ export function useBallotDraft({ debateId, judgeId }: Props) {
 
   const debate = debateData?.debates?.[0];
 
-  const lockedPositions = useMemo<Set<Position>>(() => {
-    if (!debate) return new Set<Position>();
-    // Lock all slots in an assigned debate so judges can't accidentally
-    // add speakers to empty slots (e.g. when a side has only 1 debater).
-    return new Set<Position>(POSITIONS);
-  }, [debate]);
+  const speakersLocked = debate != null;
 
   useEffect(() => {
     if (initialized) return;
@@ -131,13 +126,13 @@ export function useBallotDraft({ debateId, judgeId }: Props) {
   return {
     debate,
     students,
-    lockedPositions,
     winner,
     rfd,
     speakers,
     rankOrder,
     activePositions: getActivePositions(speakers),
     allScored: isAllScored(speakers),
+    speakersLocked,
     canSubmit: canSubmitBallot(speakers, winner, rankOrder),
     submitting,
     updateWinner,
