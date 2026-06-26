@@ -41,31 +41,6 @@
     @apply block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1.5;
   }
 
-  input[type='text'],
-  input[type='email'],
-  input[type='number'],
-  input[type='date'],
-  select,
-  textarea {
-    @apply w-full px-3 py-2.5 border-2 border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm outline-none transition-colors;
-    font-family: inherit;
-  }
-
-  input:focus,
-  select:focus,
-  textarea:focus {
-    @apply border-nf-accent;
-  }
-
-  textarea {
-    resize: none;
-    overflow: hidden;
-    display: block;
-  }
-
-  select {
-    cursor: pointer;
-  }
 }
 
 @layer components {
@@ -85,5 +60,6 @@
     resize: none;
     overflow: hidden;
     min-height: 2.5rem;
+    field-sizing: content;
   }
 }
