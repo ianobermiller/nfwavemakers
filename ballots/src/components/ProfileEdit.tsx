@@ -52,17 +52,25 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
             onKeyDown={(e) => e.key === 'Enter' && void save()}
             placeholder="Jane Smith"
             autoFocus
+            required
+            aria-required="true"
           />
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">I am a…</p>
-          <div className="flex flex-col gap-2">
+          <p
+            id="role-group-label"
+            className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2"
+          >
+            I am a…
+          </p>
+          <div role="group" aria-labelledby="role-group-label" className="flex flex-col gap-2">
             {SELECTABLE_ROLES.map((r) => (
               <button
                 key={r.value}
                 type="button"
                 onClick={() => setRole(r.value)}
+                aria-pressed={role === r.value}
                 className={`text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer ${
                   role === r.value
                     ? 'border-nf-blue dark:border-nf-blue-d bg-nf-blue-light dark:bg-slate-700'
