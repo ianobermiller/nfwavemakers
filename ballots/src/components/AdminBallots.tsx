@@ -91,6 +91,8 @@ function ByDebate(): React.JSX.Element {
             <button
               className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               onClick={() => toggle(d.id)}
+              aria-expanded={isOpen}
+              aria-controls={`debate-panel-${d.id}`}
             >
               <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -112,11 +114,16 @@ function ByDebate(): React.JSX.Element {
                   </span>
                 </span>
               </div>
-              <span className="text-slate-400 text-xs shrink-0">{isOpen ? '▲' : '▼'}</span>
+              <span className="text-slate-400 text-xs shrink-0" aria-hidden="true">
+                {isOpen ? '▲' : '▼'}
+              </span>
             </button>
 
             {isOpen && (
-              <div className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4">
+              <div
+                id={`debate-panel-${d.id}`}
+                className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
+              >
                 {submittedBallots.length === 0 && (
                   <p className="text-xs text-slate-400 dark:text-slate-500">
                     No submitted ballots yet.
@@ -213,6 +220,8 @@ function ByStudent(): React.JSX.Element {
             <button
               className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               onClick={() => toggle(sid)}
+              aria-expanded={isOpen}
+              aria-controls={`student-panel-${sid}`}
             >
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -222,11 +231,16 @@ function ByStudent(): React.JSX.Element {
                   {byGroup.size} debate{byGroup.size !== 1 ? 's' : ''}
                 </span>
               </div>
-              <span className="text-slate-400 text-xs shrink-0">{isOpen ? '▲' : '▼'}</span>
+              <span className="text-slate-400 text-xs shrink-0" aria-hidden="true">
+                {isOpen ? '▲' : '▼'}
+              </span>
             </button>
 
             {isOpen && (
-              <div className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4">
+              <div
+                id={`student-panel-${sid}`}
+                className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
+              >
                 {[...byGroup.entries()].map(([groupKey, groupEvals]) => {
                   const ballot = groupEvals[0]?.ballot;
                   const debate = ballot?.debate;
