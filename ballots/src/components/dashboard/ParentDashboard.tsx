@@ -35,28 +35,21 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
           </h2>
           <div className="flex flex-col gap-3">
             {debates.map((d) => (
-              <div
+              <button
                 key={d.id}
-                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1 text-left cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all"
+                onClick={() => navigate(`judge/${d.id}`)}
               >
-                <div className="flex flex-col gap-1 min-w-0">
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {d.date}
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  {d.date}
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Room {d.room}</span>
+                {d.resolution && (
+                  <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                    {d.resolution}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">Room {d.room}</span>
-                  {d.resolution && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                      {d.resolution}
-                    </span>
-                  )}
-                </div>
-                <button
-                  className="shrink-0 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg cursor-pointer border border-slate-200 dark:border-slate-600 transition-colors"
-                  onClick={() => navigate(`judge/${d.id}`)}
-                >
-                  Fill Ballot
-                </button>
-              </div>
+                )}
+              </button>
             ))}
           </div>
         </section>
