@@ -23,7 +23,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
     <div className="flex flex-col min-h-screen">
       <AppBar />
 
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-28">
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-8">
         <div className="flex items-center justify-between mb-3">
           <button
             className="text-sm text-nf-blue dark:text-nf-blue-d font-medium cursor-pointer bg-transparent border-none p-0 hover:underline"
@@ -132,26 +132,25 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
             </button>
           </div>
         )}
-      </div>
-
-      {/* Sticky submit */}
-      <div className="fixed bottom-0 inset-x-0 z-20 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 px-4 py-3 flex flex-col items-center gap-1.5 max-w-4xl mx-auto">
-        <button
-          className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-bold rounded-xl cursor-pointer disabled:opacity-40 transition-colors"
-          disabled={!draft.canSubmit || draft.submitting}
-          onClick={() => void draft.submit()}
-        >
-          {draft.submitting ? 'Submitting…' : 'Submit Ballot'}
-        </button>
-        {!draft.canSubmit && (
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            {draft.winner === undefined
-              ? 'Select a winner to submit.'
-              : !draft.allScored
-                ? 'Score all 6 areas for each speaker to submit.'
-                : 'Assign a rank to each speaker to submit.'}
-          </p>
-        )}
+        {/* Submit */}
+        <div className="mt-6 flex flex-col items-center gap-1.5">
+          <button
+            className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-bold rounded-xl cursor-pointer disabled:opacity-40 transition-colors"
+            disabled={!draft.canSubmit || draft.submitting}
+            onClick={() => void draft.submit()}
+          >
+            {draft.submitting ? 'Submitting…' : 'Submit Ballot'}
+          </button>
+          {!draft.canSubmit && (
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {draft.winner === undefined
+                ? 'Select a winner to submit.'
+                : !draft.allScored
+                  ? 'Score all 6 areas for each speaker to submit.'
+                  : 'Assign a rank to each speaker to submit.'}
+            </p>
+          )}
+        </div>
       </div>
 
       <SpeakerPointGuide
