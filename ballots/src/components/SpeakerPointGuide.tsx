@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { SPEAKER_GUIDE_ROWS } from '../types.ts';
 
 interface Props {
@@ -8,18 +8,21 @@ interface Props {
 }
 
 export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): React.JSX.Element {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
-
-  useEffect(() => {
-    if (focusCategory === undefined) return;
-    const idx = SPEAKER_GUIDE_ROWS.findIndex((r) => r.category === focusCategory);
-    if (idx !== -1) setOpenIndex(idx);
-  }, [focusCategory]);
+  const prevFocusCategoryRef = useRef(focusCategory);
+  const [manualOpenIndex, setManualOpenIndex] = useState<number | null>(0);
+  let openIndex = manualOpenIndex;
+  if (focusCategory !== prevFocusCategoryRef.current) {
+    prevFocusCategoryRef.current = focusCategory;
+    if (focusCategory !== undefined) {
+      const idx = SPEAKER_GUIDE_ROWS.findIndex((r) => r.category === focusCategory);
+      if (idx !== -1) openIndex = idx;
+    }
+  }
 
   if (!isOpen) return <></>;
 
   function toggle(i: number): void {
-    setOpenIndex((prev) => (prev === i ? null : i));
+    setManualOpenIndex((prev) => (prev === i ? null : i));
   }
 
   return (
