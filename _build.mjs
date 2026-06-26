@@ -15,4 +15,11 @@ await cp('ballots/dist', '_site/ballots', { recursive: true });
 // (Cloudflare Pages only reads _redirects from the output root)
 await writeFile('_site/_redirects', '/ballots/*  /ballots/  200\n');
 
+// Prevent index.html from being cached — stale HTML referencing old hashed
+// asset filenames causes MIME type errors after a new deploy.
+await writeFile(
+  '_site/_headers',
+  '/ballots/index.html\n  Cache-Control: no-cache, no-store, must-revalidate\n',
+);
+
 console.log('Build complete → _site/');
