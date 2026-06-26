@@ -50,15 +50,10 @@ export function useBallotDraft({ debateId, judgeId }: Props) {
   const debate = debateData?.debates?.[0];
 
   const lockedPositions = useMemo<Set<Position>>(() => {
-    const locked = new Set<Position>();
-    if (!debate) return locked;
-    const affTeam = debate.affTeam ?? [];
-    const negTeam = debate.negTeam ?? [];
-    if (affTeam[0]) locked.add('aff1');
-    if (affTeam[1]) locked.add('aff2');
-    if (negTeam[0]) locked.add('neg1');
-    if (negTeam[1]) locked.add('neg2');
-    return locked;
+    if (!debate) return new Set<Position>();
+    // Lock all slots in an assigned debate so judges can't accidentally
+    // add speakers to empty slots (e.g. when a side has only 1 debater).
+    return new Set<Position>(POSITIONS);
   }, [debate]);
 
   useEffect(() => {

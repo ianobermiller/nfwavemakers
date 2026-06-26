@@ -110,7 +110,9 @@ export function isAllScored(speakers: Record<Position, SpeakerFormState>): boole
 
 function isAllRanked(speakers: Record<Position, SpeakerFormState>, rankOrder: Position[]): boolean {
   const active = getActivePositions(speakers);
-  return active.length > 0 && rankOrder.length === active.length;
+  if (active.length === 0) return false;
+  const ranked = new Set(rankOrder);
+  return active.every((pos) => ranked.has(pos));
 }
 
 export function canSubmitBallot(
