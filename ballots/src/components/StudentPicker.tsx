@@ -7,7 +7,12 @@ interface Props {
   students: Array<{ id: string; name?: string | null }>;
 }
 
-export function StudentPicker({ id: inputId, value, onChange, students }: Props): React.JSX.Element {
+export function StudentPicker({
+  id: inputId,
+  value,
+  onChange,
+  students,
+}: Props): React.JSX.Element {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,7 +81,9 @@ export function StudentPicker({ id: inputId, value, onChange, students }: Props)
             </button>
           ))}
           {filtered.length === 0 && (
-            <p className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">No students found</p>
+            <p className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
+              No students found
+            </p>
           )}
         </div>
       )}

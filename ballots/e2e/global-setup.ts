@@ -78,7 +78,9 @@ export default async function globalSetup(): Promise<void> {
   // Verify tokens work with this app before proceeding
   const studentVerified = await adminDb.auth.verifyToken(studentToken);
   const judgeVerified = await adminDb.auth.verifyToken(judgeToken);
-  console.log(`[e2e] Token verify — student: ${studentVerified?.email}, judge: ${judgeVerified?.email}`);
+  console.log(
+    `[e2e] Token verify — student: ${studentVerified?.email}, judge: ${judgeVerified?.email}`,
+  );
 
   const studentUser = await requireUser(adminDb, 'student@test.com');
   const judgeUser = await requireUser(adminDb, 'judge@test.com');

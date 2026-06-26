@@ -44,7 +44,8 @@ test.describe('Student picker', () => {
   test('judge can search for and find a student', async ({ page }) => {
     const judgeToken = process.env['E2E_JUDGE_TOKEN'];
     const studentName = process.env['E2E_STUDENT_NAME'];
-    if (!judgeToken || !studentName) throw new Error('Missing e2e env vars — run full test suite with globalSetup');
+    if (!judgeToken || !studentName)
+      throw new Error('Missing e2e env vars — run full test suite with globalSetup');
 
     await signInWithToken(page, judgeToken);
 
@@ -58,7 +59,9 @@ test.describe('Student picker', () => {
     await picker.fill(studentName.split(' ')[0] ?? studentName);
 
     // The student should appear in the dropdown — not "No students found"
-    await expect(page.locator(`button:has-text("${studentName}")`).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(`button:has-text("${studentName}")`).first()).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page.locator('text=No students found')).not.toBeVisible();
   });
 });
@@ -86,12 +89,14 @@ test.describe('Judge ballot view', () => {
 
     // Should show ballot content
     await expect(page.locator('text=Affirmative wins')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
+      timeout: 5000,
+    });
 
     // Should NOT show any edit controls
     await expect(page.locator('input[type="radio"]')).not.toBeVisible();
     await expect(page.locator('button:has-text("Submit Ballot")')).not.toBeVisible();
-    await expect(page.locator('text=You don\'t have access')).not.toBeVisible();
+    await expect(page.locator("text=You don't have access")).not.toBeVisible();
   });
 });
 
@@ -119,7 +124,9 @@ test.describe('Student ballot view', () => {
     // Should show the ballot with judge name and winner
     await expect(page.locator('text=Bob Judge')).toBeVisible({ timeout: 5000 });
     // DebateView renders "Winner: Affirmative" (not "Affirmative wins"), verify via the RFD which is unique
-    await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page.locator('text=No submitted ballots yet')).not.toBeVisible();
   });
 });

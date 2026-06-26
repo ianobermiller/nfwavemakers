@@ -66,7 +66,9 @@ export function ProfileSetup({ userId }: Props): React.JSX.Element {
                     : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                 }`}
               >
-                <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{r.label}</p>
+                <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">
+                  {r.label}
+                </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{r.description}</p>
               </button>
             ))}

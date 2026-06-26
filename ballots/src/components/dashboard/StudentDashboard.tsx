@@ -41,9 +41,7 @@ export function StudentDashboard({ userId }: { userId: string }): React.JSX.Elem
             debate?.date ??
             (ballot?.submittedAt != null ? new Date(ballot.submittedAt).toLocaleDateString() : '—');
           const viewRoute = debate?.id ? `debate/${debate.id}` : `ballot/${ballot?.id}`;
-          const judgeNames = [
-            ...new Set(evs.map((ev) => ev.ballot?.judge?.name).filter(Boolean)),
-          ];
+          const judgeNames = [...new Set(evs.map((ev) => ev.ballot?.judge?.name).filter(Boolean))];
           return (
             <button
               key={groupKey}
