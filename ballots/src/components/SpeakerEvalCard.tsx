@@ -57,6 +57,7 @@ interface Props {
   students: Array<{ id: string; name?: string | null }>;
   activeCount: number;
   currentRank: number;
+  locked?: boolean;
   onUpdate: (patch: Partial<SpeakerFormState>) => void;
   onRank: (rank: number) => void;
   onGuideOpen: (category: string) => void;
@@ -68,6 +69,7 @@ export function SpeakerEvalCard({
   students,
   activeCount,
   currentRank,
+  locked,
   onUpdate,
   onRank,
   onGuideOpen,
@@ -94,6 +96,7 @@ export function SpeakerEvalCard({
             value={speaker.userId}
             onChange={(uid) => onUpdate({ userId: uid })}
             students={students}
+            disabled={locked}
           />
         </div>
         {hasUser && (

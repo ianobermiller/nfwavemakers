@@ -109,6 +109,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
                   students={draft.students}
                   activeCount={draft.activePositions.length}
                   currentRank={draft.rankOrder.indexOf(pos) + 1}
+                  locked={draft.lockedPositions.has(pos)}
                   onUpdate={(patch) => draft.updateSpeaker(pos, patch)}
                   onRank={(rank) => draft.assignRank(pos, rank)}
                   onGuideOpen={(category) => {

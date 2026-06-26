@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { db } from '../db.ts';
 import { navigate } from './useHashRoute.ts';
 import { useDebouncedSave } from './useDebouncedSave.ts';
@@ -48,6 +48,18 @@ export function useBallotDraft({ debateId, judgeId }: Props) {
   );
 
   const debate = debateData?.debates?.[0];
+
+  const lockedPositions = useMemo<Set<Position>>(() => {
+    const locked = new Set<Position>();
+    if (!debate) return locked;
+    const affTeam = debate.affTeam ?? [];
+    const negTeam = debate.negTeam ?? [];
+    if (affTeam[0]) locked.add('aff1');
+    if (affTeam[1]) locked.add('aff2');
+    if (negTeam[0]) locked.add('neg1');
+    if (negTeam[1]) locked.add('neg2');
+    return locked;
+  }, [debate]);
 
   useEffect(() => {
     if (initialized) return;
@@ -124,6 +136,7 @@ export function useBallotDraft({ debateId, judgeId }: Props) {
   return {
     debate,
     students,
+    lockedPositions,
     winner,
     rfd,
     speakers,

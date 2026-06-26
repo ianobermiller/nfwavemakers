@@ -5,6 +5,7 @@ interface Props {
   value: string;
   onChange: (id: string) => void;
   students: Array<{ id: string; name?: string | null }>;
+  disabled?: boolean | undefined;
 }
 
 export function StudentPicker({
@@ -12,6 +13,7 @@ export function StudentPicker({
   value,
   onChange,
   students,
+  disabled,
 }: Props): React.JSX.Element {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -43,11 +45,12 @@ export function StudentPicker({
         value={displayText}
         placeholder="Search students…"
         autoComplete="off"
+        disabled={disabled}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => !disabled && setOpen(true)}
       />
       {open && (
         <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
