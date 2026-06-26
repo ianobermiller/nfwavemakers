@@ -21,7 +21,7 @@ export function AdminDebates(): React.JSX.Element {
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pb-12">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Debates</h2>
+          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Debates</h1>
           <button
             className="px-3 py-1.5 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white text-sm font-semibold rounded-lg cursor-pointer border-none transition-colors"
             onClick={() => navigate('admin/new')}

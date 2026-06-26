@@ -73,6 +73,12 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
       <AppBar />
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-12">
+        <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
+          {debate?.date
+            ? `Ballot — ${debate.date}${debate.room ? `, Room ${debate.room}` : ''}`
+            : 'Ballot'}
+        </h1>
+
         {/* Compact metadata line */}
         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3 flex-wrap">
           {judge && <span>Judge: {judge.name}</span>}

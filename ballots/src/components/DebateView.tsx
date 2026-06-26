@@ -61,7 +61,11 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
     <div className="flex flex-col min-h-screen">
       <AppBar />
 
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pb-12">
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-6 pb-12">
+        <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
+          {debate.date ? `Debate — ${debate.date}, Room ${debate.room}` : 'Debate'}
+        </h1>
+
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-6 flex flex-col gap-1 text-sm">
           <div>
             <strong>Date:</strong> {debate.date}
