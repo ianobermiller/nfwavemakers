@@ -4,7 +4,8 @@ import { db } from '../db.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
-import { formatSpeakerName, formatTeam, scoringTotal } from '../utils.ts';
+import { formatSpeakerName, scoringTotal } from '../utils.ts';
+import { DebateCard } from './DebateCard.tsx';
 
 type TabView = 'debate' | 'student';
 
@@ -41,8 +42,6 @@ function ByDebate(): React.JSX.Element {
   const { data, isLoading } = db.useQuery({
     debates: {
       $: { order: { serverCreatedAt: 'desc' } },
-      affTeam: {},
-      negTeam: {},
       ballots: {
         judge: {},
         speakerEvals: { speaker: {} },
@@ -86,37 +85,15 @@ function ByDebate(): React.JSX.Element {
             key={d.id}
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
           >
-            <button
+            <DebateCard
               id={`debate-btn-${d.id}`}
-              className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              debateId={d.id}
+              badge={`${submittedBallots.length} ballot${submittedBallots.length !== 1 ? 's' : ''}`}
+              isExpanded={isOpen}
               onClick={() => toggle(d.id)}
-              aria-expanded={isOpen}
-              aria-controls={`debate-panel-${d.id}`}
-            >
-              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {d.date}
-                  </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">Room {d.room}</span>
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
-                    {submittedBallots.length} ballot{submittedBallots.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <span className="text-xs">
-                  <span className="text-aff dark:text-aff-d font-semibold">
-                    {formatTeam(d.affTeam ?? [])}
-                  </span>
-                  <span className="text-slate-400 dark:text-slate-500 mx-1">vs</span>
-                  <span className="text-neg dark:text-neg-d font-semibold">
-                    {formatTeam(d.negTeam ?? [])}
-                  </span>
-                </span>
-              </div>
-              <span className="text-slate-400 text-xs shrink-0" aria-hidden="true">
-                {isOpen ? '▲' : '▼'}
-              </span>
-            </button>
+              ariaControls={`debate-panel-${d.id}`}
+              className="rounded-none border-0 hover:border-0 hover:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700/50"
+            />
 
             <div
               id={`debate-panel-${d.id}`}

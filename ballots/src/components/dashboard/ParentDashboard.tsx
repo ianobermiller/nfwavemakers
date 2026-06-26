@@ -1,5 +1,6 @@
 import { db } from '../../db.ts';
 import { navigate } from '../../hooks/useHashRoute.ts';
+import { DebateCard } from '../DebateCard.tsx';
 
 export function ParentDashboard({ userId }: { userId: string }): React.JSX.Element {
   const { data, isLoading } = db.useQuery({
@@ -35,21 +36,7 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
           </h2>
           <div className="flex flex-col gap-3">
             {debates.map((d) => (
-              <button
-                key={d.id}
-                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1 text-left cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all"
-                onClick={() => navigate(`judge/${d.id}`)}
-              >
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {d.date}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Room {d.room}</span>
-                {d.resolution && (
-                  <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
-                    {d.resolution}
-                  </span>
-                )}
-              </button>
+              <DebateCard key={d.id} debateId={d.id} onClick={() => navigate(`judge/${d.id}`)} />
             ))}
           </div>
         </section>
@@ -71,9 +58,24 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
           </h2>
           <div className="flex flex-col gap-3">
             {submittedBallots.map((b) => {
+              const winnerText =
+                b.winner === 'aff'
+                  ? 'Affirmative wins'
+                  : b.winner === 'neg'
+                    ? 'Negative wins'
+                    : '—';
+              if (b.debate) {
+                return (
+                  <DebateCard
+                    key={b.id}
+                    debateId={b.debate.id}
+                    badge={winnerText}
+                    onClick={() => navigate(`ballot/${b.id}`)}
+                  />
+                );
+              }
               const displayDate =
-                b.debate?.date ??
-                (b.submittedAt != null ? new Date(b.submittedAt).toLocaleDateString() : '—');
+                b.submittedAt != null ? new Date(b.submittedAt).toLocaleDateString() : '—';
               return (
                 <button
                   key={b.id}
@@ -83,18 +85,7 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
                   <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {displayDate}
                   </span>
-                  {b.debate?.room && (
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      Room {b.debate.room}
-                    </span>
-                  )}
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
-                    {b.winner === 'aff'
-                      ? 'Affirmative wins'
-                      : b.winner === 'neg'
-                        ? 'Negative wins'
-                        : '—'}
-                  </span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{winnerText}</span>
                 </button>
               );
             })}
