@@ -89,6 +89,7 @@ function ByDebate(): React.JSX.Element {
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
           >
             <button
+              id={`debate-btn-${d.id}`}
               className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               onClick={() => toggle(d.id)}
               aria-expanded={isOpen}
@@ -119,21 +120,22 @@ function ByDebate(): React.JSX.Element {
               </span>
             </button>
 
-            {isOpen && (
-              <div
-                id={`debate-panel-${d.id}`}
-                className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
-              >
-                {submittedBallots.length === 0 && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
-                    No submitted ballots yet.
-                  </p>
-                )}
-                {submittedBallots.map((ballot) => (
-                  <BallotSummary key={ballot.id} ballot={ballot} />
-                ))}
-              </div>
-            )}
+            <div
+              id={`debate-panel-${d.id}`}
+              role="region"
+              aria-labelledby={`debate-btn-${d.id}`}
+              hidden={!isOpen}
+              className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
+            >
+              {submittedBallots.length === 0 && (
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  No submitted ballots yet.
+                </p>
+              )}
+              {submittedBallots.map((ballot) => (
+                <BallotSummary key={ballot.id} ballot={ballot} />
+              ))}
+            </div>
           </div>
         );
       })}
@@ -218,6 +220,7 @@ function ByStudent(): React.JSX.Element {
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
           >
             <button
+              id={`student-btn-${sid}`}
               className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               onClick={() => toggle(sid)}
               aria-expanded={isOpen}
@@ -236,45 +239,46 @@ function ByStudent(): React.JSX.Element {
               </span>
             </button>
 
-            {isOpen && (
-              <div
-                id={`student-panel-${sid}`}
-                className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
-              >
-                {[...byGroup.entries()].map(([groupKey, groupEvals]) => {
-                  const ballot = groupEvals[0]?.ballot;
-                  const debate = ballot?.debate;
-                  const judgeNames = [
-                    ...new Set(groupEvals.map((e) => e.ballot?.judge?.name).filter(Boolean)),
-                  ];
-                  return (
-                    <div key={groupKey}>
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                          {debate?.date ?? '—'}
+            <div
+              id={`student-panel-${sid}`}
+              role="region"
+              aria-labelledby={`student-btn-${sid}`}
+              hidden={!isOpen}
+              className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
+            >
+              {[...byGroup.entries()].map(([groupKey, groupEvals]) => {
+                const ballot = groupEvals[0]?.ballot;
+                const debate = ballot?.debate;
+                const judgeNames = [
+                  ...new Set(groupEvals.map((e) => e.ballot?.judge?.name).filter(Boolean)),
+                ];
+                return (
+                  <div key={groupKey}>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                        {debate?.date ?? '—'}
+                      </span>
+                      {debate?.room && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Room {debate.room}
                         </span>
-                        {debate?.room && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            Room {debate.room}
-                          </span>
-                        )}
-                        {judgeNames.map((jn) => (
-                          <span
-                            key={jn}
-                            className="text-xs text-slate-400 dark:text-slate-500 italic"
-                          >
-                            Judge: {jn}
-                          </span>
-                        ))}
-                      </div>
-                      {groupEvals.map((ev) => (
-                        <StudentEvalCard key={ev.id} ev={ev} />
+                      )}
+                      {judgeNames.map((jn) => (
+                        <span
+                          key={jn}
+                          className="text-xs text-slate-400 dark:text-slate-500 italic"
+                        >
+                          Judge: {jn}
+                        </span>
                       ))}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    {groupEvals.map((ev) => (
+                      <StudentEvalCard key={ev.id} ev={ev} />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       })}
