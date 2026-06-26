@@ -126,6 +126,7 @@ export function useBallotDraft({ debateId, judgeId }: Props) {
   return {
     debate,
     students,
+
     winner,
     rfd,
     speakers,
