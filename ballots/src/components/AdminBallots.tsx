@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { db } from '../db.ts';
-import { AppBar } from './AppBar.tsx';
+import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName, formatTeam, scoringTotal } from '../utils.ts';
@@ -11,29 +11,25 @@ export function AdminBallots(): React.JSX.Element {
   const [view, setView] = useState<TabView>('debate');
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <AppBar />
-
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-12">
-        <div className="flex gap-2 mb-5">
-          {(['debate', 'student'] as const).map((t) => (
-            <button
-              key={t}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors ${
-                view === t
-                  ? 'bg-nf-blue dark:bg-nf-blue-d text-white border-nf-blue dark:border-nf-blue-d'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent'
-              }`}
-              onClick={() => setView(t)}
-            >
-              {t === 'debate' ? 'By Debate' : 'By Student'}
-            </button>
-          ))}
-        </div>
-
-        {view === 'debate' ? <ByDebate /> : <ByStudent />}
+    <PageLayout>
+      <div className="flex gap-2 mb-5">
+        {(['debate', 'student'] as const).map((t) => (
+          <button
+            key={t}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors ${
+              view === t
+                ? 'bg-nf-blue dark:bg-nf-blue-d text-white border-nf-blue dark:border-nf-blue-d'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent'
+            }`}
+            onClick={() => setView(t)}
+          >
+            {t === 'debate' ? 'By Debate' : 'By Student'}
+          </button>
+        ))}
       </div>
-    </div>
+
+      {view === 'debate' ? <ByDebate /> : <ByStudent />}
+    </PageLayout>
   );
 }
 

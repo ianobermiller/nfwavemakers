@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { AppBar } from './AppBar.tsx';
+import { PageLayout } from './PageLayout.tsx';
 import type { Role } from '../types.ts';
 
 interface Props {
@@ -38,10 +38,8 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
   const changed = name.trim() !== currentName || role !== currentRole;
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <AppBar />
-
-      <div className="flex-1 max-w-sm mx-auto w-full px-4 py-8 flex flex-col gap-4">
+    <PageLayout>
+      <div className="max-w-sm mx-auto flex flex-col gap-4">
         <div>
           <label htmlFor="name">Full name</label>
           <input
@@ -96,6 +94,6 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
           {loading ? 'Saving…' : 'Save'}
         </button>
       </div>
-    </div>
+    </PageLayout>
   );
 }

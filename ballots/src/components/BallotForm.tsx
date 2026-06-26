@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useBallotDraft } from '../hooks/useBallotDraft.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
-import { AppBar } from './AppBar.tsx';
+import { PageLayout } from './PageLayout.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
 import type { Winner } from '../types.ts';
@@ -20,10 +20,8 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   const draft = useBallotDraft({ debateId, judgeId });
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <AppBar />
-
-      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-4 pb-8">
+    <>
+      <PageLayout>
         <div className="flex items-center justify-between mb-3">
           <button
             className="text-sm text-nf-blue dark:text-nf-blue-d font-medium cursor-pointer bg-transparent border-none p-0 hover:underline"
@@ -155,13 +153,13 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
             </p>
           )}
         </div>
-      </div>
+      </PageLayout>
 
       <SpeakerPointGuide
         isOpen={guideOpen}
         onClose={() => setGuideOpen(false)}
         focusCategory={guideCategory}
       />
-    </div>
+    </>
   );
 }
