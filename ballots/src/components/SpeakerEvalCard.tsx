@@ -97,7 +97,7 @@ export function SpeakerEvalCard({
             value={speaker.userId}
             onChange={(uid) => onUpdate({ userId: uid })}
             students={students}
-            disabled={locked}
+            disabled={locked === true}
           />
         </div>
         {hasUser && (

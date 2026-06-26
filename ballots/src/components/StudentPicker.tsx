@@ -6,7 +6,7 @@ interface Props {
   value: string;
   onChange: (id: string) => void;
   students: Array<{ id: string; name?: string | null }>;
-  disabled?: boolean | undefined;
+  disabled?: boolean;
 }
 
 export function StudentPicker({
@@ -48,13 +48,24 @@ export function StudentPicker({
         autoComplete="off"
         disabled={disabled}
         onChange={(e) => {
+          if (disabled) return;
           setQuery(e.target.value);
           setOpen(true);
         }}
-        onFocus={() => !disabled && setOpen(true)}
+        onFocus={() => {
+          if (!disabled) setOpen(true);
+        }}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls="student-picker-list"
+        aria-autocomplete="list"
       />
       {open && (
-        <div className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div
+          id="student-picker-list"
+          role="listbox"
+          className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+        >
           <button
             type="button"
             className="w-full text-left px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer border-none bg-transparent"
@@ -70,6 +81,8 @@ export function StudentPicker({
             <button
               key={s.id}
               type="button"
+              role="option"
+              aria-selected={s.id === value}
               className={`w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors ${
                 value === s.id
                   ? 'bg-nf-blue-light dark:bg-slate-700 font-semibold text-nf-blue dark:text-nf-blue-d'
