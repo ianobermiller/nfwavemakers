@@ -57,17 +57,19 @@ export function StudentPicker({
         }}
         role="combobox"
         aria-expanded={open}
-        aria-controls="student-picker-list"
+        aria-controls={open ? `${inputId}-list` : undefined}
         aria-autocomplete="list"
       />
       {open && (
         <div
-          id="student-picker-list"
+          id={`${inputId}-list`}
           role="listbox"
           className="absolute z-30 w-full mt-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto"
         >
           <button
             type="button"
+            role="option"
+            aria-selected={value === ''}
             className="w-full text-left px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer border-none bg-transparent"
             onClick={() => {
               onChange('');
