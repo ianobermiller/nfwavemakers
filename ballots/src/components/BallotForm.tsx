@@ -55,37 +55,40 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
 
         {/* Decision */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            {(['aff', 'neg'] as const).map((side) => (
-              <label
-                key={side}
-                className={`inline-flex items-center gap-2 px-4 py-2 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors ${
-                  draft.winner === side
-                    ? side === 'aff'
-                      ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                      : 'border-neg bg-neg-bg dark:border-neg-d dark:bg-neg-bg-d text-neg dark:text-neg-d'
-                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300'
-                }`}
-              >
-                <input
-                  className="sr-only"
-                  type="radio"
-                  name="winner"
-                  value={side}
-                  checked={draft.winner === side}
-                  onChange={() => draft.updateWinner(side as Winner)}
-                />
-                {side === 'aff' ? 'Affirmative wins' : 'Negative wins'}
-              </label>
-            ))}
-          </div>
-          <div className="mt-3">
-            <AutoTextarea
-              value={draft.rfd}
-              onChange={draft.updateRfd}
-              placeholder="Reason for decision…"
-            />
-          </div>
+          <fieldset className="border-none p-0 m-0">
+            <legend className="sr-only">Decision</legend>
+            <div className="flex items-center gap-3 flex-wrap">
+              {(['aff', 'neg'] as const).map((side) => (
+                <label
+                  key={side}
+                  className={`inline-flex items-center gap-2 px-4 py-2 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors ${
+                    draft.winner === side
+                      ? side === 'aff'
+                        ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'
+                        : 'border-neg bg-neg-bg dark:border-neg-d dark:bg-neg-bg-d text-neg dark:text-neg-d'
+                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    className="sr-only"
+                    type="radio"
+                    name="winner"
+                    value={side}
+                    checked={draft.winner === side}
+                    onChange={() => draft.updateWinner(side as Winner)}
+                  />
+                  {side === 'aff' ? 'Affirmative wins' : 'Negative wins'}
+                </label>
+              ))}
+            </div>
+            <div className="mt-3">
+              <AutoTextarea
+                value={draft.rfd}
+                onChange={draft.updateRfd}
+                placeholder="Reason for decision…"
+              />
+            </div>
+          </fieldset>
         </div>
 
         {/* Speakers — 2×2 grid on md+ */}
