@@ -66,9 +66,17 @@ export function Auth(): React.JSX.Element {
                 onKeyDown={(e) => e.key === 'Enter' && void sendCode()}
                 placeholder="you@example.com"
                 autoFocus
+                required
+                aria-required="true"
+                aria-invalid={!!error}
+                aria-describedby={error ? 'email-error' : undefined}
               />
             </div>
-            {error && <p className="text-red-600 text-sm -mt-2">{error}</p>}
+            {error && (
+              <p id="email-error" role="alert" className="text-red-600 text-sm -mt-2">
+                {error}
+              </p>
+            )}
             <button
               className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 transition-colors"
               onClick={() => void sendCode()}
@@ -94,9 +102,17 @@ export function Auth(): React.JSX.Element {
                 onKeyDown={(e) => e.key === 'Enter' && void signIn()}
                 placeholder="123456"
                 autoFocus
+                required
+                aria-required="true"
+                aria-invalid={!!error}
+                aria-describedby={error ? 'code-error' : undefined}
               />
             </div>
-            {error && <p className="text-red-600 text-sm -mt-2">{error}</p>}
+            {error && (
+              <p id="code-error" role="alert" className="text-red-600 text-sm -mt-2">
+                {error}
+              </p>
+            )}
             <button
               className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 transition-colors"
               onClick={() => void signIn()}
