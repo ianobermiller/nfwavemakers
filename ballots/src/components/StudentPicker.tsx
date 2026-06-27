@@ -28,6 +28,7 @@ export function StudentPicker({
 
   const selected = students.find((s) => s.id === value);
   const displayText = open ? query : (selected?.name ?? selected?.id ?? '');
+  const showAvatar = !open && selected !== undefined;
 
   // "None" option is index 0; filtered items start at index 1
   const filtered = query.trim()
@@ -77,6 +78,15 @@ export function StudentPicker({
 
   return (
     <div ref={containerRef} className="relative">
+      {showAvatar && (
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none">
+          <Avatar
+            name={selected.name ?? selected.id}
+            imageURL={avatarURLs?.[selected.id]}
+            size="sm"
+          />
+        </div>
+      )}
       <Input
         id={inputId}
         type="text"
@@ -88,6 +98,7 @@ export function StudentPicker({
         placeholder="Search students…"
         autoComplete="off"
         disabled={disabled}
+        className={cn(showAvatar && 'pl-12')}
         onChange={(e) => {
           if (disabled) return;
           setQuery(e.target.value);

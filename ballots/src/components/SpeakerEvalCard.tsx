@@ -7,7 +7,6 @@ import {
 } from '../types.ts';
 import { scoringTotal } from '../utils.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
-import { Avatar } from './Avatar.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import { Select } from './ui/Select.tsx';
 
@@ -81,7 +80,6 @@ export function SpeakerEvalCard({
 }: Props): React.JSX.Element {
   const hasUser = speaker.userId !== '';
   const total = scoringTotal(speaker);
-  const selectedStudent = hasUser ? students.find((s) => s.id === speaker.userId) : undefined;
 
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 flex flex-col gap-2">
@@ -99,13 +97,6 @@ export function SpeakerEvalCard({
         </span>
       </div>
       <div className="flex items-center gap-2">
-        {hasUser && (
-          <Avatar
-            name={selectedStudent?.name ?? speaker.userId}
-            imageURL={avatarURLs[speaker.userId]}
-            size="sm"
-          />
-        )}
         <div className="flex-1 min-w-0">
           <StudentPicker
             id={`speaker-${pos}`}
