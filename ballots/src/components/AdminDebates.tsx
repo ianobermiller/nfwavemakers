@@ -24,7 +24,7 @@ export function AdminDebates(): React.JSX.Element {
   const { pendingDeletes, softDelete, undo } = useUndoDelete<DebateDeletePayload>(
     (payload) => {
       const now = Date.now();
-      void db.transact([
+      return db.transact([
         db.tx.debates[payload.id]!.update({ deletedAt: now }),
         ...payload.ballotIds.map((bid) => db.tx.ballots[bid]!.update({ deletedAt: now })),
       ]);
@@ -39,7 +39,7 @@ export function AdminDebates(): React.JSX.Element {
 
   function handleDelete(d: (typeof debates)[0]): void {
     const ballotIds = (d.ballots ?? []).map((b) => b.id);
-    softDelete(d.id, { id: d.id, ballotIds, ballotCount: ballotIds.length });
+    void softDelete(d.id, { id: d.id, ballotIds, ballotCount: ballotIds.length });
   }
 
   const pendingList = [...pendingDeletes.values()];

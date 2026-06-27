@@ -1,6 +1,31 @@
 import { cn } from 'cnfast';
 import { db } from '../db.ts';
 import { formatTeam } from '../utils.ts';
+import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
+import { Avatar } from './Avatar.tsx';
+
+function AvatarStack({
+  members,
+  avatarURLs,
+}: {
+  members: Array<{ id: string; name?: string | null }>;
+  avatarURLs: Record<string, string>;
+}): React.JSX.Element | null {
+  if (members.length === 0) return null;
+  return (
+    <span className="flex -space-x-2 shrink-0">
+      {members.map((m) => (
+        <Avatar
+          key={m.id}
+          name={m.name ?? m.id}
+          imageURL={avatarURLs[m.id]}
+          size="sm"
+          className="ring-2 ring-white dark:ring-slate-800"
+        />
+      ))}
+    </span>
+  );
+}
 
 interface DebateCardProps {
   debateId: string;
@@ -37,6 +62,9 @@ export function DebateCard({
   });
 
   const debate = data?.debates[0];
+  const affTeam = debate?.affTeam ?? [];
+  const negTeam = debate?.negTeam ?? [];
+  const avatarURLs = useAvatarURLs([...affTeam, ...negTeam].map((s) => s.id));
   const ballot = data?.ballots?.[0];
   const winnerBadge =
     judgeId != null
@@ -46,7 +74,7 @@ export function DebateCard({
           ? 'Negative wins'
           : '—'
       : null;
-  const hasTeams = (debate?.affTeam?.length ?? 0) > 0 || (debate?.negTeam?.length ?? 0) > 0;
+  const hasTeams = affTeam.length > 0 || negTeam.length > 0;
   const hasChevron = isExpanded !== undefined;
 
   return (
@@ -79,14 +107,12 @@ export function DebateCard({
           </span>
         )}
         {hasTeams && (
-          <span className="text-xs">
-            <span className="text-aff dark:text-aff-d font-semibold">
-              {formatTeam(debate?.affTeam ?? [])}
-            </span>
-            <span className="text-slate-400 dark:text-slate-500 mx-1">vs</span>
-            <span className="text-neg dark:text-neg-d font-semibold">
-              {formatTeam(debate?.negTeam ?? [])}
-            </span>
+          <span className="text-xs flex items-center gap-1.5 flex-wrap">
+            <AvatarStack members={affTeam} avatarURLs={avatarURLs} />
+            <span className="text-aff dark:text-aff-d font-semibold">{formatTeam(affTeam)}</span>
+            <span className="text-slate-400 dark:text-slate-500 mx-0.5">vs</span>
+            <AvatarStack members={negTeam} avatarURLs={avatarURLs} />
+            <span className="text-neg dark:text-neg-d font-semibold">{formatTeam(negTeam)}</span>
           </span>
         )}
       </div>

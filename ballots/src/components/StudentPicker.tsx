@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from 'cnfast';
 import { Input } from './ui/Input.tsx';
+import { Avatar } from './Avatar.tsx';
 
 interface Props {
   id: string;
   value: string;
   onChange: (id: string) => void;
   students: Array<{ id: string; name?: string | null }>;
+  avatarURLs?: Record<string, string>;
   disabled?: boolean;
 }
 
@@ -15,6 +17,7 @@ export function StudentPicker({
   value,
   onChange,
   students,
+  avatarURLs,
   disabled,
 }: Props): React.JSX.Element {
   const [query, setQuery] = useState('');
@@ -153,7 +156,7 @@ export function StudentPicker({
                 optionRefs.current[i + 1] = el;
               }}
               className={cn(
-                'w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors',
+                'w-full text-left px-3 py-2 text-sm cursor-pointer border-none transition-colors flex items-center gap-2',
                 value === s.id
                   ? 'bg-nf-blue-light dark:bg-slate-700 font-semibold text-nf-blue dark:text-nf-blue-d'
                   : 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100',
@@ -183,7 +186,8 @@ export function StudentPicker({
                 setFocusedIndex(-1);
               }}
             >
-              {s.name ?? s.id}
+              <Avatar name={s.name ?? s.id} imageURL={avatarURLs?.[s.id]} size="sm" />
+              <span className="truncate">{s.name ?? s.id}</span>
             </button>
           ))}
           {filtered.length === 0 && (

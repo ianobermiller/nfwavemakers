@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { cn } from 'cnfast';
 import { db } from '../db.ts';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
+import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
+import { Avatar } from './Avatar.tsx';
 import { DebateCard } from './DebateCard.tsx';
 
 type TabView = 'debate' | 'student' | 'stranded';
@@ -132,6 +134,8 @@ function ByStudent(): React.JSX.Element {
     },
   });
 
+  const avatarURLs = useAvatarURLs((data?.speakerEvals ?? []).map((e) => e.speaker?.id));
+
   if (isLoading) {
     return <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>;
   }
@@ -203,6 +207,7 @@ function ByStudent(): React.JSX.Element {
               aria-controls={`student-panel-${sid}`}
             >
               <div className="flex items-center gap-3">
+                <Avatar name={name ?? sid} imageURL={avatarURLs[sid]} size="sm" />
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {displayName}
                 </span>
@@ -280,10 +285,10 @@ function Stranded(): React.JSX.Element {
     .filter((b) => b.submittedAt != null && b.debate == null)
     .sort((a, b) => (b.submittedAt ?? 0) - (a.submittedAt ?? 0));
 
+  const avatarURLs = useAvatarURLs(strandedBallots.map((b) => b.judge?.id));
+
   const { pendingDeletes, softDelete, undo } = useUndoDelete<StrandedBallotPayload>(
-    (payload) => {
-      void db.transact([db.tx.ballots[payload.id]!.update({ deletedAt: Date.now() })]);
-    },
+    (payload) => db.transact([db.tx.ballots[payload.id]!.update({ deletedAt: Date.now() })]),
     (payload) => {
       void db.transact([db.tx.ballots[payload.id]!.update({ deletedAt: null })]);
     },
@@ -324,18 +329,25 @@ function Stranded(): React.JSX.Element {
           key={b.id}
           className="flex items-center justify-between gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3"
         >
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-              {b.judge?.name ?? 'Unknown judge'}
-            </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
-              Submitted {new Date(b.submittedAt!).toLocaleDateString()}
-            </span>
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar
+              name={b.judge?.name ?? 'Unknown judge'}
+              imageURL={b.judge?.id ? avatarURLs[b.judge.id] : undefined}
+              size="sm"
+            />
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {b.judge?.name ?? 'Unknown judge'}
+              </span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">
+                Submitted {new Date(b.submittedAt!).toLocaleDateString()}
+              </span>
+            </div>
           </div>
           <button
             className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
             onClick={() =>
-              softDelete(b.id, {
+              void softDelete(b.id, {
                 id: b.id,
                 ...(b.judge?.name != null && { judgeName: b.judge.name }),
                 submittedAt: b.submittedAt!,
@@ -373,6 +385,7 @@ type BallotWithDetails = {
 
 function BallotSummary({ ballot }: { ballot: BallotWithDetails }): React.JSX.Element {
   const evals = ballot.speakerEvals ?? [];
+  const avatarURLs = useAvatarURLs(evals.map((e) => e.speaker?.id));
   const evalsByPos = Object.fromEntries(
     POSITIONS.map((pos) => [pos, evals.find((e) => e.position === pos)]),
   );
@@ -428,18 +441,27 @@ function BallotSummary({ ballot }: { ballot: BallotWithDetails }): React.JSX.Ele
                   className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2"
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {POSITION_LABELS[pos]}
-                      {ev.speaker?.name && (
-                        <span className="ml-1.5 text-slate-700 dark:text-slate-200 font-semibold">
-                          {formatSpeakerName(ev.speaker.name)}
-                        </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      {ev.speaker?.id && (
+                        <Avatar
+                          name={ev.speaker.name ?? ev.speaker.id}
+                          imageURL={avatarURLs[ev.speaker.id]}
+                          size="xs"
+                        />
                       )}
-                      {ev.rank != null && (
-                        <span className="ml-1.5 text-slate-400 dark:text-slate-500 font-normal">
-                          · #{ev.rank}
-                        </span>
-                      )}
+                      <span>
+                        {POSITION_LABELS[pos]}
+                        {ev.speaker?.name && (
+                          <span className="ml-1.5 text-slate-700 dark:text-slate-200 font-semibold">
+                            {formatSpeakerName(ev.speaker.name)}
+                          </span>
+                        )}
+                        {ev.rank != null && (
+                          <span className="ml-1.5 text-slate-400 dark:text-slate-500 font-normal">
+                            · #{ev.rank}
+                          </span>
+                        )}
+                      </span>
                     </span>
                     {total > 0 && (
                       <span className="text-xs font-bold text-nf-blue dark:text-nf-blue-d">

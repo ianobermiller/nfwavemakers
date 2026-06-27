@@ -2,7 +2,9 @@ import { cn } from 'cnfast';
 import { db } from '../db.ts';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
+import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
+import { Avatar } from './Avatar.tsx';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 
@@ -22,6 +24,10 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
       },
     },
   });
+
+  const avatarURLs = useAvatarURLs(
+    (data?.ballots?.[0]?.speakerEvals ?? []).map((e) => e.speaker?.id),
+  );
 
   if (isLoading) {
     return (
@@ -138,18 +144,27 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
                   className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      {POSITION_LABELS[pos]}
-                      {ev?.speaker?.name && (
-                        <span className="ml-2 normal-case font-normal text-slate-700 dark:text-slate-200">
-                          {formatSpeakerName(ev.speaker.name)}
-                        </span>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      {ev?.speaker?.id && (
+                        <Avatar
+                          name={ev.speaker.name ?? ev.speaker.id}
+                          imageURL={avatarURLs[ev.speaker.id]}
+                          size="sm"
+                        />
                       )}
-                      {ev?.rank != null && (
-                        <span className="ml-2 normal-case font-normal text-slate-400 dark:text-slate-500">
-                          · Ranked #{ev.rank}
-                        </span>
-                      )}
+                      <span>
+                        {POSITION_LABELS[pos]}
+                        {ev?.speaker?.name && (
+                          <span className="ml-2 normal-case font-normal text-slate-700 dark:text-slate-200">
+                            {formatSpeakerName(ev.speaker.name)}
+                          </span>
+                        )}
+                        {ev?.rank != null && (
+                          <span className="ml-2 normal-case font-normal text-slate-400 dark:text-slate-500">
+                            · Ranked #{ev.rank}
+                          </span>
+                        )}
+                      </span>
                     </h3>
                     {total > 0 && (
                       <span className="text-sm font-bold text-nf-blue dark:text-nf-blue-d">

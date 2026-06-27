@@ -5,6 +5,15 @@ import type { InstantRules } from '@instantdb/react';
 const rules = {
   // Trusted club app — any authenticated user can read all data.
   // Writes are open so judges can create ballots and students can update their own profile.
+  $files: {
+    bind: ['isOwner', "data.path.startsWith(auth.id + '/')"],
+    allow: {
+      view: 'auth.id != null',
+      create: 'isOwner',
+      update: 'isOwner',
+      delete: 'isOwner',
+    },
+  },
   $users: {
     allow: {
       view: 'auth.id != null',

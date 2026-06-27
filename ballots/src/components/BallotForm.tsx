@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cn } from 'cnfast';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useBallotDraft } from '../hooks/useBallotDraft.ts';
+import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
 import { PageLayout } from './PageLayout.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
@@ -19,6 +20,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   const [guideCategory, setGuideCategory] = useState<string | undefined>(undefined);
 
   const draft = useBallotDraft({ debateId, judgeId });
+  const avatarURLs = useAvatarURLs(draft.students.map((s) => s.id));
 
   return (
     <>
@@ -111,6 +113,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
                   pos={pos}
                   speaker={draft.speakers[pos]}
                   students={draft.students}
+                  avatarURLs={avatarURLs}
                   activeCount={draft.activePositions.length}
                   currentRank={draft.rankOrder.indexOf(pos) + 1}
                   locked={draft.speakersLocked}

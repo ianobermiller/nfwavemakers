@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { cn } from 'cnfast';
+import { Avatar } from './Avatar.tsx';
+import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 
 interface Props {
   value: string[];
@@ -10,6 +12,7 @@ interface Props {
 
 export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const avatarURLs = useAvatarURLs(judges.map((j) => j.id));
 
   function toggleJudge(judgeId: string): void {
     onChange(value.includes(judgeId) ? value.filter((id) => id !== judgeId) : [...value, judgeId]);
@@ -37,8 +40,9 @@ export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Eleme
             selectedJudges.map((j) => (
               <span
                 key={j.id}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-nf-blue-light dark:bg-slate-700 text-nf-blue dark:text-nf-blue-d text-xs font-semibold rounded-md"
+                className="inline-flex items-center gap-1 pl-1 pr-2 py-0.5 bg-nf-blue-light dark:bg-slate-700 text-nf-blue dark:text-nf-blue-d text-xs font-semibold rounded-md"
               >
+                <Avatar name={j.name ?? j.id} imageURL={avatarURLs[j.id]} size="xs" />
                 {j.name ?? j.id}
                 <button
                   type="button"
@@ -93,6 +97,7 @@ export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Eleme
                     >
                       {selected && '✓'}
                     </span>
+                    <Avatar name={j.name ?? j.id} imageURL={avatarURLs[j.id]} size="sm" />
                     {j.name ?? j.id}
                   </button>
                 );

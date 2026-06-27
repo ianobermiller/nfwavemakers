@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { Avatar } from './Avatar.tsx';
+import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 
 export function AppBar(): React.JSX.Element {
   const { user } = db.useAuth();
   const { data } = db.useQuery(user ? { $users: { $: { where: { id: user.id } } } } : null);
   const name = (data?.$users?.[0]?.name as string | undefined) ?? '';
+
+  const avatarURLs = useAvatarURLs([user?.id]);
+  const imageURL = user ? avatarURLs[user.id] : undefined;
 
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -49,16 +54,22 @@ export function AppBar(): React.JSX.Element {
           )}
           <button
             ref={triggerRef}
-            className="flex flex-col justify-center items-center gap-1.5 w-10 h-10 cursor-pointer bg-transparent border-none text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="rounded-full cursor-pointer border-2 border-transparent hover:border-white/40 transition-colors"
             onClick={() => setOpen((o) => !o)}
             aria-label="Menu"
             aria-expanded={open}
             aria-controls="app-nav-menu"
             aria-haspopup="menu"
           >
-            <span className="block w-5 h-0.5 bg-current rounded-full" />
-            <span className="block w-5 h-0.5 bg-current rounded-full" />
-            <span className="block w-5 h-0.5 bg-current rounded-full" />
+            {name ? (
+              <Avatar name={name} imageURL={imageURL} size="sm" />
+            ) : (
+              <span className="flex flex-col justify-center items-center gap-1.5 w-8 h-8">
+                <span className="block w-5 h-0.5 bg-white rounded-full" />
+                <span className="block w-5 h-0.5 bg-white rounded-full" />
+                <span className="block w-5 h-0.5 bg-white rounded-full" />
+              </span>
+            )}
           </button>
 
           {open && (
