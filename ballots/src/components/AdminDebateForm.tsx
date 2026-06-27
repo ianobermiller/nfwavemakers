@@ -3,6 +3,7 @@ import { id, type TransactionChunk } from '@instantdb/react';
 import { db } from '../db.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
+import { Input } from './ui/Input.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import { JudgePicker } from './JudgePicker.tsx';
 
@@ -143,7 +144,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="debate-date">Date</label>
-            <input
+            <Input
               id="debate-date"
               type="date"
               value={form.date}
@@ -152,7 +153,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
           </div>
           <div>
             <label htmlFor="debate-room">Room</label>
-            <input
+            <Input
               id="debate-room"
               type="text"
               value={form.room}
@@ -164,7 +165,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
 
         <div>
           <label htmlFor="debate-resolution">Resolution</label>
-          <input
+          <Input
             id="debate-resolution"
             type="text"
             value={form.resolution}
