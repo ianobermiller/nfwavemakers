@@ -26,9 +26,9 @@ export default defineConfig({
     command: 'vite --port 5174',
     url: 'http://localhost:5174/ballots/',
     reuseExistingServer: false,
-    // No VITE_INSTANT_APP_ID here — globalSetup sets process.env before
-    // the webServer starts, so the child process inherits the correct value.
-    // Including it here would capture an empty string at config-parse time
-    // and override the value globalSetup wrote.
+    // The webServer starts BEFORE globalSetup runs, so it can't pick up the
+    // temporary app ID via process.env. Instead, each test injects the temp
+    // app ID into the page (see test.beforeEach in ballot.spec.ts), and db.ts
+    // honors a window.__INSTANT_APP_ID__ override.
   },
 });

@@ -4,6 +4,18 @@ const BASE = 'http://localhost:5174/ballots/';
 
 type InstantDb = { auth: { signInWithToken: (token: string) => Promise<void> } };
 
+// The webServer starts before globalSetup, so Vite can't read the temporary
+// app ID from process.env. Inject it into the page instead; db.ts honors a
+// window.__INSTANT_APP_ID__ override (set before any app script runs).
+test.beforeEach(async ({ page }) => {
+  const appId = process.env['VITE_INSTANT_APP_ID'];
+  if (appId) {
+    await page.addInitScript((id: string) => {
+      (window as Record<string, unknown>)['__INSTANT_APP_ID__'] = id;
+    }, appId);
+  }
+});
+
 async function signInWithToken(page: Page, token: string): Promise<void> {
   await page.goto(BASE);
   await page.waitForFunction(() => (window as Record<string, unknown>)['__db'] !== undefined);
@@ -20,23 +32,6 @@ test.describe('Auth flow', () => {
     await page.goto(BASE);
     await expect(page.locator('#email')).toBeVisible();
     await expect(page.locator('button:has-text("Send Magic Code")')).toBeVisible();
-  });
-
-  test.skip('shows code input after sending magic code', async ({ page }) => {
-    // Requires real email delivery to test@example.com — skip in automated runs.
-    await page.goto(BASE);
-    await page.fill('#email', 'test@example.com');
-    await page.click('button:has-text("Send Magic Code")');
-    await expect(page.locator('#code')).toBeVisible();
-  });
-
-  test.skip('back link returns to email screen', async ({ page }) => {
-    // Depends on "shows code input" — skipped along with it.
-    await page.goto(BASE);
-    await page.fill('#email', 'test@example.com');
-    await page.click('button:has-text("Send Magic Code")');
-    await page.click('button:has-text("Use a different email")');
-    await expect(page.locator('#email')).toBeVisible();
   });
 });
 
