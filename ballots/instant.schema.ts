@@ -3,8 +3,11 @@ import { i } from '@instantdb/react';
 const schema = i.schema({
   entities: {
     $users: i.entity({
+      email: i.string().unique().indexed().optional(),
+      imageURL: i.string().optional(),
       name: i.string().optional(),
       role: i.string().optional(),
+      type: i.string().optional(),
     }),
     debates: i.entity({
       date: i.string(),
