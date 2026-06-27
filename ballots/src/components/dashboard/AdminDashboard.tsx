@@ -26,6 +26,17 @@ export function AdminDashboard(): React.JSX.Element {
             Browse submitted ballots by debate or by student.
           </p>
         </button>
+        <button
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-left cursor-pointer hover:border-nf-accent hover:shadow-md transition-all"
+          onClick={() => navigate('admin-users')}
+        >
+          <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">
+            Manage Users
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            View all users and their roles.
+          </p>
+        </button>
       </div>
     </div>
   );

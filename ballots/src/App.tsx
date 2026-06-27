@@ -9,6 +9,7 @@ import { DebateView } from './components/DebateView.tsx';
 import { AdminDebates } from './components/AdminDebates.tsx';
 import { AdminDebateForm } from './components/AdminDebateForm.tsx';
 import { AdminBallots } from './components/AdminBallots.tsx';
+import { AdminUsers } from './components/AdminUsers.tsx';
 import { ProfileEdit } from './components/ProfileEdit.tsx';
 import type { Role } from './types.ts';
 
@@ -41,6 +42,11 @@ const ROUTES: Array<{
     segment: 'admin-ballots',
     requiredRole: 'admin',
     render: () => <AdminBallots />,
+  },
+  {
+    segment: 'admin-users',
+    requiredRole: 'admin',
+    render: () => <AdminUsers />,
   },
   {
     segment: 'judge',
