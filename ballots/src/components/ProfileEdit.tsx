@@ -5,8 +5,9 @@ import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
 import type { Role } from '../types.ts';
 import { Avatar } from './Avatar.tsx';
+import { AvatarCropDialog } from './AvatarCropDialog.tsx';
 import { Input } from './ui/Input.tsx';
-import { avatarPath, resizeToWebP } from '../utils/imageUtils.ts';
+import { avatarPath } from '../utils/imageUtils.ts';
 
 interface Props {
   userId: string;
@@ -25,6 +26,7 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: filesData } = db.useQuery({
@@ -32,19 +34,24 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
   });
   const avatarURL = filesData?.$files?.[0]?.url as string | undefined;
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>): void {
     const file = e.target.files?.[0];
-    if (!file) return;
+    // Reset the input so picking the same file again still fires onChange.
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (file) setCropFile(file);
+  }
+
+  async function handleCropConfirm(blob: Blob): Promise<void> {
     setAvatarUploading(true);
     setError('');
     try {
-      const blob = await resizeToWebP(file);
       await db.storage.uploadFile(avatarPath(userId), blob, { contentType: 'image/webp' });
+      setCropFile(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to upload photo');
+      throw e;
     } finally {
       setAvatarUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
@@ -105,7 +112,7 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
             accept="image/*"
             className="sr-only"
             aria-label="Upload profile photo"
-            onChange={(e) => void handleAvatarChange(e)}
+            onChange={handleFileSelect}
           />
           <p className="text-xs text-slate-400 dark:text-slate-500">Click to change photo</p>
         </div>
@@ -165,6 +172,12 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
           {loading ? 'Saving…' : 'Save'}
         </button>
       </div>
+
+      <AvatarCropDialog
+        file={cropFile}
+        onCancel={() => setCropFile(null)}
+        onConfirm={handleCropConfirm}
+      />
     </PageLayout>
   );
 }
