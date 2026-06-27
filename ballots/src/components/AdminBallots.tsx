@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { cn } from 'cnfast';
 import { db } from '../db.ts';
+import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { DebateCard } from './DebateCard.tsx';
 
-type TabView = 'debate' | 'student';
+type TabView = 'debate' | 'student' | 'stranded';
 
 export function AdminBallots(): React.JSX.Element {
   const [view, setView] = useState<TabView>('debate');
@@ -15,7 +16,7 @@ export function AdminBallots(): React.JSX.Element {
   return (
     <PageLayout>
       <div className="flex gap-2 mb-5">
-        {(['debate', 'student'] as const).map((t) => (
+        {(['debate', 'student', 'stranded'] as const).map((t) => (
           <button
             key={t}
             className={cn(
@@ -26,12 +27,12 @@ export function AdminBallots(): React.JSX.Element {
             )}
             onClick={() => setView(t)}
           >
-            {t === 'debate' ? 'By Debate' : 'By Student'}
+            {t === 'debate' ? 'By Debate' : t === 'student' ? 'By Student' : 'Stranded'}
           </button>
         ))}
       </div>
 
-      {view === 'debate' ? <ByDebate /> : <ByStudent />}
+      {view === 'debate' ? <ByDebate /> : view === 'student' ? <ByStudent /> : <Stranded />}
     </PageLayout>
   );
 }
@@ -257,6 +258,95 @@ function ByStudent(): React.JSX.Element {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+type StrandedBallotPayload = {
+  id: string;
+  judgeName?: string;
+  submittedAt: number;
+};
+
+function Stranded(): React.JSX.Element {
+  const { data, isLoading } = db.useQuery({
+    ballots: {
+      debate: {},
+      judge: {},
+    },
+  });
+
+  const strandedBallots = (data?.ballots ?? [])
+    .filter((b) => b.submittedAt != null && b.debate == null)
+    .sort((a, b) => (b.submittedAt ?? 0) - (a.submittedAt ?? 0));
+
+  const { pendingDeletes, softDelete, undo } = useUndoDelete<StrandedBallotPayload>(
+    (payload) => {
+      void db.transact([db.tx.ballots[payload.id]!.update({ deletedAt: Date.now() })]);
+    },
+    (payload) => {
+      void db.transact([db.tx.ballots[payload.id]!.update({ deletedAt: null })]);
+    },
+  );
+
+  if (isLoading) {
+    return <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>;
+  }
+
+  const pendingList = [...pendingDeletes.values()];
+
+  if (strandedBallots.length === 0 && pendingList.length === 0) {
+    return (
+      <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
+        No stranded ballots.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {pendingList.map((pd) => (
+        <div
+          key={pd.id}
+          className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-500 dark:text-slate-400"
+        >
+          <span>Ballot deleted.</span>
+          <button
+            className="shrink-0 text-nf-blue dark:text-nf-blue-d font-semibold hover:underline cursor-pointer border-none bg-transparent text-sm"
+            onClick={() => undo(pd.id)}
+          >
+            Undo
+          </button>
+        </div>
+      ))}
+      {strandedBallots.map((b) => (
+        <div
+          key={b.id}
+          className="flex items-center justify-between gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3"
+        >
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {b.judge?.name ?? 'Unknown judge'}
+            </span>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              Submitted {new Date(b.submittedAt!).toLocaleDateString()}
+            </span>
+          </div>
+          <button
+            className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
+            onClick={() =>
+              softDelete(b.id, {
+                id: b.id,
+                ...(b.judge?.name != null && { judgeName: b.judge.name }),
+                submittedAt: b.submittedAt!,
+              })
+            }
+            aria-label="Delete ballot"
+          >
+            Delete
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

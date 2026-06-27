@@ -15,7 +15,7 @@ const rules = {
   },
   debates: {
     allow: {
-      view: 'auth.id != null',
+      view: 'auth.id != null && data.deletedAt == null',
       create: 'auth.id != null',
       update: 'auth.id != null',
       delete: 'auth.id != null',
@@ -23,7 +23,7 @@ const rules = {
   },
   ballots: {
     allow: {
-      view: 'auth.id != null',
+      view: 'auth.id != null && data.deletedAt == null',
       create: 'auth.id != null',
       update: 'auth.id != null',
       delete: 'auth.id != null',

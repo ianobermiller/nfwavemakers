@@ -10,14 +10,17 @@ const schema = i.schema({
       date: i.string(),
       room: i.string(),
       resolution: i.string().optional(),
+      deletedAt: i.number().optional(),
     }),
     ballots: i.entity({
       winner: i.string().optional(),
       reasonForDecision: i.string().optional(),
       submittedAt: i.number().optional(),
+      deletedAt: i.number().optional(),
     }),
     speakerEvals: i.entity({
       position: i.string(),
+      rank: i.number().optional(),
       delivery: i.number().optional(),
       organization: i.number().optional(),
       evidenceAndSupport: i.number().optional(),

@@ -1,9 +1,7 @@
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { PlatformApi } from '@instantdb/platform';
 import { init } from '@instantdb/admin';
 import type { User } from '@instantdb/admin';
-import { schema } from '../src/schema.ts';
+import schema from '../instant.schema.ts';
 
 type AdminDb = ReturnType<typeof init>;
 
@@ -25,12 +23,6 @@ export default async function globalSetup(): Promise<void> {
   process.env['INSTANT_ADMIN_TOKEN'] = app.adminToken;
   console.log(`[e2e] Using temporary InstantDB app: ${app.id}`);
 
-  // Write .env.local so the Vite dev server (child process) picks up the temp
-  // app ID. Vite reads .env.local with higher priority than .env, and it's
-  // gitignored. Setting process.env alone is insufficient because Playwright
-  // evaluates webServer.env at config-parse time, before globalSetup runs.
-  const envLocalPath = join(import.meta.dirname, '..', '.env.local');
-  writeFileSync(envLocalPath, `VITE_INSTANT_APP_ID=${app.id}\n`);
 
   const adminDb = init({ appId: app.id, adminToken: app.adminToken });
   const authedPlatform = new PlatformApi({ auth: { token: app.adminToken } });

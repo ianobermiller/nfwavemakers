@@ -1,5 +1,5 @@
 import { init } from '@instantdb/react';
-import { schema } from './schema.ts';
+import schema from '../instant.schema.ts';
 
 const APP_ID =
   (import.meta.env['VITE_INSTANT_APP_ID'] as string | undefined) ??
