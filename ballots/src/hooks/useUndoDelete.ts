@@ -3,18 +3,18 @@ import { useRef, useState } from 'react';
 const UNDO_DURATION_MS = 5000;
 
 export function useUndoDelete<T>(
-  onDelete: (payload: T) => void,
+  onDelete: (payload: T) => Promise<unknown>,
   onUndo: (payload: T) => void,
 ): {
   pendingDeletes: Map<string, T>;
-  softDelete: (id: string, payload: T) => void;
+  softDelete: (id: string, payload: T) => Promise<void>;
   undo: (id: string) => void;
 } {
   const [pendingDeletes, setPendingDeletes] = useState<Map<string, T>>(new Map());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  function softDelete(id: string, payload: T): void {
-    onDelete(payload);
+  async function softDelete(id: string, payload: T): Promise<void> {
+    await onDelete(payload);
     setPendingDeletes((prev) => new Map(prev).set(id, payload));
     const timer = setTimeout(() => {
       setPendingDeletes((prev) => {
