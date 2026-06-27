@@ -185,7 +185,7 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
               onWheel={onWheel}
-              className="relative w-64 max-w-full aspect-square overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-900 touch-none cursor-grab active:cursor-grabbing select-none"
+              className="relative w-64 max-w-full aspect-square overflow-hidden rounded-full bg-slate-100 dark:bg-slate-900 touch-none cursor-grab active:cursor-grabbing select-none"
             >
               {img && (
                 <img
@@ -201,14 +201,6 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
                   }}
                 />
               )}
-              {/* Circular mask preview: darken outside the avatar circle. */}
-              <div
-                className="absolute inset-0 pointer-events-none rounded-lg"
-                style={{
-                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)',
-                  clipPath: 'circle(50% at 50% 50%)',
-                }}
-              />
               <div className="absolute inset-0 pointer-events-none rounded-full border-2 border-white/70" />
             </div>
 
