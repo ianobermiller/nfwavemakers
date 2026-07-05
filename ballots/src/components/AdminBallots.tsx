@@ -9,6 +9,7 @@ import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { Avatar } from './Avatar.tsx';
 import { DebateCard } from './DebateCard.tsx';
+import { SpeakerNotes } from './SpeakerNotes.tsx';
 
 type TabView = 'debate' | 'student' | 'stranded';
 
@@ -230,9 +231,16 @@ function ByStudent(): React.JSX.Element {
               {[...byGroup.entries()].map(([groupKey, groupEvals]) => {
                 const ballot = groupEvals[0]?.ballot;
                 const debate = ballot?.debate;
-                const judgeNames = [
-                  ...new Set(groupEvals.map((e) => e.ballot?.judge?.name).filter(Boolean)),
-                ];
+
+                // Sub-group evals by judge so each judge's name sits above their ballot
+                const byJudge = new Map<string, typeof groupEvals>();
+                for (const ev of groupEvals) {
+                  const jkey = ev.ballot?.judge?.id ?? ev.ballot?.judge?.name ?? '—';
+                  const arr = byJudge.get(jkey) ?? [];
+                  arr.push(ev);
+                  byJudge.set(jkey, arr);
+                }
+
                 return (
                   <div key={groupKey}>
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -244,18 +252,24 @@ function ByStudent(): React.JSX.Element {
                           {debate.room}
                         </span>
                       )}
-                      {judgeNames.map((jn) => (
-                        <span
-                          key={jn}
-                          className="text-xs text-slate-400 dark:text-slate-500 italic"
-                        >
-                          Judge: {jn}
-                        </span>
-                      ))}
                     </div>
-                    {groupEvals.map((ev) => (
-                      <StudentEvalCard key={ev.id} ev={ev} />
-                    ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+                      {[...byJudge.entries()].map(([jkey, judgeEvals]) => {
+                        const judgeName = judgeEvals[0]?.ballot?.judge?.name;
+                        return (
+                          <div key={jkey}>
+                            {judgeName && (
+                              <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                                Judge: {judgeName}
+                              </span>
+                            )}
+                            {judgeEvals.map((ev) => (
+                              <StudentEvalCard key={ev.id} ev={ev} />
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
@@ -472,11 +486,7 @@ function BallotSummary({ ballot }: { ballot: BallotWithDetails }): React.JSX.Ele
                   <div className="flex flex-col gap-0.5">
                     <ScoringRows scores={ev} />
                   </div>
-                  {ev.notes && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 whitespace-pre-wrap">
-                      {ev.notes}
-                    </p>
-                  )}
+                  {ev.notes && <SpeakerNotes notes={ev.notes} />}
                 </div>
               );
             })}

@@ -4,6 +4,7 @@ import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName } from '../utils.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
+import { SpeakerNotes } from './SpeakerNotes.tsx';
 
 interface Props {
   debateId: string;
@@ -116,34 +117,27 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                 >
                   {side === 'aff' ? 'Affirmative' : 'Negative'}
                 </h3>
-                {([`${side}1`, `${side}2`] as const).map((pos) => {
-                  const ev = evalsByPos[pos];
-                  if (!ev) return null;
-                  return (
-                    <div
-                      key={pos}
-                      className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl p-4 mb-3"
-                    >
-                      <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-100 mb-3">
-                        {POSITION_LABELS[pos]} —{' '}
-                        {ev.speaker?.name ? formatSpeakerName(ev.speaker.name) : 'Unknown'}
-                      </h4>
-                      <div className="flex flex-col gap-1 mb-3">
-                        <ScoringRows scores={ev} showTotal />
-                      </div>
-                      {ev.notes && (
-                        <div className="bg-white dark:bg-slate-800 rounded-lg px-3 py-2">
-                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                            Notes
-                          </p>
-                          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                            {ev.notes}
-                          </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                  {([`${side}1`, `${side}2`] as const).map((pos) => {
+                    const ev = evalsByPos[pos];
+                    if (!ev) return null;
+                    return (
+                      <div
+                        key={pos}
+                        className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl p-4"
+                      >
+                        <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-100 mb-3">
+                          {POSITION_LABELS[pos]} —{' '}
+                          {ev.speaker?.name ? formatSpeakerName(ev.speaker.name) : 'Unknown'}
+                        </h4>
+                        <div className="flex flex-col gap-1 mb-3">
+                          <ScoringRows scores={ev} showTotal />
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        {ev.notes && <SpeakerNotes notes={ev.notes} />}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>

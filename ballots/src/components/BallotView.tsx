@@ -7,6 +7,7 @@ import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { Avatar } from './Avatar.tsx';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
+import { SpeakerNotes } from './SpeakerNotes.tsx';
 
 interface Props {
   ballotId: string;
@@ -175,11 +176,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
                   <div className="flex flex-col gap-1.5">
                     <ScoringRows scores={ev ?? {}} />
                   </div>
-                  {ev?.notes && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap">
-                      {ev.notes}
-                    </p>
-                  )}
+                  {ev?.notes && <SpeakerNotes notes={ev.notes} />}
                 </div>
               );
             })}
