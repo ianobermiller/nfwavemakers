@@ -13,7 +13,8 @@
     "check": "run-p --print-label types lint knip",
     "check:push": "run-p --print-label types lint knip test:e2e",
     "test:e2e": "playwright test",
-    "token": "node scripts/get-token.mjs"
+    "token": "node scripts/get-token.mjs",
+    "seed": "node scripts/seed-fake-data.mjs"
   },
   "dependencies": {
     "@instantdb/react": "^1.0.39",
