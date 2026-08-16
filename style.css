@@ -186,11 +186,14 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 
 /* ── Buttons ── */
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: .7rem 1.6rem;
   border-radius: 8px;
   font-weight: 600;
   font-size: .95rem;
+  line-height: 1.2;
   transition: transform .12s, box-shadow .12s, background .15s;
   cursor: pointer;
   text-decoration: none;
