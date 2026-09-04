@@ -1,3 +1,11 @@
+**IMPORTANT**: before you do anything else, run the `beans prime` command and heed its output.
+
+## Issue tracker
+
+Issues live in Beans (flat-file markdown in `.beans/`). See `docs/agents/issue-tracker.md`.
+
+When making a commit, include the relevant bean IDs in the commit message.
+
 <!-- convex-ai-start -->
 
 This project uses [Convex](https://convex.dev) as its backend.
