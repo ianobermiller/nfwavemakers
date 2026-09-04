@@ -6,6 +6,7 @@ import type { Role } from '../types.ts';
 
 export interface AppUser {
   _id: Id<'users'>;
+  archived: boolean;
   avatarUrl: string | null;
   email?: string;
   name?: string;

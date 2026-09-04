@@ -1,10 +1,10 @@
 import { v } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
-import { getCurrentUser, getCurrentUserOrNull } from './lib/auth';
+import { getCurrentUser, getCurrentUserOrNull, requireAdmin } from './lib/auth';
 import { compact } from './lib/compact';
 import { normalizeEmail } from './lib/normalizeEmail';
-import { toUserSummary } from './lib/users';
+import { isArchived, toUserSummary } from './lib/users';
 import { roleValidator, userSummaryValidator } from './lib/validators';
 
 export const ensureCurrent = mutation({
@@ -69,17 +69,40 @@ export const current = query({
 });
 
 export const list = query({
-  args: {},
+  args: { includeArchived: v.optional(v.boolean()) },
   returns: v.array(userSummaryValidator),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     await getCurrentUser(ctx);
     const users = await ctx.db.query('users').collect();
     const summaries = [];
     for (const user of users) {
+      if (!args.includeArchived && isArchived(user)) continue;
       summaries.push(await toUserSummary(ctx, user));
     }
     summaries.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     return summaries;
+  },
+});
+
+export const setArchived = mutation({
+  args: {
+    archived: v.boolean(),
+    userId: v.id('users'),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const admin = await requireAdmin(ctx);
+    if (admin._id === args.userId) {
+      throw new Error('You cannot archive your own account');
+    }
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    await ctx.db.patch(args.userId, {
+      archivedAt: args.archived ? Date.now() : undefined,
+    });
+    return null;
   },
 });
 

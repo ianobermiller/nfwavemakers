@@ -3,6 +3,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
 import { convexId } from '../lib/convexId.ts';
+import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { Input } from './ui/Input.tsx';
@@ -86,11 +87,14 @@ function AdminDebateFormEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const users = useQuery(api.users.list) ?? [];
+  const users = useQuery(api.users.list, { includeArchived: true }) ?? [];
   const saveDebate = useMutation(api.debates.save);
 
-  const students = users.filter((u) => u.role === 'student');
-  const judges = users.filter((u) => u.role === 'parent' || u.role === 'admin');
+  const selectedIds = [form.aff1, form.aff2, form.neg1, form.neg2, ...form.judges];
+  const students = users.filter((u) => u.role === 'student' && isPickerEligible(u, selectedIds));
+  const judges = users.filter(
+    (u) => (u.role === 'parent' || u.role === 'admin') && isPickerEligible(u, selectedIds),
+  );
 
   function patch(p: Partial<DebateForm>): void {
     setForm((f) => ({ ...f, ...p }));

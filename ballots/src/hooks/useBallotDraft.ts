@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
+import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from './useHashRoute.ts';
 import { useDebouncedSave } from './useDebouncedSave.ts';
 import { POSITIONS, type Position, type SpeakerFormState, type Winner } from '../types.ts';
@@ -29,8 +30,11 @@ export function useBallotDraft({ initial, debateId }: Props) {
   const [rankOrder, setRankOrder] = useState<Position[]>(initial.rankOrder);
   const [submitting, setSubmitting] = useState(false);
 
-  const users = useQuery(api.users.list);
-  const students = (users ?? []).filter((u) => u.role === 'student');
+  const users = useQuery(api.users.list, { includeArchived: true });
+  const selectedStudentIds = POSITIONS.map((pos) => speakers[pos].userId).filter(Boolean);
+  const students = (users ?? []).filter(
+    (u) => u.role === 'student' && isPickerEligible(u, selectedStudentIds),
+  );
 
   const debate = useQuery(api.debates.get, debateId ? { debateId } : 'skip');
   const saveDraft = useMutation(api.ballots.saveDraft);

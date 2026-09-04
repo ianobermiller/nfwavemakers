@@ -34,7 +34,7 @@ export function AdminDashboard(): React.JSX.Element {
             Manage Users
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            View all users and their roles.
+            View, archive, and manage club members.
           </p>
         </button>
       </div>

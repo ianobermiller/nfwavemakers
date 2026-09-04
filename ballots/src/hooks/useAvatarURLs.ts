@@ -20,7 +20,7 @@ export function useAvatarURLs(
     ),
   ];
 
-  const listed = useQuery(api.users.list, ids.length > 0 ? {} : 'skip');
+  const listed = useQuery(api.users.list, ids.length > 0 ? { includeArchived: true } : 'skip');
   const map: Record<string, string> = {};
   for (const user of listed ?? []) {
     if (user.avatarUrl && ids.includes(user._id)) {

@@ -17,6 +17,7 @@ export const winnerValidator = v.union(v.literal('aff'), v.literal('neg'));
 
 export const userSummaryValidator = v.object({
   _id: v.id('users'),
+  archived: v.boolean(),
   avatarUrl: v.union(v.string(), v.null()),
   email: v.optional(v.string()),
   name: v.optional(v.string()),

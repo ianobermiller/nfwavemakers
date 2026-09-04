@@ -1,6 +1,6 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
-import { loadUserSummary, type UserSummary } from './users';
+import { isArchived, loadUserSummary, type UserSummary } from './users';
 
 export interface DebateTeams {
   affTeam: UserSummary[];
@@ -54,6 +54,14 @@ export async function replaceParticipants(
     .query('debateParticipants')
     .withIndex('by_debate', (q) => q.eq('debateId', debateId))
     .collect();
+  const previouslyAssigned = new Set(existing.map((row) => row.userId));
+  for (const userId of [...affTeam, ...negTeam, ...judges]) {
+    if (previouslyAssigned.has(userId)) continue;
+    const user = await ctx.db.get(userId);
+    if (user && isArchived(user)) {
+      throw new Error(`${user.name ?? 'User'} is archived and cannot be assigned`);
+    }
+  }
   for (const row of existing) {
     await ctx.db.delete(row._id);
   }

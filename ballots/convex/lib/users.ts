@@ -4,10 +4,15 @@ import { compact } from './compact';
 
 export interface UserSummary {
   _id: Id<'users'>;
+  archived: boolean;
   avatarUrl: string | null;
   email?: string;
   name?: string;
   role?: 'admin' | 'parent' | 'student';
+}
+
+export function isArchived(user: { archivedAt?: number }): boolean {
+  return user.archivedAt != null;
 }
 
 export async function toUserSummary(
@@ -19,6 +24,7 @@ export async function toUserSummary(
     : null;
   return compact({
     _id: user._id,
+    archived: isArchived(user),
     avatarUrl,
     email: user.email,
     name: user.name,
