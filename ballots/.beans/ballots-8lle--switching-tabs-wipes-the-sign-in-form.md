@@ -1,11 +1,11 @@
 ---
 # ballots-8lle
 title: Switching tabs wipes the sign-in form
-status: in-progress
+status: completed
 type: bug
 priority: high
 created_at: 2026-09-04T22:52:10Z
-updated_at: 2026-09-04T22:52:10Z
+updated_at: 2026-09-04T22:53:11Z
 ---
 
 On prod, typing an email on the sign-in screen and then switching to another tab and back clears the field. It looks like a page reload but is actually a React remount.
@@ -33,4 +33,10 @@ Verified A/B against local dev with a Playwright script that dispatches the same
 - [x] Reproduce with an automated script
 - [x] Hold last settled auth state instead of re-showing the loading gate
 - [x] Confirm A/B and that `npm run check` passes
-- [ ] Deploy the frontend to Cloudflare Pages so prod picks it up
+- [x] Deploy the frontend to Cloudflare Pages so prod picks it up
+
+## Summary of Changes
+
+`AuthSession` in `src/hooks/auth.tsx` now returns `undefined` while auth is unsettled and holds the last settled context value, so a focus revalidation no longer reports as loading. `AppShell` therefore stops unmounting `<Auth />`, and the sign-in form keeps its state across tab switches.
+
+Deployed to Cloudflare Pages; https://ballots.nfwavemakers.com now serves `assets/index-BfKgEoNm.js`, matching the local build.
