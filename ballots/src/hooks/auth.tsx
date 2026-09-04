@@ -72,7 +72,7 @@ function AuthSession({
       });
   }, [authLoading, ensureCurrentUser, isAuthenticated, userEnsured]);
 
-  const value = useMemo((): AuthContextValue => {
+  const resolved = useMemo((): AuthContextValue | undefined => {
     if (ensureError) {
       return { ...loggedOut, queryError: ensureError };
     }
@@ -80,7 +80,7 @@ function AuthSession({
     const isAuthSettling = authLoading && !isAuthenticated;
     const isSessionLoading = isAuthenticated && (!userEnsured || session === undefined);
     if (isAuthSettling || isSessionLoading) {
-      return loading;
+      return undefined;
     }
 
     if (isAuthenticated && session) {
@@ -89,6 +89,17 @@ function AuthSession({
 
     return loggedOut;
   }, [authLoading, ensureError, isAuthenticated, session, userEnsured]);
+
+  // Better Auth refetches the session every time the tab becomes visible again. Reporting
+  // that as loading would swap the whole tree for the loading screen and remount it, so a
+  // half-typed sign-in form would be wiped just by switching tabs. Hold the last settled
+  // state until the refetch lands; only the very first resolve shows the loading screen.
+  const [lastResolved, setLastResolved] = useState<AuthContextValue>();
+  if (resolved && resolved !== lastResolved) {
+    setLastResolved(resolved);
+  }
+
+  const value = resolved ?? lastResolved ?? loading;
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
