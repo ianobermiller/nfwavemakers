@@ -7,7 +7,7 @@ import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 interface Props {
   value: string[];
   onChange: (ids: string[]) => void;
-  judges: Array<{ id: string; name?: string | null }>;
+  judges: Array<{ id: string; name?: string | undefined }>;
 }
 
 export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Element {

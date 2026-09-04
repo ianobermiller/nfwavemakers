@@ -1,3 +1,4 @@
 {
-  "ignore": ["instant.perms.ts"]
+  "entry": ["scripts/*.mjs"],
+  "ignore": ["convex/betterAuth/**"]
 }

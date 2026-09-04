@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { db } from '../db.ts';
+import { authClient } from '../authClient.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { Avatar } from './Avatar.tsx';
-import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
+import { useAppUser } from '../hooks/auth.tsx';
 
 export function AppBar(): React.JSX.Element {
-  const { user } = db.useAuth();
-  const { data } = db.useQuery(user ? { $users: { $: { where: { id: user.id } } } } : null);
-  const name = (data?.$users?.[0]?.name as string | undefined) ?? '';
-
-  const avatarURLs = useAvatarURLs([user?.id]);
-  const imageURL = user ? avatarURLs[user.id] : undefined;
+  const user = useAppUser();
+  const name = user?.name ?? '';
+  const imageURL = user?.avatarUrl ?? undefined;
 
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -119,7 +116,7 @@ export function AppBar(): React.JSX.Element {
               <button
                 role="menuitem"
                 className="w-full text-left px-4 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer bg-transparent border-none transition-colors border-t border-slate-100 dark:border-slate-700"
-                onClick={() => db.auth.signOut()}
+                onClick={() => void authClient.signOut()}
               >
                 Sign Out
               </button>

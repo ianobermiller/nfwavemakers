@@ -1,5 +1,3 @@
-import { id, type TransactionChunk } from '@instantdb/react';
-import { db } from '../db.ts';
 import {
   POSITIONS,
   SCORE_CATEGORIES,
@@ -7,14 +5,12 @@ import {
   type SpeakerFormState,
   type Winner,
 } from '../types.ts';
+import type { Id } from '../../convex/_generated/dataModel';
 
 export interface BallotIds {
-  ballotId: string;
-  evalIds: Record<Position, string>;
+  ballotId?: Id<'ballots'>;
+  evalIds: Partial<Record<Position, Id<'speakerEvals'>>>;
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyTxChunk = TransactionChunk<any, any>;
 
 function makeEmptySpeaker(): SpeakerFormState {
   return {
@@ -39,63 +35,118 @@ export function makeEmptySpeakers(): Record<Position, SpeakerFormState> {
 }
 
 export function makeNewBallotIds(): BallotIds {
-  return {
-    ballotId: id(),
-    evalIds: { aff1: id(), aff2: id(), neg1: id(), neg2: id() },
-  };
+  return { evalIds: {} };
 }
 
-export function buildBallotTxs(
-  winner: Winner | undefined,
-  rfd: string,
+type ExistingSpeakerEval = {
+  _id: Id<'speakerEvals'>;
+  position: Position;
+  rank?: number;
+  delivery?: number;
+  organization?: number;
+  evidenceAndSupport?: number;
+  refutation?: number;
+  crossExamination?: number;
+  conduct?: number;
+  notes?: string;
+  speaker: { _id: Id<'users'> } | null;
+};
+
+export type ExistingBallot = {
+  _id: Id<'ballots'>;
+  winner?: Winner;
+  reasonForDecision?: string;
+  speakerEvals: ExistingSpeakerEval[];
+};
+
+export type DebateTeams = {
+  affTeam: Array<{ _id: Id<'users'> }>;
+  negTeam: Array<{ _id: Id<'users'> }>;
+};
+
+export interface BallotFormInit {
+  speakers: Record<Position, SpeakerFormState>;
+  rankOrder: Position[];
+  winner: Winner | undefined;
+  rfd: string;
+  ids: BallotIds;
+}
+
+export function initBallotFormState(
+  existing: ExistingBallot | null | undefined,
+  debate: DebateTeams | null | undefined,
+): BallotFormInit {
+  if (existing) {
+    const ids: BallotIds = { ballotId: existing._id, evalIds: {} };
+    const speakers = makeEmptySpeakers();
+
+    for (const ev of existing.speakerEvals) {
+      const pos = ev.position;
+      if (!POSITIONS.includes(pos)) continue;
+      ids.evalIds[pos] = ev._id;
+      speakers[pos] = {
+        userId: ev.speaker?._id ?? '',
+        delivery: ev.delivery,
+        organization: ev.organization,
+        evidenceAndSupport: ev.evidenceAndSupport,
+        refutation: ev.refutation,
+        crossExamination: ev.crossExamination,
+        conduct: ev.conduct,
+        notes: ev.notes ?? '',
+      };
+    }
+
+    const rankOrder = existing.speakerEvals
+      .filter((ev) => ev.rank != null && speakers[ev.position]?.userId)
+      .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
+      .map((ev) => ev.position)
+      .filter((pos) => POSITIONS.includes(pos));
+
+    return {
+      speakers,
+      rankOrder,
+      winner: existing.winner,
+      rfd: existing.reasonForDecision ?? '',
+      ids,
+    };
+  }
+
+  const speakers = makeEmptySpeakers();
+
+  if (debate) {
+    const affTeam = debate.affTeam;
+    const negTeam = debate.negTeam;
+    if (affTeam[0]) speakers.aff1 = { ...makeEmptySpeaker(), userId: affTeam[0]._id };
+    if (affTeam[1]) speakers.aff2 = { ...makeEmptySpeaker(), userId: affTeam[1]._id };
+    if (negTeam[0]) speakers.neg1 = { ...makeEmptySpeaker(), userId: negTeam[0]._id };
+    if (negTeam[1]) speakers.neg2 = { ...makeEmptySpeaker(), userId: negTeam[1]._id };
+  }
+
+  return { speakers, rankOrder: [], winner: undefined, rfd: '', ids: makeNewBallotIds() };
+}
+
+export function buildEvalPayload(
   speakers: Record<Position, SpeakerFormState>,
   ids: BallotIds,
   rankOrder: Position[],
-  judgeId: string,
-  debateId: string | undefined,
-  submittedAt?: number,
-): AnyTxChunk[] {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const ballotChunk = db.tx.ballots[ids.ballotId]!;
-  const txs: AnyTxChunk[] = [
-    ballotChunk.update({
-      winner: winner ?? null,
-      reasonForDecision: rfd || null,
-      ...(submittedAt !== undefined ? { submittedAt } : {}),
-    }),
-    ballotChunk.link({ judge: judgeId }),
-  ];
-
-  if (debateId) {
-    txs.push(ballotChunk.link({ debate: debateId }));
-  }
-
-  for (const pos of POSITIONS) {
+) {
+  return POSITIONS.map((pos) => {
     const sp = speakers[pos];
-    const evalId = ids.evalIds[pos];
     const rankIdx = rankOrder.indexOf(pos);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const evalChunk = db.tx.speakerEvals[evalId]!;
-    txs.push(
-      evalChunk.update({
-        position: pos,
-        rank: rankIdx >= 0 ? rankIdx + 1 : null,
-        delivery: sp.delivery ?? null,
-        organization: sp.organization ?? null,
-        evidenceAndSupport: sp.evidenceAndSupport ?? null,
-        refutation: sp.refutation ?? null,
-        crossExamination: sp.crossExamination ?? null,
-        conduct: sp.conduct ?? null,
-        notes: sp.notes || null,
-      }),
-    );
-    txs.push(evalChunk.link({ ballot: ids.ballotId }));
-    if (sp.userId) {
-      txs.push(evalChunk.link({ speaker: sp.userId }));
-    }
-  }
-
-  return txs;
+    return {
+      ...(ids.evalIds[pos] ? { evalId: ids.evalIds[pos] } : {}),
+      position: pos,
+      ...(rankIdx >= 0 ? { rank: rankIdx + 1 } : {}),
+      ...(sp.delivery !== undefined ? { delivery: sp.delivery } : {}),
+      ...(sp.organization !== undefined ? { organization: sp.organization } : {}),
+      ...(sp.evidenceAndSupport !== undefined ? { evidenceAndSupport: sp.evidenceAndSupport } : {}),
+      ...(sp.refutation !== undefined ? { refutation: sp.refutation } : {}),
+      ...(sp.crossExamination !== undefined ? { crossExamination: sp.crossExamination } : {}),
+      ...(sp.conduct !== undefined ? { conduct: sp.conduct } : {}),
+      notes: sp.notes,
+      ...(sp.userId ? { speakerId: sp.userId as Id<'users'> } : {}),
+    };
+  });
 }
 
 export function getActivePositions(speakers: Record<Position, SpeakerFormState>): Position[] {
@@ -121,94 +172,4 @@ export function canSubmitBallot(
   rankOrder: Position[],
 ): boolean {
   return winner !== undefined && isAllScored(speakers) && isAllRanked(speakers, rankOrder);
-}
-
-interface ExistingSpeakerEval {
-  id: string;
-  position: string;
-  rank?: number | null;
-  delivery?: number | null;
-  organization?: number | null;
-  evidenceAndSupport?: number | null;
-  refutation?: number | null;
-  crossExamination?: number | null;
-  conduct?: number | null;
-  notes?: string | null;
-  speaker: { id: string } | undefined;
-}
-
-interface ExistingBallot {
-  id: string;
-  winner?: string | null;
-  reasonForDecision?: string | null;
-  speakerEvals?: ExistingSpeakerEval[];
-}
-
-interface DebateTeams {
-  affTeam?: Array<{ id: string }>;
-  negTeam?: Array<{ id: string }>;
-}
-
-export interface BallotFormInit {
-  speakers: Record<Position, SpeakerFormState>;
-  rankOrder: Position[];
-  winner: Winner | undefined;
-  rfd: string;
-  ids: BallotIds;
-}
-
-export function initBallotFormState(
-  existing: ExistingBallot | undefined,
-  debate: DebateTeams | undefined,
-): BallotFormInit {
-  if (existing) {
-    const ids: BallotIds = {
-      ballotId: existing.id,
-      evalIds: { aff1: id(), aff2: id(), neg1: id(), neg2: id() },
-    };
-    const speakers = makeEmptySpeakers();
-
-    for (const ev of existing.speakerEvals ?? []) {
-      const pos = ev.position as Position;
-      if (!POSITIONS.includes(pos)) continue;
-      ids.evalIds[pos] = ev.id;
-      speakers[pos] = {
-        userId: ev.speaker?.id ?? '',
-        delivery: ev.delivery ?? undefined,
-        organization: ev.organization ?? undefined,
-        evidenceAndSupport: ev.evidenceAndSupport ?? undefined,
-        refutation: ev.refutation ?? undefined,
-        crossExamination: ev.crossExamination ?? undefined,
-        conduct: ev.conduct ?? undefined,
-        notes: ev.notes ?? '',
-      };
-    }
-
-    const rankOrder = (existing.speakerEvals ?? [])
-      .filter((ev) => ev.rank != null && speakers[ev.position as Position]?.userId)
-      .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
-      .map((ev) => ev.position as Position)
-      .filter((pos) => POSITIONS.includes(pos));
-
-    return {
-      speakers,
-      rankOrder,
-      winner: (existing.winner as Winner | undefined) ?? undefined,
-      rfd: existing.reasonForDecision ?? '',
-      ids,
-    };
-  }
-
-  const speakers = makeEmptySpeakers();
-
-  if (debate) {
-    const affTeam = debate.affTeam ?? [];
-    const negTeam = debate.negTeam ?? [];
-    if (affTeam[0]) speakers.aff1 = { ...makeEmptySpeaker(), userId: affTeam[0].id };
-    if (affTeam[1]) speakers.aff2 = { ...makeEmptySpeaker(), userId: affTeam[1].id };
-    if (negTeam[0]) speakers.neg1 = { ...makeEmptySpeaker(), userId: negTeam[0].id };
-    if (negTeam[1]) speakers.neg2 = { ...makeEmptySpeaker(), userId: negTeam[1].id };
-  }
-
-  return { speakers, rankOrder: [], winner: undefined, rfd: '', ids: makeNewBallotIds() };
 }

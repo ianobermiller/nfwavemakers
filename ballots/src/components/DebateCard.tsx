@@ -1,24 +1,23 @@
 import { cn } from 'cnfast';
-import { db } from '../db.ts';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { formatTeam } from '../utils.ts';
-import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 import { Avatar } from './Avatar.tsx';
 
 function AvatarStack({
   members,
-  avatarURLs,
 }: {
-  members: Array<{ id: string; name?: string | null }>;
-  avatarURLs: Record<string, string>;
+  members: Array<{ _id: string; name?: string; avatarUrl: string | null }>;
 }): React.JSX.Element | null {
   if (members.length === 0) return null;
   return (
     <span className="flex -space-x-2 shrink-0">
       {members.map((m) => (
         <Avatar
-          key={m.id}
-          name={m.name ?? m.id}
-          imageURL={avatarURLs[m.id]}
+          key={m._id}
+          name={m.name ?? m._id}
+          imageURL={m.avatarUrl ?? undefined}
           size="sm"
           className="ring-2 ring-white dark:ring-slate-800"
         />
@@ -48,29 +47,19 @@ export function DebateCard({
   ariaControls,
   className,
 }: DebateCardProps): React.JSX.Element {
-  const { data } = db.useQuery({
-    debates: {
-      $: { where: { id: debateId } },
-      affTeam: {},
-      negTeam: {},
-    },
-    ...(judgeId != null && {
-      ballots: {
-        $: { where: { 'debate.id': debateId, 'judge.id': judgeId } },
-      },
-    }),
+  const data = useQuery(api.debates.card, {
+    debateId: debateId as Id<'debates'>,
+    ...(judgeId ? { judgeId: judgeId as Id<'users'> } : {}),
   });
 
-  const debate = data?.debates[0];
+  const debate = data?.debate;
   const affTeam = debate?.affTeam ?? [];
   const negTeam = debate?.negTeam ?? [];
-  const avatarURLs = useAvatarURLs([...affTeam, ...negTeam].map((s) => s.id));
-  const ballot = data?.ballots?.[0];
   const winnerBadge =
     judgeId != null
-      ? ballot?.winner === 'aff'
+      ? data?.winner === 'aff'
         ? 'Affirmative wins'
-        : ballot?.winner === 'neg'
+        : data?.winner === 'neg'
           ? 'Negative wins'
           : '—'
       : null;
@@ -108,10 +97,10 @@ export function DebateCard({
         )}
         {hasTeams && (
           <span className="text-xs flex items-center gap-1.5 flex-wrap">
-            <AvatarStack members={affTeam} avatarURLs={avatarURLs} />
+            <AvatarStack members={affTeam} />
             <span className="text-aff dark:text-aff-d font-semibold">{formatTeam(affTeam)}</span>
             <span className="text-slate-400 dark:text-slate-500 mx-0.5">vs</span>
-            <AvatarStack members={negTeam} avatarURLs={avatarURLs} />
+            <AvatarStack members={negTeam} />
             <span className="text-neg dark:text-neg-d font-semibold">{formatTeam(negTeam)}</span>
           </span>
         )}

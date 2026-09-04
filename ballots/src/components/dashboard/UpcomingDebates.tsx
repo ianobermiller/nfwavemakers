@@ -1,20 +1,12 @@
-import { db } from '../../db.ts';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { formatTeam } from '../../utils.ts';
 
 export function UpcomingDebates(): React.JSX.Element {
   const today = new Date().toISOString().slice(0, 10);
-  const { data, isLoading } = db.useQuery({
-    debates: {
-      $: { where: { date: { $gte: today } }, order: { serverCreatedAt: 'asc' } },
-      affTeam: {},
-      negTeam: {},
-      judges: {},
-    },
-  });
+  const upcoming = useQuery(api.debates.listUpcoming, { today });
 
-  const upcoming = data?.debates ?? [];
-
-  if (isLoading || upcoming.length === 0) return <></>;
+  if (upcoming === undefined || upcoming.length === 0) return <></>;
 
   return (
     <section>
@@ -23,12 +15,12 @@ export function UpcomingDebates(): React.JSX.Element {
       </h2>
       <div className="flex flex-col gap-3">
         {upcoming.map((d) => {
-          const affStr = formatTeam(d.affTeam ?? []);
-          const negStr = formatTeam(d.negTeam ?? []);
-          const judgeNames = (d.judges ?? []).map((u) => u.name ?? '?');
+          const affStr = formatTeam(d.affTeam);
+          const negStr = formatTeam(d.negTeam);
+          const judgeNames = d.judges.map((u) => u.name ?? '?');
           return (
             <div
-              key={d.id}
+              key={d._id}
               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1"
             >
               <div className="flex items-center justify-between gap-2">

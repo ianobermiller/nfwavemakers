@@ -1,7 +1,5 @@
 const AVATAR_SIZE = 128;
 
-export const avatarPath = (userId: string): string => `${userId}/avatar.webp`;
-
 /**
  * Loads a user-selected file into a decoded <img>, resolving once it's ready to
  * draw. The resolved element's `src` is a live object URL; the caller owns it and

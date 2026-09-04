@@ -1,5 +1,5 @@
-import { db } from './db.ts';
 import { useHashRoute } from './hooks/useHashRoute.ts';
+import { AuthProvider, useAppUser, useAuthState } from './hooks/auth.tsx';
 import { Auth } from './components/Auth.tsx';
 import { ProfileSetup } from './components/ProfileSetup.tsx';
 import { Dashboard } from './components/Dashboard.tsx';
@@ -12,10 +12,11 @@ import { AdminBallots } from './components/AdminBallots.tsx';
 import { AdminUsers } from './components/AdminUsers.tsx';
 import { ProfileEdit } from './components/ProfileEdit.tsx';
 import type { Role } from './types.ts';
+import type { Id } from '../convex/_generated/dataModel';
 
 interface RouteCtx {
   param: string;
-  userId: string;
+  userId: Id<'users'>;
   role: Role;
   name: string;
 }
@@ -67,7 +68,16 @@ const ROUTES: Array<{
 ];
 
 export function App(): React.JSX.Element {
-  const { isLoading, user, error } = db.useAuth();
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
+  );
+}
+
+function AppShell(): React.JSX.Element {
+  const { isLoading, queryError } = useAuthState();
+  const user = useAppUser();
 
   if (isLoading) {
     return (
@@ -79,11 +89,11 @@ export function App(): React.JSX.Element {
     );
   }
 
-  if (error) {
+  if (queryError) {
     return (
       <div className="min-h-screen flex items-start justify-center p-6 pt-16 bg-slate-50 dark:bg-slate-950">
         <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8">
-          <p className="text-red-600 text-sm">Auth error: {error.message}</p>
+          <p className="text-red-600 text-sm">Auth error: {queryError}</p>
         </div>
       </div>
     );
@@ -91,17 +101,14 @@ export function App(): React.JSX.Element {
 
   if (!user) return <Auth />;
 
-  return <AuthenticatedApp userId={user.id} />;
+  return <AuthenticatedApp userId={user._id as Id<'users'>} />;
 }
 
-function AuthenticatedApp({ userId }: { userId: string }): React.JSX.Element {
+function AuthenticatedApp({ userId }: { userId: Id<'users'> }): React.JSX.Element {
   const hash = useHashRoute();
+  const user = useAppUser();
 
-  const { data, isLoading } = db.useQuery({
-    $users: { $: { where: { id: userId } } },
-  });
-
-  if (isLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-start justify-center p-6 pt-16 bg-slate-50 dark:bg-slate-950">
         <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8">
@@ -111,12 +118,11 @@ function AuthenticatedApp({ userId }: { userId: string }): React.JSX.Element {
     );
   }
 
-  const userRecord = data?.$users?.[0];
-  const name = userRecord?.name;
-  const role = userRecord?.role as Role | undefined;
+  const name = user.name;
+  const role = user.role;
 
   if (!name || !role) {
-    return <ProfileSetup userId={userId} />;
+    return <ProfileSetup />;
   }
 
   const [segment, param = ''] = hash.split('/');

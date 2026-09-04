@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "strict": true,
+        "target": "ESNext",
+        "lib": ["ES2024", "ESNext.Array", "DOM"],
+        "forceConsistentCasingInFileNames": true,
+        "allowSyntheticDefaultImports": true,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        "types": ["node"]
+    },
+    "include": ["./**/*"],
+    "exclude": ["./_generated"]
+}

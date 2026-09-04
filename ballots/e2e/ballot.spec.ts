@@ -1,29 +1,29 @@
 import { test, expect, type Page } from '@playwright/test';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '../convex/_generated/api';
 
 const BASE = 'http://localhost:5174/ballots/';
 
-type InstantDb = { auth: { signInWithToken: (token: string) => Promise<void> } };
-
-// The webServer starts before globalSetup, so Vite can't read the temporary
-// app ID from process.env. Inject it into the page instead; db.ts honors a
-// window.__INSTANT_APP_ID__ override (set before any app script runs).
-test.beforeEach(async ({ page }) => {
-  const appId = process.env['VITE_INSTANT_APP_ID'];
-  if (appId) {
-    await page.addInitScript((id: string) => {
-      (window as Record<string, unknown>)['__INSTANT_APP_ID__'] = id;
-    }, appId);
+async function waitForOtp(email: string): Promise<string> {
+  const url = process.env['VITE_CONVEX_URL'];
+  if (!url) throw new Error('Missing VITE_CONVEX_URL');
+  const client = new ConvexHttpClient(url);
+  for (let i = 0; i < 20; i += 1) {
+    const otp = await client.query(api.devAuth.getOtp, { email });
+    if (otp) return otp;
+    await new Promise((r) => setTimeout(r, 250));
   }
-});
+  throw new Error(`No OTP stored for ${email}`);
+}
 
-async function signInWithToken(page: Page, token: string): Promise<void> {
+async function signIn(page: Page, email: string): Promise<void> {
   await page.goto(BASE);
-  await page.waitForFunction(() => (window as Record<string, unknown>)['__db'] !== undefined);
-  await page.evaluate(async (t: string) => {
-    const db = (window as Record<string, unknown>)['__db'] as InstantDb;
-    await db.auth.signInWithToken(t);
-  }, token);
-  // Wait for the auth screen (email input) to disappear — indicates sign-in succeeded.
+  await page.locator('#email').fill(email);
+  await page.locator('button:has-text("Send Magic Code")').click();
+  await page.locator('#code').waitFor({ state: 'visible', timeout: 15_000 });
+  const otp = await waitForOtp(email);
+  await page.locator('#code').fill(otp);
+  await page.locator('button:has-text("Sign In")').click();
   await page.locator('#email').waitFor({ state: 'hidden', timeout: 15_000 });
 }
 
@@ -37,23 +37,20 @@ test.describe('Auth flow', () => {
 
 test.describe('Student picker', () => {
   test('judge can search for and find a student', async ({ page }) => {
-    const judgeToken = process.env['E2E_JUDGE_TOKEN'];
+    const judgeEmail = process.env['E2E_JUDGE_EMAIL'];
     const studentName = process.env['E2E_STUDENT_NAME'];
-    if (!judgeToken || !studentName)
+    if (!judgeEmail || !studentName)
       throw new Error('Missing e2e env vars — run full test suite with globalSetup');
 
-    await signInWithToken(page, judgeToken);
+    await signIn(page, judgeEmail);
 
-    // Navigate to the judge / ballot form
     await page.goto(`${BASE}judge`);
     await page.waitForSelector('input[placeholder="Search students…"]', { timeout: 10_000 });
 
-    // Focus the first student picker and type the student's name
     const picker = page.locator('input[placeholder="Search students…"]').first();
     await picker.click();
     await picker.fill(studentName.split(' ')[0] ?? studentName);
 
-    // The student should appear in the dropdown — not "No students found"
     await expect(page.locator(`button:has-text("${studentName}")`).first()).toBeVisible({
       timeout: 5000,
     });
@@ -63,32 +60,29 @@ test.describe('Student picker', () => {
 
 test.describe('Judge ballot view', () => {
   test('judge sees submitted ballot in dashboard', async ({ page }) => {
-    const judgeToken = process.env['E2E_JUDGE_TOKEN'];
-    if (!judgeToken) throw new Error('Missing E2E_JUDGE_TOKEN');
+    const judgeEmail = process.env['E2E_JUDGE_EMAIL'];
+    if (!judgeEmail) throw new Error('Missing E2E_JUDGE_EMAIL');
 
-    await signInWithToken(page, judgeToken);
+    await signIn(page, judgeEmail);
     await page.goto(`${BASE}dashboard`);
 
     await expect(page.locator('text=Submitted Ballots')).toBeVisible({ timeout: 5000 });
-    // The seeded debate has date 2024-01-15 — card should be clickable
     await expect(page.locator('text=2024-01-15').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('judge can view submitted ballot as read-only', async ({ page }) => {
-    const judgeToken = process.env['E2E_JUDGE_TOKEN'];
+    const judgeEmail = process.env['E2E_JUDGE_EMAIL'];
     const ballotId = process.env['E2E_BALLOT_ID'];
-    if (!judgeToken || !ballotId) throw new Error('Missing e2e env vars');
+    if (!judgeEmail || !ballotId) throw new Error('Missing e2e env vars');
 
-    await signInWithToken(page, judgeToken);
+    await signIn(page, judgeEmail);
     await page.goto(`${BASE}ballot/${ballotId}`);
 
-    // Should show ballot content
     await expect(page.locator('text=Affirmative wins')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
       timeout: 5000,
     });
 
-    // Should NOT show any edit controls
     await expect(page.locator('input[type="radio"]')).not.toBeVisible();
     await expect(page.locator('button:has-text("Submit Ballot")')).not.toBeVisible();
     await expect(page.locator("text=You don't have access")).not.toBeVisible();
@@ -97,28 +91,25 @@ test.describe('Judge ballot view', () => {
 
 test.describe('Student ballot view', () => {
   test('student sees submitted ballot in dashboard', async ({ page }) => {
-    const studentToken = process.env['E2E_STUDENT_TOKEN'];
-    if (!studentToken) throw new Error('Missing E2E_STUDENT_TOKEN');
+    const studentEmail = process.env['E2E_STUDENT_EMAIL'];
+    if (!studentEmail) throw new Error('Missing E2E_STUDENT_EMAIL');
 
-    await signInWithToken(page, studentToken);
+    await signIn(page, studentEmail);
     await page.goto(`${BASE}dashboard`);
 
     await expect(page.locator('text=My Feedback')).toBeVisible({ timeout: 5000 });
-    // The card shows the judge name — confirms the seeded ballot appears
     await expect(page.locator('text=Judge: Bob Judge')).toBeVisible({ timeout: 5000 });
   });
 
   test('student can view full ballot for their debate', async ({ page }) => {
-    const studentToken = process.env['E2E_STUDENT_TOKEN'];
+    const studentEmail = process.env['E2E_STUDENT_EMAIL'];
     const debateId = process.env['E2E_DEBATE_ID'];
-    if (!studentToken || !debateId) throw new Error('Missing e2e env vars');
+    if (!studentEmail || !debateId) throw new Error('Missing e2e env vars');
 
-    await signInWithToken(page, studentToken);
+    await signIn(page, studentEmail);
     await page.goto(`${BASE}debate/${debateId}`);
 
-    // Should show the ballot with judge name and winner
     await expect(page.locator('text=Bob Judge')).toBeVisible({ timeout: 5000 });
-    // DebateView renders "Winner: Affirmative" (not "Affirmative wins"), verify via the RFD which is unique
     await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
       timeout: 5000,
     });

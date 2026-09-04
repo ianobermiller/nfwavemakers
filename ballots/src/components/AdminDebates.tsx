@@ -1,4 +1,6 @@
-import { db } from '../db.ts';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
@@ -11,38 +13,30 @@ type DebateDeletePayload = {
 };
 
 export function AdminDebates(): React.JSX.Element {
-  const { data, isLoading } = db.useQuery({
-    debates: {
-      $: { order: { serverCreatedAt: 'desc' } },
-      judges: {},
-      ballots: {},
-    },
-  });
-
-  const debates = data?.debates ?? [];
+  const debates = useQuery(api.debates.listAll);
+  const softDeleteDebate = useMutation(api.debates.softDelete);
+  const restoreDebate = useMutation(api.debates.restore);
 
   const { pendingDeletes, softDelete, undo } = useUndoDelete<DebateDeletePayload>(
+    (payload) => softDeleteDebate({ debateId: payload.id as Id<'debates'> }),
     (payload) => {
-      const now = Date.now();
-      return db.transact([
-        db.tx.debates[payload.id]!.update({ deletedAt: now }),
-        ...payload.ballotIds.map((bid) => db.tx.ballots[bid]!.update({ deletedAt: now })),
-      ]);
-    },
-    (payload) => {
-      void db.transact([
-        db.tx.debates[payload.id]!.update({ deletedAt: null }),
-        ...payload.ballotIds.map((bid) => db.tx.ballots[bid]!.update({ deletedAt: null })),
-      ]);
+      void restoreDebate({
+        debateId: payload.id as Id<'debates'>,
+        ballotIds: payload.ballotIds as Id<'ballots'>[],
+      });
     },
   );
 
-  function handleDelete(d: (typeof debates)[0]): void {
-    const ballotIds = (d.ballots ?? []).map((b) => b.id);
-    void softDelete(d.id, { id: d.id, ballotIds, ballotCount: ballotIds.length });
+  function handleDelete(d: NonNullable<typeof debates>[0]): void {
+    void softDelete(d._id, {
+      id: d._id,
+      ballotIds: d.ballotIds,
+      ballotCount: d.ballotCount,
+    });
   }
 
   const pendingList = [...pendingDeletes.values()];
+  const isLoading = debates === undefined;
 
   return (
     <PageLayout>
@@ -65,10 +59,10 @@ export function AdminDebates(): React.JSX.Element {
         {pendingList.map((pd) => (
           <UndoDebateRow key={pd.id} payload={pd} onUndo={() => undo(pd.id)} />
         ))}
-        {debates.map((d) => (
-          <div key={d.id} className="flex items-center gap-2">
+        {(debates ?? []).map((d) => (
+          <div key={d._id} className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
-              <DebateCard debateId={d.id} onClick={() => navigate(`admin/${d.id}`)} />
+              <DebateCard debateId={d._id} onClick={() => navigate(`admin/${d._id}`)} />
             </div>
             <button
               className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"

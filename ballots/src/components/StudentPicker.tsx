@@ -7,7 +7,7 @@ interface Props {
   id: string;
   value: string;
   onChange: (id: string) => void;
-  students: Array<{ id: string; name?: string | null }>;
+  students: Array<{ id: string; name?: string | undefined }>;
   avatarURLs?: Record<string, string>;
   disabled?: boolean;
 }

@@ -26,9 +26,5 @@ export default defineConfig({
     command: 'vite --port 5174',
     url: 'http://localhost:5174/ballots/',
     reuseExistingServer: false,
-    // The webServer starts BEFORE globalSetup runs, so it can't pick up the
-    // temporary app ID via process.env. Instead, each test injects the temp
-    // app ID into the page (see test.beforeEach in ballot.spec.ts), and db.ts
-    // honors a window.__INSTANT_APP_ID__ override.
   },
 });

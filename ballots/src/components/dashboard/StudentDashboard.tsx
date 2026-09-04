@@ -1,26 +1,16 @@
-import { db } from '../../db.ts';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { navigate } from '../../hooks/useHashRoute.ts';
 
-export function StudentDashboard({ userId }: { userId: string }): React.JSX.Element {
-  const { data, isLoading } = db.useQuery({
-    speakerEvals: {
-      $: { where: { 'speaker.id': userId } },
-      ballot: {
-        debate: {},
-        judge: {},
-      },
-    },
-  });
+export function StudentDashboard({ userId: _userId }: { userId: string }): React.JSX.Element {
+  const ballots = useQuery(api.ballots.forSpeaker);
+  const isLoading = ballots === undefined;
 
-  const evals = (data?.speakerEvals ?? []).filter((e) => e.ballot?.submittedAt != null);
-
-  // Group by debateId when available, fall back to ballotId so standalone ballots still appear.
-  const byGroup = new Map<string, typeof evals>();
-  for (const e of evals) {
-    const key = e.ballot?.debate?.id ?? e.ballot?.id;
-    if (!key) continue;
+  const byGroup = new Map<string, NonNullable<typeof ballots>>();
+  for (const b of ballots ?? []) {
+    const key = b.debate?._id ?? b._id;
     const arr = byGroup.get(key) ?? [];
-    arr.push(e);
+    arr.push(b);
     byGroup.set(key, arr);
   }
 
@@ -35,13 +25,17 @@ export function StudentDashboard({ userId }: { userId: string }): React.JSX.Elem
       )}
       <div className="flex flex-col gap-3">
         {[...byGroup.entries()].map(([groupKey, evs]) => {
-          const ballot = evs[0]?.ballot;
+          const ballot = evs[0];
           const debate = ballot?.debate;
           const displayDate =
             debate?.date ??
             (ballot?.submittedAt != null ? new Date(ballot.submittedAt).toLocaleDateString() : '—');
-          const viewRoute = debate?.id ? `debate/${debate.id}` : `ballot/${ballot?.id}`;
-          const judgeNames = [...new Set(evs.map((ev) => ev.ballot?.judge?.name).filter(Boolean))];
+          const viewRoute = debate?._id ? `debate/${debate._id}` : `ballot/${ballot?._id}`;
+          const judgeNames = [
+            ...new Set(
+              evs.map((ev) => ev.judge?.name).filter((name): name is string => name != null),
+            ),
+          ];
           return (
             <button
               key={groupKey}

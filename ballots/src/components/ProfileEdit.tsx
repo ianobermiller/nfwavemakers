@@ -1,13 +1,15 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from 'cnfast';
-import { db } from '../db.ts';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
 import type { Role } from '../types.ts';
 import { Avatar } from './Avatar.tsx';
 import { AvatarCropDialog } from './AvatarCropDialog.tsx';
 import { Input } from './ui/Input.tsx';
-import { avatarPath } from '../utils/imageUtils.ts';
+import { authClient } from '../authClient.ts';
 
 interface Props {
   userId: string;
@@ -20,7 +22,7 @@ const SELECTABLE_ROLES: Array<{ value: Role; label: string; description: string 
   { value: 'parent', label: 'Parent / Judge', description: 'I judge debate rounds' },
 ];
 
-export function ProfileEdit({ userId, currentName, currentRole }: Props): React.JSX.Element {
+export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Element {
   const [name, setName] = useState(currentName);
   const [role, setRole] = useState<Role>(currentRole);
   const [error, setError] = useState('');
@@ -28,11 +30,11 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const { data: filesData } = db.useQuery({
-    $files: { $: { where: { path: avatarPath(userId) } } },
-  });
-  const avatarURL = filesData?.$files?.[0]?.url as string | undefined;
+  const me = useQuery(api.users.current);
+  const updateProfile = useMutation(api.users.updateProfile);
+  const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const saveAvatar = useMutation(api.users.saveAvatar);
+  const avatarURL = me?.avatarUrl ?? undefined;
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>): void {
     const file = e.target.files?.[0];
@@ -45,7 +47,17 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
     setAvatarUploading(true);
     setError('');
     try {
-      await db.storage.uploadFile(avatarPath(userId), blob, { contentType: 'image/webp' });
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/webp' },
+        body: blob,
+      });
+      if (!result.ok) {
+        throw new Error('Failed to upload photo');
+      }
+      const { storageId } = (await result.json()) as { storageId: string };
+      await saveAvatar({ storageId: storageId as Id<'_storage'> });
       setCropFile(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to upload photo');
@@ -61,7 +73,7 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
     setError('');
     try {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await db.transact(db.tx.$users[userId]!.update({ name: name.trim(), role }));
+      await updateProfile({ name: name.trim(), role });
       navigate('dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save profile');
@@ -171,6 +183,8 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
         >
           {loading ? 'Saving…' : 'Save'}
         </button>
+
+        {'PublicKeyCredential' in window && <PasskeySettings />}
       </div>
 
       <AvatarCropDialog
@@ -180,4 +194,94 @@ export function ProfileEdit({ userId, currentName, currentRole }: Props): React.
       />
     </PageLayout>
   );
+}
+
+function PasskeySettings(): React.JSX.Element {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [passkeys, setPasskeys] =
+    useState<Array<{ id: string; name?: null | string | undefined }>>();
+
+  const refresh = useCallback(async (): Promise<void> => {
+    const result = await authClient.passkey.listUserPasskeys();
+    throwIfError(result.error);
+    setPasskeys(result.data ?? []);
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    void refresh()
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Could not load passkeys'))
+      .finally(() => setLoading(false));
+  }, [refresh]);
+
+  async function addPasskey(): Promise<void> {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await authClient.passkey.addPasskey({ name: 'NF Wavemakers passkey' });
+      throwIfError(result.error);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not add passkey');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function removePasskey(id: string): Promise<void> {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await authClient.passkey.deletePasskey({ id });
+      throwIfError(result.error);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not remove passkey');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section className="mt-4 border-t border-slate-200 dark:border-slate-700 pt-5">
+      <h2 className="font-semibold text-slate-800 dark:text-slate-100">Passkeys</h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Sign in with Face ID, Touch ID, or your device PIN.
+      </p>
+      <div className="mt-3 flex flex-col gap-2">
+        {passkeys?.map((passkey) => (
+          <div
+            className="flex items-center gap-3 rounded-xl bg-slate-100 dark:bg-slate-700 p-3"
+            key={passkey.id}
+          >
+            <span className="text-sm font-semibold">{passkey.name || 'Passkey'}</span>
+            <button
+              className="ml-auto text-sm text-red-600 disabled:opacity-50"
+              disabled={loading}
+              onClick={() => void removePasskey(passkey.id)}
+              type="button"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        <button
+          className="w-full py-2.5 border border-slate-300 dark:border-slate-600 font-semibold rounded-xl disabled:opacity-50"
+          disabled={loading}
+          onClick={() => void addPasskey()}
+          type="button"
+        >
+          {loading ? 'Please wait…' : 'Add a passkey'}
+        </button>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+      </div>
+    </section>
+  );
+}
+
+function throwIfError(error: null | { message?: string | undefined } | undefined): void {
+  if (error) {
+    throw new Error(error.message ?? 'Authentication failed');
+  }
 }

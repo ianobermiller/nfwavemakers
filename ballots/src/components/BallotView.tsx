@@ -1,8 +1,9 @@
 import { cn } from 'cnfast';
-import { db } from '../db.ts';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { Avatar } from './Avatar.tsx';
 import { PageLayout } from './PageLayout.tsx';
@@ -15,19 +16,13 @@ interface Props {
 }
 
 export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Element {
-  const { data, isLoading } = db.useQuery({
-    ballots: {
-      $: { where: { id: ballotId } },
-      judge: {},
-      debate: {},
-      speakerEvals: {
-        speaker: {},
-      },
-    },
-  });
+  const ballot = useQuery(api.ballots.get, { ballotId: ballotId as Id<'ballots'> });
+  const isLoading = ballot === undefined;
 
-  const avatarURLs = useAvatarURLs(
-    (data?.ballots?.[0]?.speakerEvals ?? []).map((e) => e.speaker?.id),
+  const avatarURLs = Object.fromEntries(
+    (ballot?.speakerEvals ?? [])
+      .filter((e) => e.speaker?.avatarUrl)
+      .map((e) => [e.speaker!._id, e.speaker!.avatarUrl as string]),
   );
 
   if (isLoading) {
@@ -38,7 +33,6 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
     );
   }
 
-  const ballot = data?.ballots?.[0];
   if (!ballot) {
     return (
       <PageLayout>
@@ -59,7 +53,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   const evals = ballot.speakerEvals ?? [];
 
   const can = usePermissions(currentUserId);
-  if (!can.canViewBallot(judge?.id, evals.map((e) => e.speaker?.id))) {
+  if (!can.canViewBallot(judge?._id, evals.map((e) => e.speaker?._id))) {
     return (
       <PageLayout>
         <p className="text-slate-500 dark:text-slate-400 text-sm">
@@ -146,10 +140,10 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
                 >
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                      {ev?.speaker?.id && (
+                      {ev?.speaker?._id && (
                         <Avatar
-                          name={ev.speaker.name ?? ev.speaker.id}
-                          imageURL={avatarURLs[ev.speaker.id]}
+                          name={ev.speaker.name ?? ev.speaker._id}
+                          imageURL={avatarURLs[ev.speaker._id]}
                           size="sm"
                         />
                       )}

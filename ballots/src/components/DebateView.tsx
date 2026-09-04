@@ -1,5 +1,7 @@
 import { cn } from 'cnfast';
-import { db } from '../db.ts';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import type { Id } from '../../convex/_generated/dataModel';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName } from '../utils.ts';
 import { PageLayout } from './PageLayout.tsx';
@@ -12,17 +14,8 @@ interface Props {
 }
 
 export function DebateView({ debateId, currentUserId }: Props): React.JSX.Element {
-  const { data, isLoading } = db.useQuery({
-    debates: {
-      $: { where: { id: debateId } },
-      affTeam: {},
-      negTeam: {},
-      ballots: {
-        judge: {},
-        speakerEvals: { speaker: {} },
-      },
-    },
-  });
+  const data = useQuery(api.ballots.debateDetail, { debateId: debateId as Id<'debates'> });
+  const isLoading = data === undefined;
 
   if (isLoading) {
     return (
@@ -32,7 +25,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
     );
   }
 
-  const debate = data?.debates?.[0];
+  const debate = data?.debate;
   if (!debate) {
     return (
       <PageLayout>
@@ -41,9 +34,10 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
     );
   }
 
-  const affIds = (debate.affTeam ?? []).map((u) => u.id);
-  const negIds = (debate.negTeam ?? []).map((u) => u.id);
-  const isMember = affIds.includes(currentUserId) || negIds.includes(currentUserId);
+  const affIds = debate.affTeam.map((u) => u._id);
+  const negIds = debate.negTeam.map((u) => u._id);
+  const isMember =
+    affIds.includes(currentUserId as Id<'users'>) || negIds.includes(currentUserId as Id<'users'>);
   if (!isMember) {
     return (
       <PageLayout>
@@ -54,7 +48,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
     );
   }
 
-  const ballots = (debate.ballots ?? []).filter((b) => b.submittedAt != null);
+  const ballots = data.ballots;
 
   return (
     <PageLayout>
@@ -89,7 +83,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
         );
         return (
           <div
-            key={ballot.id}
+            key={ballot._id}
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-5 shadow-sm"
           >
             <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">

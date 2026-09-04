@@ -1,31 +1,28 @@
 import { useState } from 'react';
 import { cn } from 'cnfast';
-import { db } from '../db.ts';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import type { Role } from '../types.ts';
 import { Input } from './ui/Input.tsx';
-
-interface Props {
-  userId: string;
-}
 
 const SELECTABLE_ROLES: Array<{ value: Role; label: string; description: string }> = [
   { value: 'student', label: 'Student', description: 'I compete as a debater' },
   { value: 'parent', label: 'Parent / Judge', description: 'I judge debate rounds' },
 ];
 
-export function ProfileSetup({ userId }: Props): React.JSX.Element {
+export function ProfileSetup(): React.JSX.Element {
   const [name, setName] = useState('');
   const [role, setRole] = useState<Role | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const updateProfile = useMutation(api.users.updateProfile);
 
   async function save(): Promise<void> {
     if (!name.trim() || !role) return;
     setLoading(true);
     setError('');
     try {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await db.transact(db.tx.$users[userId]!.update({ name: name.trim(), role }));
+      await updateProfile({ name: name.trim(), role });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save profile');
       setLoading(false);

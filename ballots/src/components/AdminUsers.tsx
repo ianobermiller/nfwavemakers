@@ -1,15 +1,11 @@
-import { db } from '../db.ts';
-import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { PageLayout } from './PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
 
 export function AdminUsers(): React.JSX.Element {
-  const { data, isLoading } = db.useQuery({
-    $users: { $: { order: { serverCreatedAt: 'desc' } } },
-  });
-
-  const users = data?.$users ?? [];
-  const avatarURLs = useAvatarURLs(users.map((u) => u.id));
+  const users = useQuery(api.users.list);
+  const isLoading = users === undefined;
 
   return (
     <PageLayout>
@@ -21,12 +17,16 @@ export function AdminUsers(): React.JSX.Element {
         </p>
       )}
       <div className="flex flex-col gap-3">
-        {users.map((u) => (
+        {(users ?? []).map((u) => (
           <div
-            key={u.id}
+            key={u._id}
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-center gap-3"
           >
-            <Avatar name={u.name ?? u.email ?? u.id} imageURL={avatarURLs[u.id]} size="sm" />
+            <Avatar
+              name={u.name ?? u.email ?? u._id}
+              imageURL={u.avatarUrl ?? undefined}
+              size="sm"
+            />
             <div className="flex flex-col gap-0.5 min-w-0">
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                 {u.name ?? 'Unnamed'}

@@ -56,7 +56,7 @@ function ScoreRow({
 interface Props {
   pos: Position;
   speaker: SpeakerFormState;
-  students: Array<{ id: string; name?: string | null }>;
+  students: Array<{ id: string; name?: string | undefined }>;
   avatarURLs: Record<string, string>;
   activeCount: number;
   currentRank: number;
