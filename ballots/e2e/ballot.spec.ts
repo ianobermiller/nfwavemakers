@@ -1,29 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
-import { ConvexHttpClient } from 'convex/browser';
-import { api } from '../convex/_generated/api';
 
 const BASE = 'http://localhost:5174/ballots/';
 
-async function waitForOtp(email: string): Promise<string> {
-  const url = process.env['VITE_CONVEX_URL'];
-  if (!url) throw new Error('Missing VITE_CONVEX_URL');
-  const client = new ConvexHttpClient(url);
-  for (let i = 0; i < 20; i += 1) {
-    const otp = await client.query(api.devAuth.getOtp, { email });
-    if (otp) return otp;
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  throw new Error(`No OTP stored for ${email}`);
-}
-
 async function signIn(page: Page, email: string): Promise<void> {
+  const password = process.env['E2E_PASSWORD'];
+  if (!password) throw new Error('Missing E2E_PASSWORD — run full test suite with globalSetup');
+
   await page.goto(BASE);
+  await page.getByRole('button', { name: 'Use a password' }).click();
   await page.locator('#email').fill(email);
-  await page.locator('button:has-text("Send Magic Code")').click();
-  await page.locator('#code').waitFor({ state: 'visible', timeout: 15_000 });
-  const otp = await waitForOtp(email);
-  await page.locator('#code').fill(otp);
-  await page.locator('button:has-text("Sign In")').click();
+  await page.locator('#password').fill(password);
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
   await page.locator('#email').waitFor({ state: 'hidden', timeout: 15_000 });
 }
 

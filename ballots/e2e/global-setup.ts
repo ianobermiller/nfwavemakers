@@ -29,14 +29,24 @@ function parseEnv(file: string): Record<string, string> {
 export default async function globalSetup(): Promise<void> {
   const env = { ...parseEnv(join(root, '.env')), ...parseEnv(join(root, '.env.local')) };
   const convexUrl = env['VITE_CONVEX_URL'];
+  const siteUrl = env['VITE_CONVEX_SITE_URL'];
   if (!convexUrl) {
     throw new Error('Missing VITE_CONVEX_URL — run npx convex dev first');
   }
+  if (!siteUrl) {
+    throw new Error('Missing VITE_CONVEX_SITE_URL — run npx convex dev first');
+  }
 
-  const seed = spawnSync('npx', ['convex', 'run', 'e2eSeed:seed'], {
-    cwd: root,
-    encoding: 'utf8',
-  });
+  const password = process.env['TEST_ACCOUNT_PASSWORD'] ?? 'test-password';
+  const seed = spawnSync(
+    'node',
+    ['--env-file=.env', '--env-file=.env.local', 'scripts/seed-test-accounts.mjs'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, TEST_ACCOUNT_PASSWORD: password },
+    },
+  );
   if (seed.status !== 0) {
     console.error(seed.stdout);
     console.error(seed.stderr);
@@ -52,10 +62,11 @@ export default async function globalSetup(): Promise<void> {
   const seeded = parsed.data;
 
   process.env['VITE_CONVEX_URL'] = convexUrl;
-  process.env['VITE_CONVEX_SITE_URL'] = env['VITE_CONVEX_SITE_URL'] ?? '';
+  process.env['VITE_CONVEX_SITE_URL'] = siteUrl;
   process.env['E2E_JUDGE_EMAIL'] = seeded.judgeEmail;
   process.env['E2E_STUDENT_EMAIL'] = seeded.studentEmail;
   process.env['E2E_STUDENT_NAME'] = 'Alice Student';
   process.env['E2E_DEBATE_ID'] = seeded.debateId;
   process.env['E2E_BALLOT_ID'] = seeded.ballotId;
+  process.env['E2E_PASSWORD'] = password;
 }

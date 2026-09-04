@@ -96,3 +96,11 @@ for (const account of accounts) {
 
 console.log(`Seeded ${accounts.map(({ email }) => email).join(', ')}`);
 console.log(`Password: ${password}`);
+console.log(
+  JSON.stringify({
+    ballotId: seeded.ballotId,
+    debateId: seeded.debateId,
+    judgeEmail: seeded.judgeEmail,
+    studentEmail: seeded.studentEmail,
+  }),
+);

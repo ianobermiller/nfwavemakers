@@ -22,6 +22,19 @@ function isLocalSite(): boolean {
   return siteUrl.includes('localhost') || siteUrl.includes('127.0.0.1');
 }
 
+/** RFC 2606 / 6761 reserved names — Resend rejects these as `to` addresses. */
+function isReservedTestEmail(email: string): boolean {
+  const domain = email.split('@')[1]?.toLowerCase() ?? '';
+  return (
+    domain === 'example.com' ||
+    domain.endsWith('.example.com') ||
+    domain === 'example.net' ||
+    domain === 'example.org' ||
+    domain === 'localhost' ||
+    domain.endsWith('.test')
+  );
+}
+
 function localTrustedOrigins(): string[] {
   if (!isLocalSite()) {
     return [];
@@ -37,6 +50,11 @@ async function persistLocalOtp(ctx: GenericCtx<DataModel>, email: string, otp: s
 }
 
 async function sendVerificationCode(email: string, otp: string, type: string): Promise<void> {
+  if (isLocalSite() && isReservedTestEmail(email)) {
+    console.log(`[auth] OTP for ${email}: ${otp}`);
+    return;
+  }
+
   const apiKey = process.env['AUTH_RESEND_KEY'];
   if (!apiKey) {
     if (isLocalSite()) {
