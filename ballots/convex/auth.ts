@@ -25,6 +25,20 @@ function isLocalSite(): boolean {
   return siteUrl.includes('localhost') || siteUrl.includes('127.0.0.1');
 }
 
+// Better Auth runs sendVerificationOTP as a background task and swallows anything it
+// throws, so a hosted deployment missing these silently drops every sign-in code while
+// still reporting success. Throwing here fails `convex deploy` instead.
+const requiredHostedEnv = ['AUTH_RESEND_KEY', 'BETTER_AUTH_SECRET'];
+if (!isLocalSite()) {
+  const missing = requiredHostedEnv.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    throw new Error(
+      `SITE_URL is ${siteUrl}, but this deployment is missing ${missing.join(', ')}. ` +
+        `Set each with \`npx convex env set <NAME> <value> --prod\`.`,
+    );
+  }
+}
+
 /** RFC 2606 / 6761 reserved names — Resend rejects these as `to` addresses. */
 function isReservedTestEmail(email: string): boolean {
   const domain = email.split('@')[1]?.toLowerCase() ?? '';
