@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from 'cnfast';
 import { useMutation, useQuery } from 'convex/react';
+import { z } from 'zod';
 import { api } from '../../convex/_generated/api';
 import type { Role } from '../types.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
@@ -16,6 +17,8 @@ interface Props {
   currentName: string;
   currentRole: Role;
 }
+
+const uploadResponseSchema = z.object({ storageId: z.string() });
 
 const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = [
   { value: 'student', label: 'Student', description: 'I compete as a debater' },
@@ -56,16 +59,11 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
       if (!result.ok) {
         throw new Error('Failed to upload photo');
       }
-      const body: unknown = await result.json();
-      if (
-        typeof body !== 'object' ||
-        body === null ||
-        !('storageId' in body) ||
-        typeof body.storageId !== 'string'
-      ) {
+      const body = uploadResponseSchema.safeParse(await result.json());
+      if (!body.success) {
         throw new Error('Invalid upload response');
       }
-      await saveAvatar({ storageId: convexStorageId(body.storageId) });
+      await saveAvatar({ storageId: convexStorageId(body.data.storageId) });
       setCropFile(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to upload photo');

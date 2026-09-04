@@ -2,8 +2,16 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { z } from 'zod';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+const seedResultSchema = z.object({
+  ballotId: z.string(),
+  debateId: z.string(),
+  judgeEmail: z.string(),
+  studentEmail: z.string(),
+});
 
 function parseEnv(file: string): Record<string, string> {
   if (!existsSync(file)) return {};
@@ -36,27 +44,12 @@ export default async function globalSetup(): Promise<void> {
   }
 
   const jsonStart = seed.stdout.lastIndexOf('{');
-  const parsed: unknown = JSON.parse(seed.stdout.slice(jsonStart));
-  if (
-    typeof parsed !== 'object' ||
-    parsed === null ||
-    !('ballotId' in parsed) ||
-    !('debateId' in parsed) ||
-    !('judgeEmail' in parsed) ||
-    !('studentEmail' in parsed) ||
-    typeof parsed.ballotId !== 'string' ||
-    typeof parsed.debateId !== 'string' ||
-    typeof parsed.judgeEmail !== 'string' ||
-    typeof parsed.studentEmail !== 'string'
-  ) {
+  const raw: unknown = JSON.parse(seed.stdout.slice(jsonStart));
+  const parsed = seedResultSchema.safeParse(raw);
+  if (!parsed.success) {
     throw new Error('e2e seed returned invalid JSON');
   }
-  const seeded = {
-    ballotId: parsed.ballotId,
-    debateId: parsed.debateId,
-    judgeEmail: parsed.judgeEmail,
-    studentEmail: parsed.studentEmail,
-  };
+  const seeded = parsed.data;
 
   process.env['VITE_CONVEX_URL'] = convexUrl;
   process.env['VITE_CONVEX_SITE_URL'] = env['VITE_CONVEX_SITE_URL'] ?? '';
