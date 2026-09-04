@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const BASE = 'http://localhost:5174/ballots/';
+const BASE = 'http://localhost:5174/';
 
 async function signIn(page: Page, email: string): Promise<void> {
   const password = process.env['E2E_PASSWORD'];

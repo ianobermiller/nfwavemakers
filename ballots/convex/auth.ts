@@ -10,7 +10,10 @@ import authConfig from './auth.config';
 import authSchema from './betterAuth/schema';
 
 const siteUrl = process.env['SITE_URL'] ?? 'http://localhost:5173';
-const relyingPartyId = new URL(siteUrl).hostname;
+const siteHost = new URL(siteUrl).hostname;
+// Parent domain so passkeys registered on nfwavemakers.com still work on the subdomain.
+const relyingPartyId =
+  siteHost === 'localhost' || siteHost === '127.0.0.1' ? siteHost : 'nfwavemakers.com';
 
 export const authComponent = createClient<DataModel, typeof authSchema>(components.betterAuth, {
   local: {
@@ -122,7 +125,12 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
       crossDomain({ siteUrl }),
       convex({ authConfig }),
     ],
-    trustedOrigins: [siteUrl, ...localTrustedOrigins()],
+    trustedOrigins: [
+      siteUrl,
+      'https://ballots.nfwavemakers.com',
+      'https://nfwm-ballots.pages.dev',
+      ...localTrustedOrigins(),
+    ],
   }) satisfies BetterAuthOptions;
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => betterAuth(createAuthOptions(ctx));

@@ -9,7 +9,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 15_000 },
   use: {
-    baseURL: 'http://localhost:5174/ballots/',
+    baseURL: 'http://localhost:5174/',
     trace: 'on-first-retry',
   },
   projects: [
@@ -24,7 +24,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'vite --port 5174',
-    url: 'http://localhost:5174/ballots/',
+    url: 'http://localhost:5174/',
     reuseExistingServer: false,
   },
 });

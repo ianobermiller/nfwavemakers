@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
-    "build": "npm ci --prefix ballots && npm run build --prefix ballots && node _build.mjs"
+    "build": "node _build.mjs"
   },
   "devDependencies": {
     "vite": "^8.2.1"

@@ -14,7 +14,7 @@ npx convex login
 npm run dev
 ```
 
-`npm run dev` runs Convex and Vite together against **local** data. The UI is at [http://localhost:5173/ballots/](http://localhost:5173/ballots/). Convex writes `VITE_CONVEX_URL` into `.env.local`.
+`npm run dev` runs Convex and Vite together against **local** data. The UI is at [http://localhost:5173/](http://localhost:5173/). Convex writes `VITE_CONVEX_URL` into `.env.local`.
 
 Seed local test data and password-enabled personas:
 
@@ -70,7 +70,8 @@ npx @better-auth/cli generate --cwd convex/betterAuth --config auth.ts --output 
 | `npm run lint` | Oxlint |
 | `npm run format` | Oxfmt |
 | `npm run knip` | Unused export check |
-| `npm run build` | Typecheck + production bundle |
+| `npm run build` | Oxlint + production bundle |
+| `npm run pages:deploy` | Build and upload `dist/` to Cloudflare Pages |
 | `npm run test:e2e` | Playwright (needs local Convex running) |
 
 ### Layout
@@ -81,7 +82,30 @@ src/             Vite React UI
 scripts/         Instant import, prod frontend
 ```
 
-Ballot and debate URLs use Convex document IDs (`/ballots/debate/<id>`). Instant UUIDs will not work after import.
+Ballot and debate URLs use Convex document IDs (`/debate/<id>`). Instant UUIDs will not work after import.
+
+## Deploy
+
+The SPA is a **second Cloudflare Pages project** (`nfwm-ballots`) on `https://ballots.nfwavemakers.com`. The club site on `nfwavemakers.com` 301s `/ballots` there.
+
+Sign in to Wrangler once on this machine:
+
+```bash
+npx wrangler login
+```
+
+First-time project (or a one-off ship without Git):
+
+```bash
+npx wrangler pages project create nfwm-ballots --production-branch main
+npm run pages:deploy
+```
+
+Attach `ballots.nfwavemakers.com` in the Pages dashboard (same Cloudflare zone as the club site). For deploy-on-push, connect `ianobermiller/nfwavemakers` with **root directory** `ballots`, build `npm run build`, output `dist`.
+
+Production Convex `SITE_URL` must be `https://ballots.nfwavemakers.com` (`npx convex env set SITE_URL https://ballots.nfwavemakers.com --prod`). Env changes apply immediately; `npx convex deploy` still pushes functions.
+
+`.env.production` bakes the public Convex URLs into the Vite bundle. Secrets stay on Convex, not Pages.
 
 ## Environment
 
@@ -100,9 +124,9 @@ Set these on the Convex deployment (`npx convex env list` to inspect):
 | `AUTH_RESEND_KEY` | Resend API key |
 | `AUTH_EMAIL` | From address for sign-in codes |
 
-Cloud/prod is a separate deployment. Copy the same env vars with `--prod` (and set `SITE_URL` to the public origin, e.g. `https://nfwavemakers.com`). Env changes apply immediately; no redeploy.
+Cloud/prod is a separate deployment. Copy the same env vars with `--prod` (and set `SITE_URL` to `https://ballots.nfwavemakers.com`). Env changes apply immediately; no redeploy.
 
-`npx convex deploy` / the site `npm run build` push functions and the frontend; they do **not** copy env.
+`npx convex deploy` pushes functions. The Pages build (`npm run build` / `npm run pages:deploy`) ships the frontend. Neither copies Convex env.
 
 ## Data import (Instant)
 
