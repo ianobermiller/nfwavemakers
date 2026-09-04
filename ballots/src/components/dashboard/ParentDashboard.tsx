@@ -1,14 +1,15 @@
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { navigate } from '../../hooks/useHashRoute.ts';
 import { DebateCard } from '../DebateCard.tsx';
 
-export function ParentDashboard({ userId }: { userId: string }): React.JSX.Element {
+export function ParentDashboard({ userId }: { userId: Id<'users'> }): React.JSX.Element {
   const debates = useQuery(api.debates.listAssigned);
   const submittedBallots = useQuery(api.ballots.submittedByMe);
   const isLoading = debates === undefined || submittedBallots === undefined;
 
-  const hasAssigned = !isLoading && (debates?.length ?? 0) > 0;
+  const hasAssigned = !isLoading && debates.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -27,7 +28,7 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
             Assigned Debates
           </h2>
           <div className="flex flex-col gap-3">
-            {(debates ?? []).map((d) => (
+            {debates.map((d) => (
               <DebateCard key={d._id} debateId={d._id} onClick={() => navigate(`judge/${d._id}`)} />
             ))}
           </div>
@@ -43,13 +44,13 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
         </button>
       )}
 
-      {!isLoading && (submittedBallots?.length ?? 0) > 0 && (
+      {!isLoading && submittedBallots.length > 0 && (
         <section>
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
             Submitted Ballots
           </h2>
           <div className="flex flex-col gap-3">
-            {(submittedBallots ?? []).map((b) => {
+            {submittedBallots.map((b) => {
               if (b.debate) {
                 return (
                   <DebateCard

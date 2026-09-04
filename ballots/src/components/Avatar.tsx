@@ -47,7 +47,7 @@ function fallbackColor(name: string): string {
   for (let i = 0; i < key.length; i++) {
     hash = (hash * 31 + key.charCodeAt(i)) | 0;
   }
-  return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length] as string;
+  return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length] ?? 'bg-blue-600 dark:bg-blue-700';
 }
 
 export function Avatar({ name, imageURL, size = 'md', className }: Props): React.JSX.Element {

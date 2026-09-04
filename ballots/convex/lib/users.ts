@@ -2,13 +2,13 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { compact } from './compact';
 
-export type UserSummary = {
+export interface UserSummary {
   _id: Id<'users'>;
   avatarUrl: string | null;
   email?: string;
   name?: string;
   role?: 'admin' | 'parent' | 'student';
-};
+}
 
 export async function toUserSummary(
   ctx: MutationCtx | QueryCtx,
@@ -23,7 +23,7 @@ export async function toUserSummary(
     email: user.email,
     name: user.name,
     role: user.role,
-  }) as UserSummary;
+  });
 }
 
 export async function loadUserSummary(

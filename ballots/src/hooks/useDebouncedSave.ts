@@ -10,7 +10,10 @@ export function useDebouncedSave(
   { delay = 500, flushOnUnmount = false }: Options = {},
 ): { schedule: () => void; cancel: () => void } {
   const saveFnRef = useRef(saveFn);
-  saveFnRef.current = saveFn;
+
+  useEffect(() => {
+    saveFnRef.current = saveFn;
+  });
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

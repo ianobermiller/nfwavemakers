@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
+import { convexId } from '../lib/convexId.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { Input } from './ui/Input.tsx';
@@ -12,11 +13,11 @@ interface DebateForm {
   date: string;
   room: string;
   resolution: string;
-  aff1: string;
-  aff2: string;
-  neg1: string;
-  neg2: string;
-  judges: string[];
+  aff1: Id<'users'> | '';
+  aff2: Id<'users'> | '';
+  neg1: Id<'users'> | '';
+  neg2: Id<'users'> | '';
+  judges: Id<'users'>[];
 }
 
 function makeEmpty(): DebateForm {
@@ -32,42 +33,64 @@ function makeEmpty(): DebateForm {
   };
 }
 
+interface LoadedDebate {
+  date: string;
+  room: string;
+  resolution?: string;
+  affTeam: { _id: Id<'users'> }[];
+  negTeam: { _id: Id<'users'> }[];
+  judges: { _id: Id<'users'> }[];
+}
+
+function debateToForm(debate: LoadedDebate): DebateForm {
+  return {
+    date: debate.date,
+    room: debate.room,
+    resolution: debate.resolution ?? '',
+    aff1: debate.affTeam[0]?._id ?? '',
+    aff2: debate.affTeam[1]?._id ?? '',
+    neg1: debate.negTeam[0]?._id ?? '',
+    neg2: debate.negTeam[1]?._id ?? '',
+    judges: debate.judges.map((j) => j._id),
+  };
+}
+
 interface Props {
-  debateId?: string | undefined;
+  debateId?: Id<'debates'> | undefined;
 }
 
 export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
-  const isEditing = Boolean(debateId);
-  const [form, setForm] = useState<DebateForm>(makeEmpty);
-  const [initialized, setInitialized] = useState(!isEditing);
+  const debate = useQuery(api.debates.get, debateId ? { debateId } : 'skip');
+
+  if (debateId && debate === undefined) {
+    return (
+      <PageLayout>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+      </PageLayout>
+    );
+  }
+
+  const initial = debateId && debate ? debateToForm(debate) : makeEmpty();
+
+  return <AdminDebateFormEditor key={debateId ?? 'new'} debateId={debateId} initial={initial} />;
+}
+
+function AdminDebateFormEditor({
+  debateId,
+  initial,
+}: {
+  debateId?: Id<'debates'> | undefined;
+  initial: DebateForm;
+}): React.JSX.Element {
+  const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const users = useQuery(api.users.list) ?? [];
-  const debate = useQuery(
-    api.debates.get,
-    debateId ? { debateId: debateId as Id<'debates'> } : 'skip',
-  );
   const saveDebate = useMutation(api.debates.save);
 
   const students = users.filter((u) => u.role === 'student');
   const judges = users.filter((u) => u.role === 'parent' || u.role === 'admin');
-
-  useEffect(() => {
-    if (initialized) return;
-    if (!debate) return;
-    setForm({
-      date: debate.date,
-      room: debate.room,
-      resolution: debate.resolution ?? '',
-      aff1: debate.affTeam[0]?._id ?? '',
-      aff2: debate.affTeam[1]?._id ?? '',
-      neg1: debate.negTeam[0]?._id ?? '',
-      neg2: debate.negTeam[1]?._id ?? '',
-      judges: debate.judges.map((j) => j._id),
-    });
-    setInitialized(true);
-  }, [debate, initialized]);
 
   function patch(p: Partial<DebateForm>): void {
     setForm((f) => ({ ...f, ...p }));
@@ -82,15 +105,14 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
     setError('');
 
     try {
-      const asId = (id: string): Id<'users'> => id as Id<'users'>;
       await saveDebate({
-        ...(debateId ? { debateId: debateId as Id<'debates'> } : {}),
+        ...(debateId ? { debateId } : {}),
         date: form.date,
         room: form.room,
         resolution: form.resolution,
-        affTeam: [form.aff1, form.aff2].filter(Boolean).map(asId),
-        negTeam: [form.neg1, form.neg2].filter(Boolean).map(asId),
-        judges: form.judges.map(asId),
+        affTeam: [form.aff1, form.aff2].filter((id): id is Id<'users'> => id !== ''),
+        negTeam: [form.neg1, form.neg2].filter((id): id is Id<'users'> => id !== ''),
+        judges: form.judges,
       });
       navigate('admin');
     } catch (e) {
@@ -100,14 +122,6 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
     }
   }
 
-  if (isEditing && !initialized) {
-    return (
-      <PageLayout>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-      </PageLayout>
-    );
-  }
-
   const studentOptions = students.map((s) => ({
     id: s._id,
     name: s.name,
@@ -115,7 +129,9 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
   }));
   const judgeOptions = judges.map((j) => ({ id: j._id, name: j.name }));
   const studentAvatarURLs = Object.fromEntries(
-    students.filter((s) => s.avatarUrl).map((s) => [s._id, s.avatarUrl as string]),
+    students
+      .filter((s): s is typeof s & { avatarUrl: string } => s.avatarUrl != null)
+      .map((s) => [s._id, s.avatarUrl]),
   );
 
   return (
@@ -165,7 +181,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
                 <StudentPicker
                   id="aff1"
                   value={form.aff1}
-                  onChange={(v) => patch({ aff1: v })}
+                  onChange={(v) => patch({ aff1: v ? convexId<'users'>(v) : '' })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -175,7 +191,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
                 <StudentPicker
                   id="aff2"
                   value={form.aff2}
-                  onChange={(v) => patch({ aff2: v })}
+                  onChange={(v) => patch({ aff2: v ? convexId<'users'>(v) : '' })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -193,7 +209,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
                 <StudentPicker
                   id="neg1"
                   value={form.neg1}
-                  onChange={(v) => patch({ neg1: v })}
+                  onChange={(v) => patch({ neg1: v ? convexId<'users'>(v) : '' })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -203,7 +219,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
                 <StudentPicker
                   id="neg2"
                   value={form.neg2}
-                  onChange={(v) => patch({ neg2: v })}
+                  onChange={(v) => patch({ neg2: v ? convexId<'users'>(v) : '' })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -216,7 +232,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
           <label>Judges</label>
           <JudgePicker
             value={form.judges}
-            onChange={(j) => patch({ judges: j })}
+            onChange={(j) => patch({ judges: j.map((id) => convexId<'users'>(id)) })}
             judges={judgeOptions}
           />
         </div>

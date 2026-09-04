@@ -8,7 +8,7 @@ import { Avatar } from './Avatar.tsx';
 function AvatarStack({
   members,
 }: {
-  members: Array<{ _id: string; name?: string; avatarUrl: string | null }>;
+  members: { _id: string; name?: string; avatarUrl: string | null }[];
 }): React.JSX.Element | null {
   if (members.length === 0) return null;
   return (
@@ -27,8 +27,8 @@ function AvatarStack({
 }
 
 interface DebateCardProps {
-  debateId: string;
-  judgeId?: string;
+  debateId: Id<'debates'>;
+  judgeId?: Id<'users'>;
   badge?: React.ReactNode;
   isExpanded?: boolean;
   onClick: () => void;
@@ -48,8 +48,8 @@ export function DebateCard({
   className,
 }: DebateCardProps): React.JSX.Element {
   const data = useQuery(api.debates.card, {
-    debateId: debateId as Id<'debates'>,
-    ...(judgeId ? { judgeId: judgeId as Id<'users'> } : {}),
+    debateId,
+    ...(judgeId ? { judgeId } : {}),
   });
 
   const debate = data?.debate;

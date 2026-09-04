@@ -51,7 +51,7 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
   useEffect(() => {
     if (!file) {
       setImg(null);
-      return;
+      return undefined;
     }
     let cancelled = false;
     let objectURL: string | null = null;
@@ -78,7 +78,7 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
   // Measure the viewport once it's in the DOM and track resizes.
   useLayoutEffect(() => {
     const el = viewportRef.current;
-    if (!el) return;
+    if (!el) return undefined;
     const update = (): void => setViewport(el.clientWidth);
     update();
     const ro = new ResizeObserver(update);
@@ -88,13 +88,14 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
 
   // Center the image and reset zoom whenever a new image or size is ready.
   useEffect(() => {
-    if (!img || !viewport) return;
+    if (!img || !viewport) return undefined;
     const ds = baseScale;
     setZoom(1);
     setOffset({
       x: (viewport - img.naturalWidth * ds) / 2,
       y: (viewport - img.naturalHeight * ds) / 2,
     });
+    return undefined;
     // baseScale is derived from img + viewport, so those deps cover it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [img, viewport]);

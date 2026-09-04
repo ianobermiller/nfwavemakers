@@ -11,7 +11,7 @@ export function Textarea({ className, style, ...rest }: Props): React.JSX.Elemen
   return (
     <textarea
       className={`${DEFAULT_CLASSES} ${className ?? ''}`}
-      style={{ fieldSizing: 'content', ...style } as React.CSSProperties}
+      style={{ fieldSizing: 'content', ...style }}
       {...rest}
     />
   );

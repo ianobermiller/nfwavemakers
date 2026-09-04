@@ -6,6 +6,7 @@ import {
   type Winner,
 } from '../types.ts';
 import type { Id } from '../../convex/_generated/dataModel';
+import { convexId } from '../lib/convexId.ts';
 
 export interface BallotIds {
   ballotId?: Id<'ballots'>;
@@ -25,7 +26,7 @@ function makeEmptySpeaker(): SpeakerFormState {
   };
 }
 
-export function makeEmptySpeakers(): Record<Position, SpeakerFormState> {
+function makeEmptySpeakers(): Record<Position, SpeakerFormState> {
   return {
     aff1: makeEmptySpeaker(),
     aff2: makeEmptySpeaker(),
@@ -34,11 +35,11 @@ export function makeEmptySpeakers(): Record<Position, SpeakerFormState> {
   };
 }
 
-export function makeNewBallotIds(): BallotIds {
+function makeNewBallotIds(): BallotIds {
   return { evalIds: {} };
 }
 
-type ExistingSpeakerEval = {
+interface ExistingSpeakerEval {
   _id: Id<'speakerEvals'>;
   position: Position;
   rank?: number;
@@ -50,19 +51,19 @@ type ExistingSpeakerEval = {
   conduct?: number;
   notes?: string;
   speaker: { _id: Id<'users'> } | null;
-};
+}
 
-export type ExistingBallot = {
+export interface ExistingBallot {
   _id: Id<'ballots'>;
   winner?: Winner;
   reasonForDecision?: string;
   speakerEvals: ExistingSpeakerEval[];
-};
+}
 
-export type DebateTeams = {
-  affTeam: Array<{ _id: Id<'users'> }>;
-  negTeam: Array<{ _id: Id<'users'> }>;
-};
+export interface DebateTeams {
+  affTeam: { _id: Id<'users'> }[];
+  negTeam: { _id: Id<'users'> }[];
+}
 
 export interface BallotFormInit {
   speakers: Record<Position, SpeakerFormState>;
@@ -97,7 +98,7 @@ export function initBallotFormState(
     }
 
     const rankOrder = existing.speakerEvals
-      .filter((ev) => ev.rank != null && speakers[ev.position]?.userId)
+      .filter((ev) => ev.rank != null && speakers[ev.position].userId)
       .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
       .map((ev) => ev.position)
       .filter((pos) => POSITIONS.includes(pos));
@@ -144,7 +145,7 @@ export function buildEvalPayload(
       ...(sp.crossExamination !== undefined ? { crossExamination: sp.crossExamination } : {}),
       ...(sp.conduct !== undefined ? { conduct: sp.conduct } : {}),
       notes: sp.notes,
-      ...(sp.userId ? { speakerId: sp.userId as Id<'users'> } : {}),
+      ...(sp.userId ? { speakerId: convexId<'users'>(sp.userId) } : {}),
     };
   });
 }

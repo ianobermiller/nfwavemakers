@@ -16,7 +16,7 @@ export interface SpeakerFormState extends SpeakerScores {
   notes: string;
 }
 
-export const SCORE_CATEGORIES: Array<{ key: keyof SpeakerScores; label: string }> = [
+export const SCORE_CATEGORIES: { key: keyof SpeakerScores; label: string }[] = [
   { key: 'delivery', label: 'Delivery' },
   { key: 'organization', label: 'Organization' },
   { key: 'evidenceAndSupport', label: 'Evidence & Support' },
@@ -34,10 +34,10 @@ export const POSITION_LABELS: Record<Position, string> = {
   neg2: 'Neg 2nd Speaker',
 };
 
-export const SPEAKER_GUIDE_ROWS: Array<{
+export const SPEAKER_GUIDE_ROWS: {
   category: string;
   scores: [string, string, string, string, string];
-}> = [
+}[] = [
   {
     category: 'Delivery',
     scores: [

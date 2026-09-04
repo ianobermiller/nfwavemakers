@@ -1,4 +1,5 @@
-import { Infer, v } from 'convex/values';
+import type { Infer} from 'convex/values';
+import { v } from 'convex/values';
 
 import type { Doc, Id } from './_generated/dataModel';
 import { mutation, query } from './_generated/server';
@@ -69,7 +70,7 @@ async function loadEvals(ctx: Parameters<typeof getCurrentUser>[0], ballotId: Id
         rank: ev.rank,
         refutation: ev.refutation,
         speaker,
-      }) as Infer<typeof speakerEvalValidator>,
+      }),
     );
   }
   return result;
@@ -278,7 +279,7 @@ export const adminByStudent = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const evals = await ctx.db.query('speakerEvals').collect();
-    const byStudent = new Map<Id<'users'>, Array<{ eval: Doc<'speakerEvals'>; ballot: Doc<'ballots'> }>>();
+    const byStudent = new Map<Id<'users'>, { eval: Doc<'speakerEvals'>; ballot: Doc<'ballots'> }[]>();
     for (const ev of evals) {
       if (!ev.speakerId) continue;
       const ballot = await ctx.db.get(ev.ballotId);
@@ -338,7 +339,7 @@ async function upsertBallot(
   args: {
     ballotId?: Id<'ballots'>;
     debateId?: Id<'debates'>;
-    evals: Array<{
+    evals: {
       conduct?: number;
       crossExamination?: number;
       delivery?: number;
@@ -350,7 +351,7 @@ async function upsertBallot(
       rank?: number;
       refutation?: number;
       speakerId?: Id<'users'>;
-    }>;
+    }[];
     reasonForDecision: string;
     submittedAt?: number;
     winner?: 'aff' | 'neg';

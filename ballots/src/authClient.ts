@@ -10,4 +10,5 @@ export const authClient = createAuthClient({
 });
 
 // Better Auth's plugin inference is more specific than the provider's public client type.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion
 export const convexAuthClient = authClient as unknown as AuthClient;

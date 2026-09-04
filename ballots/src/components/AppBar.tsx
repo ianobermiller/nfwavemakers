@@ -15,9 +15,10 @@ export function AppBar(): React.JSX.Element {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     function handle(e: PointerEvent): void {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target;
+      if (!(target instanceof Node) || !menuRef.current?.contains(target)) {
         setOpen(false);
       }
     }
@@ -80,7 +81,8 @@ export function AppBar(): React.JSX.Element {
                 const items = Array.from(
                   dropdownRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
                 );
-                const idx = items.indexOf(document.activeElement as HTMLElement);
+                const active = document.activeElement;
+                const idx = active instanceof HTMLElement ? items.indexOf(active) : -1;
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
                   items[(idx + 1) % items.length]?.focus();

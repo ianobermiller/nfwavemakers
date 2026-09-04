@@ -7,7 +7,7 @@ interface Props {
   id: string;
   value: string;
   onChange: (id: string) => void;
-  students: Array<{ id: string; name?: string | undefined }>;
+  students: { id: string; name?: string | undefined }[];
   avatarURLs?: Record<string, string>;
   disabled?: boolean;
 }
@@ -40,7 +40,8 @@ export function StudentPicker({
 
   useEffect(() => {
     function handleClick(e: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target;
+      if (!(target instanceof Node) || !containerRef.current?.contains(target)) {
         setOpen(false);
         setQuery('');
         setFocusedIndex(-1);

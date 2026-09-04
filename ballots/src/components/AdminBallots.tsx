@@ -6,7 +6,7 @@ import type { Id } from '../../convex/_generated/dataModel';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
-import { POSITIONS, POSITION_LABELS } from '../types.ts';
+import { POSITIONS, POSITION_LABELS, type Position } from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { Avatar } from './Avatar.tsx';
 import { DebateCard } from './DebateCard.tsx';
@@ -51,7 +51,7 @@ function ByDebate(): React.JSX.Element {
     return <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>;
   }
 
-  const debates = rows ?? [];
+  const debates = rows;
 
   if (debates.length === 0) {
     return (
@@ -249,11 +249,11 @@ function ByStudent(): React.JSX.Element {
   );
 }
 
-type StrandedBallotPayload = {
-  id: string;
+interface StrandedBallotPayload {
+  id: Id<'ballots'>;
   judgeName?: string;
   submittedAt: number;
-};
+}
 
 function Stranded(): React.JSX.Element {
   const strandedBallots = useQuery(api.ballots.stranded);
@@ -262,9 +262,9 @@ function Stranded(): React.JSX.Element {
   const restoreBallot = useMutation(api.ballots.restore);
 
   const { pendingDeletes, softDelete, undo } = useUndoDelete<StrandedBallotPayload>(
-    (payload) => softDeleteBallot({ ballotId: payload.id as Id<'ballots'> }),
+    (payload) => softDeleteBallot({ ballotId: payload.id }),
     (payload) => {
-      void restoreBallot({ ballotId: payload.id as Id<'ballots'> });
+      void restoreBallot({ ballotId: payload.id });
     },
   );
 
@@ -344,7 +344,7 @@ function BallotSummary({
     winner?: string;
     reasonForDecision?: string;
     judge: { name?: string } | null;
-    speakerEvals: Array<{
+    speakerEvals: {
       _id: string;
       position: string;
       rank?: number;
@@ -356,7 +356,7 @@ function BallotSummary({
       refutation?: number;
       crossExamination?: number;
       conduct?: number;
-    }>;
+    }[];
   };
 }): React.JSX.Element {
   const evals = ballot.speakerEvals;
@@ -457,7 +457,7 @@ function BallotSummary({
   );
 }
 
-type EvalWithDetails = {
+interface EvalWithDetails {
   _id: string;
   position?: string | null;
   rank?: number | null;
@@ -468,11 +468,18 @@ type EvalWithDetails = {
   refutation?: number | null;
   crossExamination?: number | null;
   conduct?: number | null;
-};
+}
+
+function parsePosition(value: string | null | undefined): Position | undefined {
+  if (value === 'aff1' || value === 'aff2' || value === 'neg1' || value === 'neg2') {
+    return value;
+  }
+  return undefined;
+}
 
 function StudentEvalCard({ ev }: { ev: EvalWithDetails }): React.JSX.Element {
   const total = scoringTotal(ev);
-  const pos = ev.position as (typeof POSITIONS)[number] | undefined;
+  const pos = parsePosition(ev.position);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2">

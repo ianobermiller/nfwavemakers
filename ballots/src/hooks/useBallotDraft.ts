@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
@@ -12,90 +12,48 @@ import {
   getActivePositions,
   initBallotFormState,
   isAllScored,
-  makeEmptySpeakers,
-  makeNewBallotIds,
+  type BallotFormInit,
   type BallotIds,
 } from '../services/ballot.ts';
 
 interface Props {
-  debateId: string | undefined;
-  judgeId: string;
+  initial: BallotFormInit;
+  debateId?: Id<'debates'> | undefined;
 }
 
-function compactDefined<T extends object>(
-  obj: T,
-): {
-  [K in keyof T as T[K] extends undefined ? never : undefined extends T[K] ? never : K]: T[K];
-} & {
-  [K in keyof T as undefined extends T[K]
-    ? Exclude<T[K], undefined> extends never
-      ? never
-      : K
-    : never]?: Exclude<T[K], undefined>;
-} {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      result[key] = value;
-    }
-  }
-  return result as never;
-}
-
-export function useBallotDraft({ debateId, judgeId: _judgeId }: Props) {
-  const [winner, setWinner] = useState<Winner | undefined>(undefined);
-  const [rfd, setRfd] = useState('');
-  const [speakers, setSpeakers] = useState<Record<Position, SpeakerFormState>>(makeEmptySpeakers);
-  const [ids, setIds] = useState<BallotIds>(makeNewBallotIds);
-  const [rankOrder, setRankOrder] = useState<Position[]>([]);
-  const [initialized, setInitialized] = useState(false);
+export function useBallotDraft({ initial, debateId }: Props) {
+  const [winner, setWinner] = useState(initial.winner);
+  const [rfd, setRfd] = useState(initial.rfd);
+  const [speakers, setSpeakers] = useState(initial.speakers);
+  const [ids, setIds] = useState<BallotIds>(initial.ids);
+  const [rankOrder, setRankOrder] = useState<Position[]>(initial.rankOrder);
   const [submitting, setSubmitting] = useState(false);
 
   const users = useQuery(api.users.list);
   const students = (users ?? []).filter((u) => u.role === 'student');
 
-  const debate = useQuery(
-    api.debates.get,
-    debateId ? { debateId: debateId as Id<'debates'> } : 'skip',
-  );
-  const existing = useQuery(api.ballots.draftForJudge, {
-    ...(debateId ? { debateId: debateId as Id<'debates'> } : {}),
-  });
+  const debate = useQuery(api.debates.get, debateId ? { debateId } : 'skip');
   const saveDraft = useMutation(api.ballots.saveDraft);
 
   const speakersLocked = debate != null;
-
-  useEffect(() => {
-    if (initialized) return;
-    if (debateId && debate === undefined) return;
-    if (existing === undefined) return;
-
-    const init = initBallotFormState(existing, debate);
-    setSpeakers(init.speakers);
-    setRankOrder(init.rankOrder);
-    setWinner(init.winner);
-    setRfd(init.rfd);
-    setIds(init.ids);
-    setInitialized(true);
-  }, [debateId, debate, existing, initialized]);
 
   const { schedule: scheduleSave, cancel: cancelSave } = useDebouncedSave(
     () => {
       void saveDraft({
         ...(ids.ballotId ? { ballotId: ids.ballotId } : {}),
-        ...(debateId ? { debateId: debateId as Id<'debates'> } : {}),
+        ...(debateId ? { debateId } : {}),
         evals: buildEvalPayload(speakers, ids, rankOrder),
         reasonForDecision: rfd,
         ...(winner ? { winner } : {}),
       }).then((result) => {
         setIds({
           ballotId: result.ballotId,
-          evalIds: compactDefined({
-            aff1: result.evalIds['aff1'],
-            aff2: result.evalIds['aff2'],
-            neg1: result.evalIds['neg1'],
-            neg2: result.evalIds['neg2'],
-          }),
+          evalIds: {
+            ...(result.evalIds['aff1'] ? { aff1: result.evalIds['aff1'] } : {}),
+            ...(result.evalIds['aff2'] ? { aff2: result.evalIds['aff2'] } : {}),
+            ...(result.evalIds['neg1'] ? { neg1: result.evalIds['neg1'] } : {}),
+            ...(result.evalIds['neg2'] ? { neg2: result.evalIds['neg2'] } : {}),
+          },
         });
       });
     },
@@ -144,7 +102,7 @@ export function useBallotDraft({ debateId, judgeId: _judgeId }: Props) {
     cancelSave();
     await saveDraft({
       ...(ids.ballotId ? { ballotId: ids.ballotId } : {}),
-      ...(debateId ? { debateId: debateId as Id<'debates'> } : {}),
+      ...(debateId ? { debateId } : {}),
       evals: buildEvalPayload(speakers, ids, rankOrder),
       reasonForDecision: rfd,
       submittedAt: Date.now(),
@@ -173,4 +131,17 @@ export function useBallotDraft({ debateId, judgeId: _judgeId }: Props) {
     suggestByPoints,
     submit,
   };
+}
+
+export function useBallotDraftLoader(debateId?: Id<'debates'>) {
+  const debate = useQuery(api.debates.get, debateId ? { debateId } : 'skip');
+  const existing = useQuery(api.ballots.draftForJudge, debateId ? { debateId } : {});
+
+  const isLoading = existing === undefined || (debateId !== undefined && debate === undefined);
+  const initial =
+    existing === undefined || (debateId !== undefined && debate === undefined)
+      ? undefined
+      : initBallotFormState(existing, debate);
+
+  return { debate, existing, initial, isLoading };
 }

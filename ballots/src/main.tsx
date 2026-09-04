@@ -7,7 +7,7 @@ import './ballots.css';
 import { App } from './App.tsx';
 
 if (import.meta.env.DEV) {
-  (window as unknown as Record<string, unknown>)['__authClient'] = convexAuthClient;
+  Object.assign(window, { __authClient: convexAuthClient });
 }
 
 const root = document.getElementById('root');

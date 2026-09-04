@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from 'cnfast';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
+import type { Role } from '../types.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
-import type { Role } from '../types.ts';
 import { Avatar } from './Avatar.tsx';
 import { AvatarCropDialog } from './AvatarCropDialog.tsx';
 import { Input } from './ui/Input.tsx';
+import { convexStorageId } from '../lib/convexId.ts';
 import { authClient } from '../authClient.ts';
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
   currentRole: Role;
 }
 
-const SELECTABLE_ROLES: Array<{ value: Role; label: string; description: string }> = [
+const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = [
   { value: 'student', label: 'Student', description: 'I compete as a debater' },
   { value: 'parent', label: 'Parent / Judge', description: 'I judge debate rounds' },
 ];
@@ -56,8 +56,16 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
       if (!result.ok) {
         throw new Error('Failed to upload photo');
       }
-      const { storageId } = (await result.json()) as { storageId: string };
-      await saveAvatar({ storageId: storageId as Id<'_storage'> });
+      const body: unknown = await result.json();
+      if (
+        typeof body !== 'object' ||
+        body === null ||
+        !('storageId' in body) ||
+        typeof body.storageId !== 'string'
+      ) {
+        throw new Error('Invalid upload response');
+      }
+      await saveAvatar({ storageId: convexStorageId(body.storageId) });
       setCropFile(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to upload photo');
@@ -68,7 +76,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
   }
 
   async function save(): Promise<void> {
-    if (!name.trim() || !role) return;
+    if (!name.trim()) return;
     setLoading(true);
     setError('');
     try {
@@ -197,10 +205,11 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
 }
 
 function PasskeySettings(): React.JSX.Element {
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
-  const [passkeys, setPasskeys] =
-    useState<Array<{ id: string; name?: null | string | undefined }>>();
+  const [passkeys, setPasskeys] = useState<
+    { id: string; name?: null | string | undefined }[] | undefined
+  >(undefined);
 
   const refresh = useCallback(async (): Promise<void> => {
     const result = await authClient.passkey.listUserPasskeys();
@@ -209,14 +218,15 @@ function PasskeySettings(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    void refresh()
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Could not load passkeys'))
-      .finally(() => setLoading(false));
+    void refresh().catch((e: unknown) =>
+      setError(e instanceof Error ? e.message : 'Could not load passkeys'),
+    );
   }, [refresh]);
 
+  const loading = passkeys === undefined || actionLoading;
+
   async function addPasskey(): Promise<void> {
-    setLoading(true);
+    setActionLoading(true);
     setError('');
     try {
       const result = await authClient.passkey.addPasskey({ name: 'NF Wavemakers passkey' });
@@ -225,12 +235,12 @@ function PasskeySettings(): React.JSX.Element {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add passkey');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   }
 
   async function removePasskey(id: string): Promise<void> {
-    setLoading(true);
+    setActionLoading(true);
     setError('');
     try {
       const result = await authClient.passkey.deletePasskey({ id });
@@ -239,7 +249,7 @@ function PasskeySettings(): React.JSX.Element {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not remove passkey');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   }
 

@@ -15,7 +15,7 @@ export function formatSpeakerName(fullName: string): string {
 }
 
 /** [{name: "Alice Smith"}, {name: "Bob Jones"}] → "Smith, A / Jones, B" */
-export function formatTeam(speakers: Array<{ name?: string | null }>): string {
+export function formatTeam(speakers: { name?: string | null }[]): string {
   const names = speakers.map((s) => (s.name ? formatSpeakerName(s.name) : null)).filter(Boolean);
   return names.length > 0 ? names.join(' / ') : '—';
 }

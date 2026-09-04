@@ -1,9 +1,9 @@
-import { cn } from 'cnfast';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
-import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
+import { cn } from 'cnfast';
+import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils.ts';
 import { Avatar } from './Avatar.tsx';
 import { PageLayout } from './PageLayout.tsx';
@@ -11,19 +11,14 @@ import { ScoringRows } from './ScoringRows.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
 
 interface Props {
-  ballotId: string;
-  currentUserId: string;
+  ballotId: Id<'ballots'>;
+  currentUserId: Id<'users'>;
 }
 
 export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Element {
-  const ballot = useQuery(api.ballots.get, { ballotId: ballotId as Id<'ballots'> });
+  const ballot = useQuery(api.ballots.get, { ballotId });
+  const can = usePermissions(currentUserId);
   const isLoading = ballot === undefined;
-
-  const avatarURLs = Object.fromEntries(
-    (ballot?.speakerEvals ?? [])
-      .filter((e) => e.speaker?.avatarUrl)
-      .map((e) => [e.speaker!._id, e.speaker!.avatarUrl as string]),
-  );
 
   if (isLoading) {
     return (
@@ -50,10 +45,26 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
   const debate = ballot.debate;
   const judge = ballot.judge;
-  const evals = ballot.speakerEvals ?? [];
+  const evals = ballot.speakerEvals;
 
-  const can = usePermissions(currentUserId);
-  if (!can.canViewBallot(judge?._id, evals.map((e) => e.speaker?._id))) {
+  const avatarURLs = Object.fromEntries(
+    evals
+      .filter(
+        (
+          e,
+        ): e is typeof e & {
+          speaker: NonNullable<typeof e.speaker> & { avatarUrl: string };
+        } => e.speaker?.avatarUrl != null,
+      )
+      .map((e) => [e.speaker._id, e.speaker.avatarUrl]),
+  );
+
+  if (
+    !can.canViewBallot(
+      judge?._id,
+      evals.map((e) => e.speaker?._id),
+    )
+  ) {
     return (
       <PageLayout>
         <p className="text-slate-500 dark:text-slate-400 text-sm">
@@ -78,9 +89,9 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
       {/* Compact metadata line */}
       <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3 flex-wrap">
         {judge && <span>Judge: {judge.name}</span>}
-        {judge && (debate?.date || debate?.room) && <span>·</span>}
+        {judge && debate && (debate.date || debate.room) && <span>·</span>}
         {debate?.date && <span>{debate.date}</span>}
-        {debate?.date && debate?.room && <span>·</span>}
+        {debate?.date && debate.room && <span>·</span>}
         {debate?.room && <span>{debate.room}</span>}
         {debate?.resolution && (
           <>

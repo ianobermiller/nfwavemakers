@@ -6,11 +6,11 @@ import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { DebateCard } from './DebateCard.tsx';
 
-type DebateDeletePayload = {
-  id: string;
-  ballotIds: string[];
+interface DebateDeletePayload {
+  id: Id<'debates'>;
+  ballotIds: Id<'ballots'>[];
   ballotCount: number;
-};
+}
 
 export function AdminDebates(): React.JSX.Element {
   const debates = useQuery(api.debates.listAll);
@@ -18,16 +18,16 @@ export function AdminDebates(): React.JSX.Element {
   const restoreDebate = useMutation(api.debates.restore);
 
   const { pendingDeletes, softDelete, undo } = useUndoDelete<DebateDeletePayload>(
-    (payload) => softDeleteDebate({ debateId: payload.id as Id<'debates'> }),
+    (payload) => softDeleteDebate({ debateId: payload.id }),
     (payload) => {
       void restoreDebate({
-        debateId: payload.id as Id<'debates'>,
-        ballotIds: payload.ballotIds as Id<'ballots'>[],
+        debateId: payload.id,
+        ballotIds: payload.ballotIds,
       });
     },
   );
 
-  function handleDelete(d: NonNullable<typeof debates>[0]): void {
+  function handleDelete(d: NonNullable<typeof debates>[number]): void {
     void softDelete(d._id, {
       id: d._id,
       ballotIds: d.ballotIds,
@@ -59,20 +59,21 @@ export function AdminDebates(): React.JSX.Element {
         {pendingList.map((pd) => (
           <UndoDebateRow key={pd.id} payload={pd} onUndo={() => undo(pd.id)} />
         ))}
-        {(debates ?? []).map((d) => (
-          <div key={d._id} className="flex items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <DebateCard debateId={d._id} onClick={() => navigate(`admin/${d._id}`)} />
+        {!isLoading &&
+          debates.map((d) => (
+            <div key={d._id} className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <DebateCard debateId={d._id} onClick={() => navigate(`admin/${d._id}`)} />
+              </div>
+              <button
+                className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
+                onClick={() => handleDelete(d)}
+                aria-label="Delete debate"
+              >
+                Delete
+              </button>
             </div>
-            <button
-              className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
-              onClick={() => handleDelete(d)}
-              aria-label="Delete debate"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
+          ))}
       </div>
     </PageLayout>
   );

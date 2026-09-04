@@ -5,7 +5,7 @@ import { api } from '../../convex/_generated/api';
 import type { Role } from '../types.ts';
 import { Input } from './ui/Input.tsx';
 
-const SELECTABLE_ROLES: Array<{ value: Role; label: string; description: string }> = [
+const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = [
   { value: 'student', label: 'Student', description: 'I compete as a debater' },
   { value: 'parent', label: 'Parent / Judge', description: 'I judge debate rounds' },
 ];

@@ -12,7 +12,7 @@ interface Props {
 export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): React.JSX.Element {
   const initialOpenIndex =
     focusCategory !== undefined
-      ? (SPEAKER_GUIDE_ROWS.findIndex((r) => r.category === focusCategory) ?? 0)
+      ? SPEAKER_GUIDE_ROWS.findIndex((r) => r.category === focusCategory)
       : 0;
 
   const [openIndex, setOpenIndex] = useState<number | null>(

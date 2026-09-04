@@ -15,7 +15,7 @@ const E2E_ROOM = 'A1';
 
 type Position = 'aff1' | 'aff2' | 'neg1' | 'neg2';
 
-type SpeakerFeedback = {
+interface SpeakerFeedback {
   conduct: number;
   crossExamination: number;
   delivery: number;
@@ -24,7 +24,7 @@ type SpeakerFeedback = {
   refutation: number;
   rank: number;
   notes: string;
-};
+}
 
 const DEMO_STUDENTS = [
   { key: 'alice', name: 'Alice Student', email: 'student@example.com', main: true },

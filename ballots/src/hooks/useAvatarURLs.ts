@@ -6,9 +6,7 @@ import { api } from '../../convex/_generated/api';
  * Users from Convex queries already include avatarUrl; this hook is for mixing IDs.
  */
 export function useAvatarURLs(
-  users: Array<
-    { _id?: string; id?: string; avatarUrl?: string | null } | string | null | undefined
-  >,
+  users: ({ _id?: string; id?: string; avatarUrl?: string | null } | string | null | undefined)[],
 ): Record<string, string> {
   const ids = [
     ...new Set(

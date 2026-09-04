@@ -1,12 +1,10 @@
-import { Infer, v } from 'convex/values';
+import { v } from 'convex/values';
 
 import { mutation, query } from './_generated/server';
 import { getCurrentUser, requireAdmin } from './lib/auth';
 import { isActiveDebate, loadDebateTeams, replaceParticipants } from './lib/debates';
 import { compact } from './lib/compact';
 import { debateSummaryValidator, winnerValidator } from './lib/validators';
-
-type DebateSummary = Infer<typeof debateSummaryValidator>;
 
 export const listUpcoming = query({
   args: { today: v.string() },
@@ -27,7 +25,7 @@ export const listUpcoming = query({
           resolution: debate.resolution,
           room: debate.room,
           ...teams,
-        }) as DebateSummary,
+        }),
       );
     }
     return result;
@@ -66,7 +64,7 @@ export const listAll = query({
           resolution: debate.resolution,
           room: debate.room,
           ...teams,
-        }) as DebateSummary & { ballotCount: number; ballotIds: Array<(typeof ballots)[number]['_id']> },
+        }),
       );
     }
     return result;
@@ -95,7 +93,7 @@ export const listAssigned = query({
           resolution: debate.resolution,
           room: debate.room,
           ...teams,
-        }) as DebateSummary,
+        }),
       );
     }
     return result;
@@ -118,7 +116,7 @@ export const get = query({
       resolution: debate.resolution,
       room: debate.room,
       ...teams,
-    }) as DebateSummary;
+    });
   },
 });
 
@@ -159,9 +157,9 @@ export const card = query({
         resolution: debate.resolution,
         room: debate.room,
         ...teams,
-      }) as DebateSummary,
+      }),
       winner,
-    }) as { debate: DebateSummary; winner?: 'aff' | 'neg' };
+    });
   },
 });
 

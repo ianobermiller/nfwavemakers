@@ -15,5 +15,6 @@ export function compact<T extends object>(obj: T): Compact<T> {
       result[key] = value;
     }
   }
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- strips undefined keys for Convex inserts
   return result as Compact<T>;
 }

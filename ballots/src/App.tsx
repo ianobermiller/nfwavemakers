@@ -1,5 +1,6 @@
 import { useHashRoute } from './hooks/useHashRoute.ts';
 import { AuthProvider, useAppUser, useAuthState } from './hooks/auth.tsx';
+import { convexId } from './lib/convexId.ts';
 import { Auth } from './components/Auth.tsx';
 import { ProfileSetup } from './components/ProfileSetup.tsx';
 import { Dashboard } from './components/Dashboard.tsx';
@@ -21,12 +22,12 @@ interface RouteCtx {
   name: string;
 }
 
-const ROUTES: Array<{
+const ROUTES: {
   segment: string;
   requiredRole?: Role;
   requiresParam?: boolean;
   render: (ctx: RouteCtx) => React.JSX.Element;
-}> = [
+}[] = [
   {
     segment: 'profile',
     render: ({ userId, name, role }) => (
@@ -37,7 +38,11 @@ const ROUTES: Array<{
     segment: 'admin',
     requiredRole: 'admin',
     render: ({ param }) =>
-      param ? <AdminDebateForm debateId={param === 'new' ? undefined : param} /> : <AdminDebates />,
+      param ? (
+        <AdminDebateForm debateId={param === 'new' ? undefined : convexId<'debates'>(param)} />
+      ) : (
+        <AdminDebates />
+      ),
   },
   {
     segment: 'admin-ballots',
@@ -52,18 +57,26 @@ const ROUTES: Array<{
   {
     segment: 'judge',
     render: ({ param, userId, name }) => (
-      <BallotForm {...(param ? { debateId: param } : {})} judgeId={userId} judgeName={name} />
+      <BallotForm
+        {...(param ? { debateId: convexId<'debates'>(param) } : {})}
+        judgeId={userId}
+        judgeName={name}
+      />
     ),
   },
   {
     segment: 'ballot',
     requiresParam: true,
-    render: ({ param, userId }) => <BallotView ballotId={param} currentUserId={userId} />,
+    render: ({ param, userId }) => (
+      <BallotView ballotId={convexId<'ballots'>(param)} currentUserId={userId} />
+    ),
   },
   {
     segment: 'debate',
     requiresParam: true,
-    render: ({ param, userId }) => <DebateView debateId={param} currentUserId={userId} />,
+    render: ({ param, userId }) => (
+      <DebateView debateId={convexId<'debates'>(param)} currentUserId={userId} />
+    ),
   },
 ];
 
@@ -101,7 +114,7 @@ function AppShell(): React.JSX.Element {
 
   if (!user) return <Auth />;
 
-  return <AuthenticatedApp userId={user._id as Id<'users'>} />;
+  return <AuthenticatedApp userId={user._id} />;
 }
 
 function AuthenticatedApp({ userId }: { userId: Id<'users'> }): React.JSX.Element {

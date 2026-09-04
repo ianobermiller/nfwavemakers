@@ -1,16 +1,48 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "react"],
+  "plugins": ["typescript", "react", "oxc"],
   "categories": {
     "correctness": "error",
-    "suspicious": "warn",
-    "pedantic": "off",
-    "perf": "warn",
-    "style": "off"
+    "suspicious": "error"
+  },
+  "env": {
+    "browser": true
+  },
+  "ignorePatterns": ["dist", "convex/_generated"],
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
   },
   "rules": {
-    "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": "error",
-    "react/react-in-jsx-scope": "off"
-  }
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-confusing-void-expression": "off",
+    "typescript/no-misused-promises": "off",
+    "object-shorthand": ["error", "always"],
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "typescript/array-type": "error",
+    "typescript/consistent-generic-constructors": "error",
+    "typescript/consistent-indexed-object-style": "error",
+    "typescript/consistent-type-definitions": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-inferrable-types": "error",
+    "typescript/no-unnecessary-condition": "error",
+    "no-shadow": "off",
+    "no-unmodified-loop-condition": "off",
+    "no-underscore-dangle": ["error", { "allow": ["_id", "_creationTime"] }]
+  },
+  "overrides": [
+    {
+      "files": ["*.js", "*.mjs", "convex/**/*.ts"],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": ["src/components/ProfileEdit.tsx"],
+      "rules": {
+        "react/set-state-in-effect": "off"
+      }
+    }
+  ]
 }

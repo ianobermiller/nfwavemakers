@@ -80,7 +80,7 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
         trustedProviders: ['apple'],
       },
     },
-    baseURL: process.env['CONVEX_SITE_URL'],
+    baseURL: process.env['CONVEX_SITE_URL'] ?? siteUrl,
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,

@@ -36,11 +36,26 @@ export default async function globalSetup(): Promise<void> {
   }
 
   const jsonStart = seed.stdout.lastIndexOf('{');
-  const seeded = JSON.parse(seed.stdout.slice(jsonStart)) as {
-    ballotId: string;
-    debateId: string;
-    judgeEmail: string;
-    studentEmail: string;
+  const parsed: unknown = JSON.parse(seed.stdout.slice(jsonStart));
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    !('ballotId' in parsed) ||
+    !('debateId' in parsed) ||
+    !('judgeEmail' in parsed) ||
+    !('studentEmail' in parsed) ||
+    typeof parsed.ballotId !== 'string' ||
+    typeof parsed.debateId !== 'string' ||
+    typeof parsed.judgeEmail !== 'string' ||
+    typeof parsed.studentEmail !== 'string'
+  ) {
+    throw new Error('e2e seed returned invalid JSON');
+  }
+  const seeded = {
+    ballotId: parsed.ballotId,
+    debateId: parsed.debateId,
+    judgeEmail: parsed.judgeEmail,
+    studentEmail: parsed.studentEmail,
   };
 
   process.env['VITE_CONVEX_URL'] = convexUrl;

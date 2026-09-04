@@ -11,8 +11,8 @@ function convexCloudUrl() {
     encoding: 'utf8',
     timeout: 20_000,
   });
-  const url = result.stdout?.trim();
-  if (result.status === 0 && url?.startsWith('https://')) {
+  const url = result.stdout.trim();
+  if (result.status === 0 && url.startsWith('https://')) {
     return url;
   }
 

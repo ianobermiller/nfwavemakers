@@ -1,26 +1,57 @@
 import { useState } from 'react';
 import { cn } from 'cnfast';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { useBallotDraft } from '../hooks/useBallotDraft.ts';
+import { useBallotDraft, useBallotDraftLoader } from '../hooks/useBallotDraft.ts';
+import type { Id } from '../../convex/_generated/dataModel';
 import { AutoTextarea } from './AutoTextarea.tsx';
 import { PageLayout } from './PageLayout.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
-import type { Winner } from '../types.ts';
 
 interface Props {
-  debateId?: string;
-  judgeId: string;
+  debateId?: Id<'debates'> | undefined;
+  judgeId: Id<'users'>;
   judgeName: string;
 }
 
 export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props): React.JSX.Element {
+  const { initial, isLoading } = useBallotDraftLoader(debateId);
+
+  if (isLoading || initial === undefined) {
+    return (
+      <PageLayout>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
+      </PageLayout>
+    );
+  }
+
+  return (
+    <BallotFormEditor
+      key={`${debateId ?? 'new'}-${initial.ids.ballotId ?? 'draft'}`}
+      debateId={debateId}
+      judgeId={judgeId}
+      initial={initial}
+    />
+  );
+}
+
+function BallotFormEditor({
+  debateId,
+  initial,
+  judgeId: _judgeId,
+}: {
+  debateId?: Id<'debates'> | undefined;
+  judgeId: Id<'users'>;
+  initial: NonNullable<ReturnType<typeof useBallotDraftLoader>['initial']>;
+}): React.JSX.Element {
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideCategory, setGuideCategory] = useState<string | undefined>(undefined);
 
-  const draft = useBallotDraft({ debateId, judgeId });
+  const draft = useBallotDraft({ initial, debateId });
   const avatarURLs = Object.fromEntries(
-    draft.students.filter((s) => s.avatarUrl).map((s) => [s.id, s.avatarUrl as string]),
+    draft.students
+      .filter((s): s is typeof s & { avatarUrl: string } => s.avatarUrl != null)
+      .map((s) => [s.id, s.avatarUrl]),
   );
 
   return (
@@ -78,7 +109,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
                     name="winner"
                     value={side}
                     checked={draft.winner === side}
-                    onChange={() => draft.updateWinner(side as Winner)}
+                    onChange={() => draft.updateWinner(side)}
                   />
                   {side === 'aff' ? 'Affirmative wins' : 'Negative wins'}
                 </label>

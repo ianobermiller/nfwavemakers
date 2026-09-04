@@ -2,11 +2,11 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { loadUserSummary, type UserSummary } from './users';
 
-export type DebateTeams = {
+export interface DebateTeams {
   affTeam: UserSummary[];
   judges: UserSummary[];
   negTeam: UserSummary[];
-};
+}
 
 export function isActiveDebate(debate: Doc<'debates'>): boolean {
   return debate.deletedAt == null;
@@ -46,9 +46,9 @@ export async function loadDebateTeams(
 export async function replaceParticipants(
   ctx: MutationCtx,
   debateId: Id<'debates'>,
-  affTeam: Array<Id<'users'>>,
-  negTeam: Array<Id<'users'>>,
-  judges: Array<Id<'users'>>,
+  affTeam: Id<'users'>[],
+  negTeam: Id<'users'>[],
+  judges: Id<'users'>[],
 ): Promise<void> {
   const existing = await ctx.db
     .query('debateParticipants')
@@ -60,7 +60,7 @@ export async function replaceParticipants(
 
   const insertSide = async (
     side: 'aff' | 'neg' | 'judge',
-    userIds: Array<Id<'users'>>,
+    userIds: Id<'users'>[],
   ): Promise<void> => {
     for (let slot = 0; slot < userIds.length; slot += 1) {
       const userId = userIds[slot];
