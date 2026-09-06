@@ -1,13 +1,16 @@
 import PocketBase from 'pocketbase';
 
 const url = process.env.POCKETBASE_TEST_URL ?? process.env.VITE_POCKETBASE_URL;
-const superuserEmail = process.env.PB_SUPERUSER_EMAIL;
-const superuserPassword = process.env.PB_SUPERUSER_PASSWORD;
+// .env.local names these POCKETBASE_ADMIN_*, and global setup loads that file.
+const superuserEmail = process.env.PB_SUPERUSER_EMAIL ?? process.env.POCKETBASE_ADMIN_EMAIL;
+const superuserPassword = process.env.PB_SUPERUSER_PASSWORD ?? process.env.POCKETBASE_ADMIN_PASSWORD;
 const password = process.env.TEST_ACCOUNT_PASSWORD ?? 'test-password';
 
 if (!url) throw new Error('Set POCKETBASE_TEST_URL to the PocketBase test instance.');
 if (!superuserEmail || !superuserPassword) {
-  throw new Error('Set PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD to seed test data.');
+  throw new Error(
+    'Set PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD (or POCKETBASE_ADMIN_*) to seed test data.',
+  );
 }
 if (
   !url.includes('127.0.0.1') &&
