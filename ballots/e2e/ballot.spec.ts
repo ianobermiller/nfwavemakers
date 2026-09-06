@@ -1,12 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const BASE = `http://localhost:${process.env['PLAYWRIGHT_PORT'] ?? '5174'}/`;
+// Paths are relative so they resolve against the config's baseURL, whose port
+// is chosen at run time.
 
 async function signIn(page: Page, email: string): Promise<void> {
   const password = process.env['E2E_PASSWORD'];
   if (!password) throw new Error('Missing E2E_PASSWORD — run full test suite with globalSetup');
 
-  await page.goto(BASE);
+  await page.goto('/');
   await page.getByRole('button', { name: 'Use a password' }).click();
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
@@ -16,7 +17,7 @@ async function signIn(page: Page, email: string): Promise<void> {
 
 test.describe('Auth flow', () => {
   test('shows email input on landing', async ({ page }) => {
-    await page.goto(BASE);
+    await page.goto('/');
     await expect(page.locator('#email')).toBeVisible();
     await expect(page.locator('button:has-text("Send Sign-in Code")')).toBeVisible();
   });
@@ -48,7 +49,7 @@ test.describe('Auth flow', () => {
 
     try {
       await signIn(page, email);
-      await page.goto(`${BASE}profile`);
+      await page.goto(`/profile`);
       await page.getByRole('button', { name: 'Add a passkey' }).click();
       await expect(page.getByText('Passkey added. You can now use it to sign in.')).toBeVisible();
 
@@ -82,7 +83,7 @@ test.describe('Student picker', () => {
 
     await signIn(page, judgeEmail);
 
-    await page.goto(`${BASE}judge`);
+    await page.goto(`/judge`);
     await page.waitForSelector('input[placeholder="Search students…"]', { timeout: 10_000 });
 
     const picker = page.locator('input[placeholder="Search students…"]').first();
@@ -102,7 +103,7 @@ test.describe('Judge ballot view', () => {
     if (!judgeEmail) throw new Error('Missing E2E_JUDGE_EMAIL');
 
     await signIn(page, judgeEmail);
-    await page.goto(`${BASE}dashboard`);
+    await page.goto(`/dashboard`);
 
     await expect(page.locator('text=Submitted Ballots')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=2024-01-15').first()).toBeVisible({ timeout: 5000 });
@@ -114,7 +115,7 @@ test.describe('Judge ballot view', () => {
     if (!judgeEmail || !ballotId) throw new Error('Missing e2e env vars');
 
     await signIn(page, judgeEmail);
-    await page.goto(`${BASE}ballot/${ballotId}`);
+    await page.goto(`/ballot/${ballotId}`);
 
     await expect(page.locator('text=Affirmative wins')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
@@ -133,7 +134,7 @@ test.describe('Student ballot view', () => {
     if (!studentEmail) throw new Error('Missing E2E_STUDENT_EMAIL');
 
     await signIn(page, studentEmail);
-    await page.goto(`${BASE}dashboard`);
+    await page.goto(`/dashboard`);
 
     await expect(page.locator('text=My Feedback')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=Judge: Bob Judge')).toBeVisible({ timeout: 5000 });
@@ -145,7 +146,7 @@ test.describe('Student ballot view', () => {
     if (!studentEmail || !debateId) throw new Error('Missing e2e env vars');
 
     await signIn(page, studentEmail);
-    await page.goto(`${BASE}debate/${debateId}`);
+    await page.goto(`/debate/${debateId}`);
 
     await expect(page.locator('text=Bob Judge')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
@@ -159,7 +160,7 @@ test.describe('Routing', () => {
   test('hash routing renders app without crash', async ({ page }) => {
     const routes = ['', 'dashboard', 'judge', 'admin'];
     for (const route of routes) {
-      await page.goto(route ? `${BASE}${route}` : BASE);
+      await page.goto(`/${route}`);
       await expect(page.locator('body')).toBeVisible();
     }
   });
@@ -168,7 +169,7 @@ test.describe('Routing', () => {
 test.describe('Mobile layout', () => {
   test('app renders auth screen on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(BASE);
+    await page.goto('/');
     await expect(page.locator('#email')).toBeVisible();
   });
 });
