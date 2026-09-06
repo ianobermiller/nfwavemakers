@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const port = process.env['PLAYWRIGHT_PORT'] ?? '5174';
+const baseURL = `http://localhost:${port}/`;
+
 export default defineConfig({
   testDir: './e2e',
   globalSetup: './e2e/global-setup.ts',
@@ -9,7 +12,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 15_000 },
   use: {
-    baseURL: 'http://localhost:5174/',
+    baseURL,
     trace: 'on-first-retry',
   },
   projects: [
@@ -23,8 +26,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'vite --port 5174',
-    url: 'http://localhost:5174/',
+    command: `vite --port ${port}`,
+    url: baseURL,
     reuseExistingServer: false,
   },
 });

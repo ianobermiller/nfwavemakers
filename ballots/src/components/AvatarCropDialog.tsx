@@ -228,7 +228,7 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
             <Dialog.Close
               type="button"
               disabled={saving}
-              className="px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer bg-transparent border-none disabled:opacity-50"
+              className="px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 dark:text-slate-300 enabled:hover:bg-slate-100 enabled:dark:hover:bg-slate-700 transition-colors cursor-pointer bg-transparent border-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </Dialog.Close>
@@ -236,7 +236,7 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
               type="button"
               onClick={() => void handleConfirm()}
               disabled={!img || saving}
-              className="px-4 py-2 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white transition-colors cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving…' : 'Save photo'}
             </button>

@@ -84,7 +84,7 @@ export function ProfileSetup(): React.JSX.Element {
         {error && <p className="text-red-600 text-sm">{error}</p>}
 
         <button
-          className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 transition-colors"
+          className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           onClick={() => void save()}
           disabled={loading || !name.trim() || !role}
         >

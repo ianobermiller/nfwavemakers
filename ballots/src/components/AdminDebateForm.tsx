@@ -233,7 +233,7 @@ function AdminDebateFormEditor({
         {error && <p className="text-red-600 text-sm">{error}</p>}
 
         <button
-          className="px-5 py-2.5 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 transition-colors self-start"
+          className="px-5 py-2.5 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors self-start"
           onClick={() => void save()}
           disabled={saving}
         >

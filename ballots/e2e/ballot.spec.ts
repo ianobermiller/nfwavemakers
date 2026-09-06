@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const BASE = 'http://localhost:5174/';
+const BASE = `http://localhost:${process.env['PLAYWRIGHT_PORT'] ?? '5174'}/`;
 
 async function signIn(page: Page, email: string): Promise<void> {
   const password = process.env['E2E_PASSWORD'];
@@ -19,6 +19,57 @@ test.describe('Auth flow', () => {
     await page.goto(BASE);
     await expect(page.locator('#email')).toBeVisible();
     await expect(page.locator('button:has-text("Send Sign-in Code")')).toBeVisible();
+  });
+
+  test('registers and signs back in with a passkey', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'WebAuthn CDP test runs in desktop Chromium');
+
+    const email = process.env['E2E_JUDGE_EMAIL'];
+    if (!email) throw new Error('Missing E2E_JUDGE_EMAIL');
+
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('WebAuthn.enable');
+    const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+      options: {
+        automaticPresenceSimulation: true,
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        protocol: 'ctap2',
+        transport: 'internal',
+      },
+    });
+
+    // Autofill would satisfy the virtual authenticator on load and sign in
+    // before the button is clicked, so keep it out of this test.
+    await page.addInitScript(() => {
+      PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+    });
+
+    try {
+      await signIn(page, email);
+      await page.goto(`${BASE}profile`);
+      await page.getByRole('button', { name: 'Add a passkey' }).click();
+      await expect(page.getByText('Passkey added. You can now use it to sign in.')).toBeVisible();
+
+      const credentials = await cdp.send('WebAuthn.getCredentials', { authenticatorId });
+      expect(credentials.credentials.map((c) => c.isResidentCredential)).toContain(true);
+
+      await page.getByRole('button', { name: 'Menu' }).click();
+      await page.getByRole('menuitem', { name: 'Sign Out' }).click();
+
+      // No email typed: the authenticator picks the passkey.
+      await expect(page.locator('#email')).toHaveValue('');
+      await page.getByRole('button', { name: 'Sign in with a passkey' }).click();
+
+      await expect(page.locator('#email')).toBeHidden();
+      const auth = await page.evaluate(() => localStorage.getItem('pocketbase_auth'));
+      expect(auth).toContain('"token"');
+      expect(auth).toContain(email);
+    } finally {
+      await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+      await cdp.send('WebAuthn.disable');
+    }
   });
 });
 

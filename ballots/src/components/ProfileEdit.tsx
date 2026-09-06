@@ -8,6 +8,7 @@ import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
 import { AvatarCropDialog } from './AvatarCropDialog.tsx';
+import { PasskeyRegistration } from './PasskeyRegistration.tsx';
 import { Input } from './ui/Input.tsx';
 
 interface Props {
@@ -79,7 +80,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
               onClick={() => fileInputRef.current?.click()}
               disabled={avatarUploading}
               aria-label="Change profile photo"
-              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 flex items-center justify-center shadow cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 flex items-center justify-center shadow cursor-pointer enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {avatarUploading ? (
                 <span className="w-3 h-3 border-2 border-nf-blue dark:border-nf-blue-d border-t-transparent rounded-full animate-spin" />
@@ -162,12 +163,14 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
         {error && <p className="text-red-600 text-sm">{error}</p>}
 
         <button
-          className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 transition-colors"
+          className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           onClick={() => void save()}
           disabled={loading || !name.trim() || !changed}
         >
           {loading ? 'Saving…' : 'Save'}
         </button>
+
+        <PasskeyRegistration />
       </div>
 
       <AvatarCropDialog

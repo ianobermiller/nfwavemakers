@@ -174,7 +174,7 @@ function BallotFormEditor({
         {/* Submit */}
         <div className="mt-6 flex flex-col items-center gap-1.5">
           <button
-            className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-bold rounded-xl cursor-pointer disabled:opacity-40 transition-colors"
+            className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-bold rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             disabled={!draft.canSubmit || draft.submitting}
             onClick={() => void draft.submit()}
           >

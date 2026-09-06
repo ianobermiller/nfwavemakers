@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createAccount,
   requestPasswordReset,
@@ -6,6 +6,13 @@ import {
   signInWithCode,
   signInWithPassword,
 } from '../data/auth.ts';
+import {
+  isPasskeyCanceled,
+  passkeyAutofillAvailable,
+  passkeysSupported,
+  signInWithPasskey,
+  signInWithPasskeyAutofill,
+} from '../data/passkeys.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 import { Input } from './ui/Input.tsx';
 
@@ -20,6 +27,8 @@ export function Auth(): React.JSX.Element {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const autofillRef = useRef<AbortController>();
+  const autofillSettled = useRef<Promise<void>>();
 
   async function submitCredentials(): Promise<void> {
     const normalizedEmail = email.trim().toLowerCase();
@@ -71,7 +80,47 @@ export function Auth(): React.JSX.Element {
     }
   }
 
+  async function handlePasskeySignIn(): Promise<void> {
+    // Only one WebAuthn request can be pending. Drop the autofill offer and let
+    // the browser release it, or this request is rejected as already pending.
+    autofillRef.current?.abort();
+    setLoading(true);
+    setError('');
+    setNotice('');
+    try {
+      await autofillSettled.current;
+      await signInWithPasskey(email);
+    } catch (cause: unknown) {
+      if (isPasskeyCanceled(cause)) {
+        setNotice('Passkey sign-in canceled.');
+      } else {
+        setError(errorMessage(cause, 'Passkey sign-in failed'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const needsPassword = mode !== 'code';
+  const supportsPasskeys = passkeysSupported();
+
+  // Offer saved passkeys in the email field's autofill dropdown.
+  useEffect(() => {
+    const controller = new AbortController();
+    autofillRef.current = controller;
+    autofillSettled.current = (async () => {
+      if (!supportsPasskeys || !(await passkeyAutofillAvailable()) || controller.signal.aborted) {
+        return;
+      }
+      try {
+        await signInWithPasskeyAutofill(controller.signal);
+      } catch {
+        // Autofill is best effort; the button still works.
+      }
+    })();
+
+    return () => controller.abort();
+  }, [supportsPasskeys]);
 
   return (
     <div className="min-h-screen flex items-start justify-center p-4 pt-16 bg-slate-50 dark:bg-slate-950">
@@ -98,7 +147,7 @@ export function Auth(): React.JSX.Element {
               <Input
                 aria-describedby={error ? 'auth-error' : undefined}
                 aria-invalid={!!error}
-                autoComplete="email"
+                autoComplete={supportsPasskeys ? 'username webauthn' : 'email'}
                 autoFocus
                 id="email"
                 onChange={(event) => setEmail(event.target.value)}
@@ -129,7 +178,7 @@ export function Auth(): React.JSX.Element {
             )}
             {notice && <p className="text-sm text-emerald-700 dark:text-emerald-300">{notice}</p>}
             <button
-              className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 transition-colors"
+              className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               disabled={loading || !email.trim() || (needsPassword && password.length < 8)}
               type="submit"
             >
@@ -141,6 +190,24 @@ export function Auth(): React.JSX.Element {
                     ? 'Create Account'
                     : 'Sign In'}
             </button>
+
+            {supportsPasskeys && (
+              <>
+                <div className="flex items-center gap-3" aria-hidden="true">
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-600" />
+                  <span className="text-xs uppercase text-slate-400">or</span>
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-600" />
+                </div>
+                <button
+                  className="w-full py-3 border-2 border-nf-blue dark:border-nf-blue-d text-nf-blue dark:text-nf-blue-d enabled:hover:bg-nf-blue-light enabled:dark:hover:bg-slate-700 font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={loading}
+                  onClick={() => void handlePasskeySignIn()}
+                  type="button"
+                >
+                  {loading ? 'Please wait…' : 'Sign in with a passkey'}
+                </button>
+              </>
+            )}
 
             <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-sm">
               {mode !== 'code' && (
@@ -214,7 +281,7 @@ export function Auth(): React.JSX.Element {
               </p>
             )}
             <button
-              className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 transition-colors"
+              className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               disabled={loading || !code.trim()}
               type="submit"
             >
