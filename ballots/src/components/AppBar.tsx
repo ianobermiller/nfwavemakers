@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { authClient } from '../authClient.ts';
+import { signOut } from '../data/auth.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { Avatar } from './Avatar.tsx';
 import { useAppUser } from '../hooks/auth.tsx';
@@ -118,7 +118,7 @@ export function AppBar(): React.JSX.Element {
               <button
                 role="menuitem"
                 className="w-full text-left px-4 py-3.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer bg-transparent border-none transition-colors border-t border-slate-100 dark:border-slate-700"
-                onClick={() => void authClient.signOut()}
+                onClick={signOut}
               >
                 Sign Out
               </button>

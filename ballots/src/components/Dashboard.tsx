@@ -1,4 +1,3 @@
-import type { Id } from '../../convex/_generated/dataModel';
 import type { Role } from '../types.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { AdminDashboard } from './dashboard/AdminDashboard.tsx';
@@ -7,7 +6,7 @@ import { StudentDashboard } from './dashboard/StudentDashboard.tsx';
 import { UpcomingDebates } from './dashboard/UpcomingDebates.tsx';
 
 interface Props {
-  userId: Id<'users'>;
+  userId: string;
   role: Role;
   name: string;
 }

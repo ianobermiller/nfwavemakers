@@ -1,12 +1,11 @@
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { useUsers } from './data.ts';
 
 /**
  * Batched lookup of avatar image URLs for a set of user IDs.
- * Users from Convex queries already include avatarUrl; this hook is for mixing IDs.
+ * PocketBase expands often include avatarUrl; this hook fills URLs for bare IDs.
  */
 export function useAvatarURLs(
-  users: ({ _id?: string; id?: string; avatarUrl?: string | null } | string | null | undefined)[],
+  users: ({ id?: string; avatarUrl?: string | null } | string | null | undefined)[],
 ): Record<string, string> {
   const ids = [
     ...new Set(
@@ -14,22 +13,22 @@ export function useAvatarURLs(
         .map((u) => {
           if (!u) return undefined;
           if (typeof u === 'string') return u;
-          return u._id ?? u.id;
+          return u.id;
         })
         .filter((id): id is string => !!id),
     ),
   ];
 
-  const listed = useQuery(api.users.list, ids.length > 0 ? { includeArchived: true } : 'skip');
+  const listed = useUsers(true);
   const map: Record<string, string> = {};
   for (const user of listed ?? []) {
-    if (user.avatarUrl && ids.includes(user._id)) {
-      map[user._id] = user.avatarUrl;
+    if (user.avatarUrl && ids.includes(user.id)) {
+      map[user.id] = user.avatarUrl;
     }
   }
   for (const u of users) {
     if (!u || typeof u === 'string') continue;
-    const id = u._id ?? u.id;
+    const id = u.id;
     if (id && u.avatarUrl) {
       map[id] = u.avatarUrl;
     }

@@ -8,7 +8,7 @@
   "env": {
     "browser": true
   },
-  "ignorePatterns": ["dist", "convex/_generated"],
+  "ignorePatterns": ["dist"],
   "options": {
     "typeAware": true,
     "typeCheck": true
@@ -28,12 +28,11 @@
     "typescript/no-inferrable-types": "error",
     "typescript/no-unnecessary-condition": "error",
     "no-shadow": "off",
-    "no-unmodified-loop-condition": "off",
-    "no-underscore-dangle": ["error", { "allow": ["_id", "_creationTime"] }]
+    "no-unmodified-loop-condition": "off"
   },
   "overrides": [
     {
-      "files": ["*.js", "*.mjs", "convex/**/*.ts"],
+      "files": ["*.js", "*.mjs"],
       "env": {
         "node": true
       }

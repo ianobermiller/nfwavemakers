@@ -1,24 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { cn } from 'cnfast';
-import { useMutation, useQuery } from 'convex/react';
-import { z } from 'zod';
-import { api } from '../../convex/_generated/api';
 import type { Role } from '../types.ts';
+import { updateAvatar, updateProfile } from '../data/api.ts';
+import { errorMessage } from '../data/pocketbase.ts';
+import { useAppUser } from '../hooks/auth.tsx';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
 import { AvatarCropDialog } from './AvatarCropDialog.tsx';
 import { Input } from './ui/Input.tsx';
-import { convexStorageId } from '../lib/convexId.ts';
-import { authClient } from '../authClient.ts';
 
 interface Props {
   userId: string;
   currentName: string;
   currentRole: Role;
 }
-
-const uploadResponseSchema = z.object({ storageId: z.string() });
 
 const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = [
   { value: 'student', label: 'Student', description: 'I compete as a debater' },
@@ -33,10 +29,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const me = useQuery(api.users.current);
-  const updateProfile = useMutation(api.users.updateProfile);
-  const generateUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
-  const saveAvatar = useMutation(api.users.saveAvatar);
+  const me = useAppUser();
   const avatarURL = me?.avatarUrl ?? undefined;
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>): void {
@@ -50,24 +43,11 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
     setAvatarUploading(true);
     setError('');
     try {
-      const uploadUrl = await generateUploadUrl();
-      const result = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/webp' },
-        body: blob,
-      });
-      if (!result.ok) {
-        throw new Error('Failed to upload photo');
-      }
-      const body = uploadResponseSchema.safeParse(await result.json());
-      if (!body.success) {
-        throw new Error('Invalid upload response');
-      }
-      await saveAvatar({ storageId: convexStorageId(body.data.storageId) });
+      await updateAvatar(blob);
       setCropFile(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to upload photo');
-      throw e;
+    } catch (cause: unknown) {
+      setError(errorMessage(cause, 'Failed to upload photo'));
+      throw cause;
     } finally {
       setAvatarUploading(false);
     }
@@ -78,11 +58,10 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
     setLoading(true);
     setError('');
     try {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      await updateProfile({ name: name.trim(), role });
+      await updateProfile(name, role);
       navigate('dashboard');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save profile');
+    } catch (cause: unknown) {
+      setError(errorMessage(cause, 'Failed to save profile'));
       setLoading(false);
     }
   }
@@ -189,8 +168,6 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
         >
           {loading ? 'Saving…' : 'Save'}
         </button>
-
-        {'PublicKeyCredential' in window && <PasskeySettings />}
       </div>
 
       <AvatarCropDialog
@@ -200,96 +177,4 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
       />
     </PageLayout>
   );
-}
-
-function PasskeySettings(): React.JSX.Element {
-  const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [passkeys, setPasskeys] = useState<
-    { id: string; name?: null | string | undefined }[] | undefined
-  >(undefined);
-
-  const refresh = useCallback(async (): Promise<void> => {
-    const result = await authClient.passkey.listUserPasskeys();
-    throwIfError(result.error);
-    setPasskeys(result.data ?? []);
-  }, []);
-
-  useEffect(() => {
-    void refresh().catch((e: unknown) =>
-      setError(e instanceof Error ? e.message : 'Could not load passkeys'),
-    );
-  }, [refresh]);
-
-  const loading = passkeys === undefined || actionLoading;
-
-  async function addPasskey(): Promise<void> {
-    setActionLoading(true);
-    setError('');
-    try {
-      const result = await authClient.passkey.addPasskey({ name: 'NF Wavemakers passkey' });
-      throwIfError(result.error);
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add passkey');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function removePasskey(id: string): Promise<void> {
-    setActionLoading(true);
-    setError('');
-    try {
-      const result = await authClient.passkey.deletePasskey({ id });
-      throwIfError(result.error);
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not remove passkey');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  return (
-    <section className="mt-4 border-t border-slate-200 dark:border-slate-700 pt-5">
-      <h2 className="font-semibold text-slate-800 dark:text-slate-100">Passkeys</h2>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Sign in with Face ID, Touch ID, or your device PIN.
-      </p>
-      <div className="mt-3 flex flex-col gap-2">
-        {passkeys?.map((passkey) => (
-          <div
-            className="flex items-center gap-3 rounded-xl bg-slate-100 dark:bg-slate-700 p-3"
-            key={passkey.id}
-          >
-            <span className="text-sm font-semibold">{passkey.name || 'Passkey'}</span>
-            <button
-              className="ml-auto text-sm text-red-600 disabled:opacity-50"
-              disabled={loading}
-              onClick={() => void removePasskey(passkey.id)}
-              type="button"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-        <button
-          className="w-full py-2.5 border border-slate-300 dark:border-slate-600 font-semibold rounded-xl disabled:opacity-50"
-          disabled={loading}
-          onClick={() => void addPasskey()}
-          type="button"
-        >
-          {loading ? 'Please wait…' : 'Add a passkey'}
-        </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-      </div>
-    </section>
-  );
-}
-
-function throwIfError(error: null | { message?: string | undefined } | undefined): void {
-  if (error) {
-    throw new Error(error.message ?? 'Authentication failed');
-  }
 }

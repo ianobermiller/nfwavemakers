@@ -2,145 +2,74 @@
 
 Judge debate rounds, record speaker scores, and share feedback with students.
 
-Live data lives in [Convex](https://convex.dev). Sign-in uses Better Auth (email codes via Resend).
+The React app uses PocketBase at `https://pb.obermillers.com` for authentication,
+records, files, access rules, and realtime updates.
 
 ## Develop
 
-You need Node 18+ and a [Convex](https://dashboard.convex.dev) account.
-
 ```bash
 npm install
-npx convex login
 npm run dev
 ```
 
-`npm run dev` runs Convex and Vite together against **local** data. The UI is at [http://localhost:5173/](http://localhost:5173/). Convex writes `VITE_CONVEX_URL` into `.env.local`.
+The UI is available at `http://localhost:5173`. `VITE_POCKETBASE_URL` defaults to
+the production instance and can be overridden in `.env.local`.
 
-Seed local test data and password-enabled personas:
+## PocketBase schema
+
+The schema migration is in `pocketbase/pb_migrations`. Copy that directory beside
+the PocketBase executable and restart PocketBase (or run `pocketbase migrate up`).
+It:
+
+- leaves the shared `users` auth collection unchanged;
+- creates `ballots_profiles`, `ballots_debates`, `ballots_ballots`, and
+  `ballots_speaker_evals`;
+- adds indexes, relation limits, and record-level access rules.
+
+Every app-owned collection is prefixed with `ballots_`. Debate teams and judges
+relate to `ballots_profiles`, which isolates ballot-specific names, roles,
+avatars, and archive state from other apps sharing the auth collection. Ballot
+and speaker-evaluation changes use PocketBase's batch API so autosaves remain
+transactional. The PocketBase batch API must be enabled.
+
+Make the first administrator by setting their `ballots_profiles.role` to `admin`
+in the PocketBase dashboard. Users can then register with email/password or sign
+in with an email OTP. Password resets use PocketBase's configured email flow.
+Passkey sign-in will be wired to the shared PocketBase instance separately.
+
+## Test data
+
+Seeding requires a dedicated PocketBase test instance and superuser:
 
 ```bash
+POCKETBASE_TEST_URL=http://127.0.0.1:8090 \
+PB_SUPERUSER_EMAIL=admin@example.com \
+PB_SUPERUSER_PASSWORD=... \
 npm run seed:test
 ```
 
-All three accounts use the password `test-password`:
+The seed command refuses remote instances unless `ALLOW_REMOTE_TEST_SEED=1` is
+explicitly set.
 
-- `student@example.com`
-- `judge@example.com`
-- `admin@example.com`
+## Commands
 
-Override the shared password with `TEST_ACCOUNT_PASSWORD=... npm run seed:test`. The seed command refuses to run against a non-local Convex deployment.
-
-Frontend-only, still local Convex (backend already running):
-
-```bash
-npm run dev:frontend
-```
-
-Local UI against **production** data (does not start local Convex; writes are live):
-
-```bash
-npm run dev:prod
-```
-
-First time on a machine (or a new deployment), set auth:
-
-```bash
-npx convex env set BETTER_AUTH_SECRET="$(openssl rand -base64 32)"
-npx convex env set SITE_URL http://localhost:5173
-npx convex env set AUTH_RESEND_KEY re_...
-npx convex env set AUTH_EMAIL 'NF Wavemakers <notifications@updates.obermillers.com>'
-```
-
-`AUTH_RESEND_KEY` is the same Resend key used by other Obermiller apps. The from-address domain is `updates.obermillers.com`.
-
-When Better Auth plugins change, regenerate its local component schema:
-
-```bash
-npx @better-auth/cli generate --cwd convex/betterAuth --config auth.ts --output schema.ts -y
-```
-
-### Useful commands
-
-| Command | What it does |
-|---|---|
-| `npm run dev` | Local Convex + Vite |
-| `npm run dev:frontend` | Vite only, local Convex URL |
-| `npm run dev:prod` | Vite only, production Convex data |
-| `npm run seed:test` | Seed local student, judge, and admin test accounts |
-| `npm run lint` | Oxlint |
-| `npm run format` | Oxfmt |
-| `npm run knip` | Unused export check |
-| `npm run build` | Oxlint + production bundle |
-| `npm run pages:deploy` | Build and upload `dist/` to Cloudflare Pages |
-| `npm run test:e2e` | Playwright (needs local Convex running) |
-
-### Layout
-
-```
-convex/          queries, mutations, schema, auth
-src/             Vite React UI
-scripts/         Instant import, prod frontend
-```
-
-Ballot and debate URLs use Convex document IDs (`/debate/<id>`). Instant UUIDs will not work after import.
+- `npm run dev` — Vite development server
+- `npm run check` — types, lint, and unused-code checks
+- `npm run build` — production build
+- `npm run test:e2e` — Playwright against the configured test PocketBase
+- `npm run pages:deploy` — deploy `dist` to Cloudflare Pages
 
 ## Deploy
 
-The SPA is a **second Cloudflare Pages project** (`nfwm-ballots`) on `https://ballots.nfwavemakers.com`. The club site on `nfwavemakers.com` 301s `/ballots` there.
-
-Sign in to Wrangler once on this machine:
+The SPA is deployed as the `nfwm-ballots` Cloudflare Pages project at
+`https://ballots.nfwavemakers.com`.
 
 ```bash
 npx wrangler login
-```
-
-First-time project (or a one-off ship without Git):
-
-```bash
-npx wrangler pages project create nfwm-ballots --production-branch main
 npm run pages:deploy
 ```
 
-Attach `ballots.nfwavemakers.com` in the Pages dashboard (same Cloudflare zone as the club site). For deploy-on-push, connect `ianobermiller/nfwavemakers` with **root directory** `ballots`, build `npm run build`, output `dist`.
-
-Production Convex `SITE_URL` must be `https://ballots.nfwavemakers.com` (`npx convex env set SITE_URL https://ballots.nfwavemakers.com --prod`). Env changes apply immediately; `npx convex deploy` still pushes functions.
-
-`.env.production` bakes the public Convex URLs into the Vite bundle. Secrets stay on Convex, not Pages.
-
-## Environment
-
-Checked in (`.env`):
-
-- `VITE_INSTANT_APP_ID` — Instant app id, only for the one-shot data import
-
-Convex CLI writes `.env.local` (`CONVEX_DEPLOYMENT`, `VITE_CONVEX_URL`, `VITE_CONVEX_SITE_URL`). Keep secrets there, including `INSTANT_APP_ADMIN_TOKEN` if you still need to import. Optional: `VITE_CONVEX_PROD_URL` for `npm run dev:prod`.
-
-Set these on the Convex deployment (`npx convex env list` to inspect):
-
-| Variable | Purpose |
-|---|---|
-| `SITE_URL` | App origin Better Auth trusts (`http://localhost:5173` in dev) |
-| `BETTER_AUTH_SECRET` | Better Auth encryption and signing secret |
-| `AUTH_RESEND_KEY` | Resend API key |
-| `AUTH_EMAIL` | From address for sign-in codes |
-
-Cloud/prod is a separate deployment. Copy the same env vars with `--prod` (and set `SITE_URL` to `https://ballots.nfwavemakers.com`). Env changes apply immediately; no redeploy.
-
-`npx convex deploy` pushes functions. The Pages build (`npm run build` / `npm run pages:deploy`) ships the frontend. Neither copies Convex env.
-
-## Data import (Instant)
-
-The app was migrated from InstantDB. To load Instant into the **current** Convex deployment:
-
-```bash
-# INSTANT_APP_ADMIN_TOKEN in .env.local
-npm run migrate:instant
-```
-
-Production:
-
-```bash
-npm run migrate:instant:prod
-```
-
-The importer is idempotent (rows keyed by Instant id). Skip this once Instant is gone.
+Cloudflare Pages should use root directory `ballots`, build command
+`npm run build`, and output directory `dist`. `VITE_POCKETBASE_URL` is public and
+is checked into `.env.production`; PocketBase superuser credentials must never be
+added to the frontend or committed.

@@ -1,4 +1,3 @@
 {
-  "entry": ["scripts/*.mjs"],
-  "ignore": ["convex/betterAuth/**"]
+  "entry": ["scripts/*.mjs", "pocketbase/pb_migrations/*.js"]
 }

@@ -1,6 +1,4 @@
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
+import { useBallot } from '../hooks/data.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { cn } from 'cnfast';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
@@ -11,12 +9,12 @@ import { ScoringRows } from './ScoringRows.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
 
 interface Props {
-  ballotId: Id<'ballots'>;
-  currentUserId: Id<'users'>;
+  ballotId: string;
+  currentUserId: string;
 }
 
 export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Element {
-  const ballot = useQuery(api.ballots.get, { ballotId });
+  const ballot = useBallot(ballotId);
   const can = usePermissions(currentUserId);
   const isLoading = ballot === undefined;
 
@@ -56,13 +54,13 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
           speaker: NonNullable<typeof e.speaker> & { avatarUrl: string };
         } => e.speaker?.avatarUrl != null,
       )
-      .map((e) => [e.speaker._id, e.speaker.avatarUrl]),
+      .map((evaluation) => [evaluation.speaker.id, evaluation.speaker.avatarUrl]),
   );
 
   if (
     !can.canViewBallot(
-      judge?._id,
-      evals.map((e) => e.speaker?._id),
+      judge?.id,
+      evals.map((evaluation) => evaluation.speaker?.id),
     )
   ) {
     return (
@@ -151,10 +149,10 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
                 >
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                      {ev?.speaker?._id && (
+                      {ev?.speaker?.id && (
                         <Avatar
-                          name={ev.speaker.name ?? ev.speaker._id}
-                          imageURL={avatarURLs[ev.speaker._id]}
+                          name={ev.speaker.name ?? ev.speaker.id}
+                          imageURL={avatarURLs[ev.speaker.id]}
                           size="sm"
                         />
                       )}

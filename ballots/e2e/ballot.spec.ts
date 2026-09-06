@@ -18,7 +18,7 @@ test.describe('Auth flow', () => {
   test('shows email input on landing', async ({ page }) => {
     await page.goto(BASE);
     await expect(page.locator('#email')).toBeVisible();
-    await expect(page.locator('button:has-text("Send Magic Code")')).toBeVisible();
+    await expect(page.locator('button:has-text("Send Sign-in Code")')).toBeVisible();
   });
 });
 

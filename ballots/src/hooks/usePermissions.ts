@@ -1,11 +1,6 @@
-import type { Id } from '../../convex/_generated/dataModel';
-
-export function usePermissions(userId: Id<'users'>) {
+export function usePermissions(userId: string) {
   return {
-    canViewBallot(
-      judgeId: Id<'users'> | undefined,
-      speakerIds: (Id<'users'> | undefined)[],
-    ): boolean {
+    canViewBallot(judgeId: string | undefined, speakerIds: (string | undefined)[]): boolean {
       return judgeId === userId || speakerIds.some((id) => id === userId);
     },
   };

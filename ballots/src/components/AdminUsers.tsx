@@ -1,26 +1,24 @@
 import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
+import { setUserArchived } from '../data/api.ts';
 import { useAppUser } from '../hooks/auth.tsx';
+import { useUsers } from '../hooks/data.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
 
 export function AdminUsers(): React.JSX.Element {
   const [showArchived, setShowArchived] = useState(false);
   const me = useAppUser();
-  const users = useQuery(api.users.list, { includeArchived: showArchived });
-  const setArchived = useMutation(api.users.setArchived);
+  const users = useUsers(showArchived);
   const isLoading = users === undefined;
-  const [pendingId, setPendingId] = useState<Id<'users'> | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  async function toggleArchived(userId: Id<'users'>, archived: boolean): Promise<void> {
+  async function toggleArchived(userId: string, archived: boolean): Promise<void> {
     setPendingId(userId);
     setError('');
     try {
-      await setArchived({ userId, archived });
+      await setUserArchived(userId, archived);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update user');
     } finally {
@@ -51,17 +49,17 @@ export function AdminUsers(): React.JSX.Element {
       )}
       <div className="flex flex-col gap-3">
         {(users ?? []).map((u) => {
-          const isMe = me?._id === u._id;
-          const busy = pendingId === u._id;
+          const isMe = me?.id === u.id;
+          const busy = pendingId === u.id;
           return (
             <div
-              key={u._id}
+              key={u.id}
               className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-center gap-3 ${
                 u.archived ? 'opacity-70' : ''
               }`}
             >
               <Avatar
-                name={u.name ?? u.email ?? u._id}
+                name={u.name ?? u.email ?? u.id}
                 imageURL={u.avatarUrl ?? undefined}
                 size="sm"
               />
@@ -89,7 +87,7 @@ export function AdminUsers(): React.JSX.Element {
                     archived={u.archived}
                     busy={busy}
                     name={u.name ?? u.email ?? 'user'}
-                    onToggleArchived={() => void toggleArchived(u._id, !u.archived)}
+                    onToggleArchived={() => void toggleArchived(u.id, !u.archived)}
                   />
                 )}
               </div>

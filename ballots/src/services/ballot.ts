@@ -5,12 +5,10 @@ import {
   type SpeakerFormState,
   type Winner,
 } from '../types.ts';
-import type { Id } from '../../convex/_generated/dataModel';
-import { convexId } from '../lib/convexId.ts';
 
 export interface BallotIds {
-  ballotId?: Id<'ballots'>;
-  evalIds: Partial<Record<Position, Id<'speakerEvals'>>>;
+  ballotId?: string;
+  evalIds: Partial<Record<Position, string>>;
 }
 
 function makeEmptySpeaker(): SpeakerFormState {
@@ -40,29 +38,29 @@ function makeNewBallotIds(): BallotIds {
 }
 
 interface ExistingSpeakerEval {
-  _id: Id<'speakerEvals'>;
+  id: string;
   position: Position;
-  rank?: number;
-  delivery?: number;
-  organization?: number;
-  evidenceAndSupport?: number;
-  refutation?: number;
-  crossExamination?: number;
-  conduct?: number;
-  notes?: string;
-  speaker: { _id: Id<'users'> } | null;
+  rank?: number | undefined;
+  delivery?: number | undefined;
+  organization?: number | undefined;
+  evidenceAndSupport?: number | undefined;
+  refutation?: number | undefined;
+  crossExamination?: number | undefined;
+  conduct?: number | undefined;
+  notes?: string | undefined;
+  speaker: { id: string } | null;
 }
 
 export interface ExistingBallot {
-  _id: Id<'ballots'>;
-  winner?: Winner;
-  reasonForDecision?: string;
+  id: string;
+  winner?: Winner | undefined;
+  reasonForDecision?: string | undefined;
   speakerEvals: ExistingSpeakerEval[];
 }
 
 export interface DebateTeams {
-  affTeam: { _id: Id<'users'> }[];
-  negTeam: { _id: Id<'users'> }[];
+  affTeam: { id: string }[];
+  negTeam: { id: string }[];
 }
 
 export interface BallotFormInit {
@@ -78,15 +76,15 @@ export function initBallotFormState(
   debate: DebateTeams | null | undefined,
 ): BallotFormInit {
   if (existing) {
-    const ids: BallotIds = { ballotId: existing._id, evalIds: {} };
+    const ids: BallotIds = { ballotId: existing.id, evalIds: {} };
     const speakers = makeEmptySpeakers();
 
     for (const ev of existing.speakerEvals) {
       const pos = ev.position;
       if (!POSITIONS.includes(pos)) continue;
-      ids.evalIds[pos] = ev._id;
+      ids.evalIds[pos] = ev.id;
       speakers[pos] = {
-        userId: ev.speaker?._id ?? '',
+        userId: ev.speaker?.id ?? '',
         delivery: ev.delivery,
         organization: ev.organization,
         evidenceAndSupport: ev.evidenceAndSupport,
@@ -117,10 +115,10 @@ export function initBallotFormState(
   if (debate) {
     const affTeam = debate.affTeam;
     const negTeam = debate.negTeam;
-    if (affTeam[0]) speakers.aff1 = { ...makeEmptySpeaker(), userId: affTeam[0]._id };
-    if (affTeam[1]) speakers.aff2 = { ...makeEmptySpeaker(), userId: affTeam[1]._id };
-    if (negTeam[0]) speakers.neg1 = { ...makeEmptySpeaker(), userId: negTeam[0]._id };
-    if (negTeam[1]) speakers.neg2 = { ...makeEmptySpeaker(), userId: negTeam[1]._id };
+    if (affTeam[0]) speakers.aff1 = { ...makeEmptySpeaker(), userId: affTeam[0].id };
+    if (affTeam[1]) speakers.aff2 = { ...makeEmptySpeaker(), userId: affTeam[1].id };
+    if (negTeam[0]) speakers.neg1 = { ...makeEmptySpeaker(), userId: negTeam[0].id };
+    if (negTeam[1]) speakers.neg2 = { ...makeEmptySpeaker(), userId: negTeam[1].id };
   }
 
   return { speakers, rankOrder: [], winner: undefined, rfd: '', ids: makeNewBallotIds() };
@@ -145,7 +143,7 @@ export function buildEvalPayload(
       ...(sp.crossExamination !== undefined ? { crossExamination: sp.crossExamination } : {}),
       ...(sp.conduct !== undefined ? { conduct: sp.conduct } : {}),
       notes: sp.notes,
-      ...(sp.userId ? { speakerId: convexId<'users'>(sp.userId) } : {}),
+      ...(sp.userId ? { speakerId: sp.userId } : {}),
     };
   });
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cn } from 'cnfast';
-import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { updateProfile } from '../data/api.ts';
+import { errorMessage } from '../data/pocketbase.ts';
 import type { Role } from '../types.ts';
 import { Input } from './ui/Input.tsx';
 
@@ -15,16 +15,14 @@ export function ProfileSetup(): React.JSX.Element {
   const [role, setRole] = useState<Role | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const updateProfile = useMutation(api.users.updateProfile);
-
   async function save(): Promise<void> {
     if (!name.trim() || !role) return;
     setLoading(true);
     setError('');
     try {
-      await updateProfile({ name: name.trim(), role });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save profile');
+      await updateProfile(name, role);
+    } catch (cause: unknown) {
+      setError(errorMessage(cause, 'Failed to save profile'));
       setLoading(false);
     }
   }

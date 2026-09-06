@@ -1,10 +1,9 @@
-import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { useUpcomingDebates } from '../../hooks/data.ts';
 import { formatTeam } from '../../utils.ts';
 
 export function UpcomingDebates(): React.JSX.Element {
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = useQuery(api.debates.listUpcoming, { today });
+  const upcoming = useUpcomingDebates(today);
 
   if (upcoming === undefined || upcoming.length === 0) return <></>;
 
@@ -20,7 +19,7 @@ export function UpcomingDebates(): React.JSX.Element {
           const judgeNames = d.judges.map((u) => u.name ?? '?');
           return (
             <div
-              key={d._id}
+              key={d.id}
               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1"
             >
               <div className="flex items-center justify-between gap-2">

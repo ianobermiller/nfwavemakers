@@ -1,22 +1,17 @@
 import { cn } from 'cnfast';
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
+import type { User } from '../data/model.ts';
+import { useDebateCard } from '../hooks/data.ts';
 import { formatTeam } from '../utils.ts';
 import { Avatar } from './Avatar.tsx';
 
-function AvatarStack({
-  members,
-}: {
-  members: { _id: string; name?: string; avatarUrl: string | null }[];
-}): React.JSX.Element | null {
+function AvatarStack({ members }: { members: User[] }): React.JSX.Element | null {
   if (members.length === 0) return null;
   return (
     <span className="flex -space-x-2 shrink-0">
       {members.map((m) => (
         <Avatar
-          key={m._id}
-          name={m.name ?? m._id}
+          key={m.id}
+          name={m.name ?? m.id}
           imageURL={m.avatarUrl ?? undefined}
           size="sm"
           className="ring-2 ring-white dark:ring-slate-800"
@@ -27,8 +22,8 @@ function AvatarStack({
 }
 
 interface DebateCardProps {
-  debateId: Id<'debates'>;
-  judgeId?: Id<'users'>;
+  debateId: string;
+  judgeId?: string;
   badge?: React.ReactNode;
   isExpanded?: boolean;
   onClick: () => void;
@@ -47,10 +42,7 @@ export function DebateCard({
   ariaControls,
   className,
 }: DebateCardProps): React.JSX.Element {
-  const data = useQuery(api.debates.card, {
-    debateId,
-    ...(judgeId ? { judgeId } : {}),
-  });
+  const data = useDebateCard(debateId, judgeId);
 
   const debate = data?.debate;
   const affTeam = debate?.affTeam ?? [];

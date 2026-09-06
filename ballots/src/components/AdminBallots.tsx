@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { cn } from 'cnfast';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
+import { restoreBallot, softDeleteBallot } from '../data/api.ts';
+import type { Ballot, SpeakerEval } from '../data/model.ts';
+import {
+  useAdminBallotsByDebate,
+  useAdminBallotsByStudent,
+  useStrandedBallots,
+} from '../hooks/data.ts';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
@@ -44,7 +48,7 @@ export function AdminBallots(): React.JSX.Element {
 function ByDebate(): React.JSX.Element {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const rows = useQuery(api.ballots.adminByDebate);
+  const rows = useAdminBallotsByDebate();
   const isLoading = rows === undefined;
 
   if (isLoading) {
@@ -78,26 +82,26 @@ function ByDebate(): React.JSX.Element {
       {debates.map((row) => {
         const d = row.debate;
         const submittedBallots = row.ballots;
-        const isOpen = expanded.has(d._id);
+        const isOpen = expanded.has(d.id);
         return (
           <div
-            key={d._id}
+            key={d.id}
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
           >
             <DebateCard
-              id={`debate-btn-${d._id}`}
-              debateId={d._id}
+              id={`debate-btn-${d.id}`}
+              debateId={d.id}
               badge={`${submittedBallots.length} ballot${submittedBallots.length !== 1 ? 's' : ''}`}
               isExpanded={isOpen}
-              onClick={() => toggle(d._id)}
-              ariaControls={`debate-panel-${d._id}`}
+              onClick={() => toggle(d.id)}
+              ariaControls={`debate-panel-${d.id}`}
               className="rounded-none border-0 hover:border-0 hover:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700/50"
             />
 
             <div
-              id={`debate-panel-${d._id}`}
+              id={`debate-panel-${d.id}`}
               role="region"
-              aria-labelledby={`debate-btn-${d._id}`}
+              aria-labelledby={`debate-btn-${d.id}`}
               hidden={!isOpen}
               className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
             >
@@ -107,7 +111,7 @@ function ByDebate(): React.JSX.Element {
                 </p>
               )}
               {submittedBallots.map((ballot) => (
-                <BallotSummary key={ballot._id} ballot={ballot} />
+                <BallotSummary key={ballot.id} ballot={ballot} />
               ))}
             </div>
           </div>
@@ -119,7 +123,7 @@ function ByDebate(): React.JSX.Element {
 
 function ByStudent(): React.JSX.Element {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const rows = useQuery(api.ballots.adminByStudent);
+  const rows = useAdminBallotsByStudent();
   const isLoading = rows === undefined;
 
   if (isLoading) {
@@ -151,14 +155,14 @@ function ByStudent(): React.JSX.Element {
   return (
     <div className="flex flex-col gap-3">
       {students.map(({ student, evals }) => {
-        const sid = student._id;
+        const sid = student.id;
         const name = student.name;
         const isOpen = expanded.has(sid);
         const displayName = name ? formatSpeakerName(name) : sid;
 
         const byGroup = new Map<string, typeof evals>();
         for (const ev of evals) {
-          const key = ev.ballot.debate?._id ?? ev.ballot._id;
+          const key = ev.ballot.debate?.id ?? ev.ballot.id;
           const arr = byGroup.get(key) ?? [];
           arr.push(ev);
           byGroup.set(key, arr);
@@ -203,7 +207,7 @@ function ByStudent(): React.JSX.Element {
 
                 const byJudge = new Map<string, typeof groupEvals>();
                 for (const ev of groupEvals) {
-                  const jkey = ev.ballot.judge?._id ?? ev.ballot.judge?.name ?? '—';
+                  const jkey = ev.ballot.judge?.id ?? ev.ballot.judge?.name ?? '—';
                   const arr = byJudge.get(jkey) ?? [];
                   arr.push(ev);
                   byJudge.set(jkey, arr);
@@ -232,7 +236,7 @@ function ByStudent(): React.JSX.Element {
                               </span>
                             )}
                             {judgeEvals.map((ev) => (
-                              <StudentEvalCard key={ev.eval._id} ev={ev.eval} />
+                              <StudentEvalCard key={ev.eval.id} ev={ev.eval} />
                             ))}
                           </div>
                         );
@@ -250,21 +254,19 @@ function ByStudent(): React.JSX.Element {
 }
 
 interface StrandedBallotPayload {
-  id: Id<'ballots'>;
+  id: string;
   judgeName?: string;
   submittedAt: number;
 }
 
 function Stranded(): React.JSX.Element {
-  const strandedBallots = useQuery(api.ballots.stranded);
+  const strandedBallots = useStrandedBallots();
   const isLoading = strandedBallots === undefined;
-  const softDeleteBallot = useMutation(api.ballots.softDelete);
-  const restoreBallot = useMutation(api.ballots.restore);
 
   const { pendingDeletes, softDelete, undo } = useUndoDelete<StrandedBallotPayload>(
-    (payload) => softDeleteBallot({ ballotId: payload.id }),
+    (payload) => softDeleteBallot(payload.id),
     (payload) => {
-      void restoreBallot({ ballotId: payload.id });
+      void restoreBallot(payload.id);
     },
   );
 
@@ -300,7 +302,7 @@ function Stranded(): React.JSX.Element {
       ))}
       {strandedBallots.map((b) => (
         <div
-          key={b._id}
+          key={b.id}
           className="flex items-center justify-between gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3"
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -321,8 +323,8 @@ function Stranded(): React.JSX.Element {
           <button
             className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
             onClick={() =>
-              void softDelete(b._id, {
-                id: b._id,
+              void softDelete(b.id, {
+                id: b.id,
                 ...(b.judge?.name != null && { judgeName: b.judge.name }),
                 submittedAt: b.submittedAt!,
               })
@@ -337,28 +339,7 @@ function Stranded(): React.JSX.Element {
   );
 }
 
-function BallotSummary({
-  ballot,
-}: {
-  ballot: {
-    winner?: string;
-    reasonForDecision?: string;
-    judge: { name?: string } | null;
-    speakerEvals: {
-      _id: string;
-      position: string;
-      rank?: number;
-      notes?: string;
-      speaker: { _id: string; name?: string; avatarUrl: string | null } | null;
-      delivery?: number;
-      organization?: number;
-      evidenceAndSupport?: number;
-      refutation?: number;
-      crossExamination?: number;
-      conduct?: number;
-    }[];
-  };
-}): React.JSX.Element {
+function BallotSummary({ ballot }: { ballot: Ballot }): React.JSX.Element {
   const evals = ballot.speakerEvals;
   const evalsByPos = Object.fromEntries(
     POSITIONS.map((pos) => [pos, evals.find((e) => e.position === pos)]),
@@ -416,9 +397,9 @@ function BallotSummary({
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      {ev.speaker?._id && (
+                      {ev.speaker?.id && (
                         <Avatar
-                          name={ev.speaker.name ?? ev.speaker._id}
+                          name={ev.speaker.name ?? ev.speaker.id}
                           imageURL={ev.speaker.avatarUrl ?? undefined}
                           size="xs"
                         />
@@ -457,19 +438,6 @@ function BallotSummary({
   );
 }
 
-interface EvalWithDetails {
-  _id: string;
-  position?: string | null;
-  rank?: number | null;
-  notes?: string | null;
-  delivery?: number | null;
-  organization?: number | null;
-  evidenceAndSupport?: number | null;
-  refutation?: number | null;
-  crossExamination?: number | null;
-  conduct?: number | null;
-}
-
 function parsePosition(value: string | null | undefined): Position | undefined {
   if (value === 'aff1' || value === 'aff2' || value === 'neg1' || value === 'neg2') {
     return value;
@@ -477,7 +445,7 @@ function parsePosition(value: string | null | undefined): Position | undefined {
   return undefined;
 }
 
-function StudentEvalCard({ ev }: { ev: EvalWithDetails }): React.JSX.Element {
+function StudentEvalCard({ ev }: { ev: SpeakerEval }): React.JSX.Element {
   const total = scoringTotal(ev);
   const pos = parsePosition(ev.position);
 

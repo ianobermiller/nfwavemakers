@@ -1,106 +1,148 @@
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import PocketBase from 'pocketbase';
 
-import { createAuthClient } from 'better-auth/client';
-import { emailOTPClient } from 'better-auth/client/plugins';
-import { ConvexHttpClient } from 'convex/browser';
-
-import { api } from '../convex/_generated/api.js';
-
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-
-function parseEnv(path) {
-  if (!existsSync(path)) return {};
-  return Object.fromEntries(
-    readFileSync(path, 'utf8')
-      .split('\n')
-      .filter((line) => line.trim() && !line.trimStart().startsWith('#'))
-      .map((line) => {
-        const separator = line.indexOf('=');
-        return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
-      }),
-  );
-}
-
-const env = { ...parseEnv(join(root, '.env')), ...parseEnv(join(root, '.env.local')) };
-const convexUrl = env.VITE_CONVEX_URL;
-const siteUrl = env.VITE_CONVEX_SITE_URL;
+const url = process.env.POCKETBASE_TEST_URL ?? process.env.VITE_POCKETBASE_URL;
+const superuserEmail = process.env.PB_SUPERUSER_EMAIL;
+const superuserPassword = process.env.PB_SUPERUSER_PASSWORD;
 const password = process.env.TEST_ACCOUNT_PASSWORD ?? 'test-password';
 
-if (!convexUrl || !siteUrl) {
-  throw new Error('Missing local Convex URLs. Run `npm run dev` first.');
+if (!url) throw new Error('Set POCKETBASE_TEST_URL to the PocketBase test instance.');
+if (!superuserEmail || !superuserPassword) {
+  throw new Error('Set PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD to seed test data.');
 }
-if (!siteUrl.includes('127.0.0.1') && !siteUrl.includes('localhost')) {
-  throw new Error('Test-account seeding is only allowed against local Convex.');
-}
-
-const seed = spawnSync('npx', ['convex', 'run', 'e2eSeed:seed'], {
-  cwd: root,
-  encoding: 'utf8',
-});
-if (seed.status !== 0) {
-  process.stderr.write(seed.stderr);
-  throw new Error('App test-data seed failed.');
+if (
+  !url.includes('127.0.0.1') &&
+  !url.includes('localhost') &&
+  process.env.ALLOW_REMOTE_TEST_SEED !== '1'
+) {
+  throw new Error('Refusing to seed a remote PocketBase without ALLOW_REMOTE_TEST_SEED=1.');
 }
 
-const jsonStart = seed.stdout.lastIndexOf('{');
-const seeded = JSON.parse(seed.stdout.slice(jsonStart));
-const accounts = [
-  { email: seeded.studentEmail, name: 'Alice Student' },
-  { email: seeded.judgeEmail, name: 'Bob Judge' },
-  { email: seeded.adminEmail, name: 'Carol Admin' },
-];
+const pb = new PocketBase(url);
+await pb.collection('_superusers').authWithPassword(superuserEmail, superuserPassword);
 
-const auth = createAuthClient({
-  baseURL: siteUrl,
-  fetchOptions: {
-    headers: { Origin: 'http://localhost:5173' },
-  },
-  plugins: [emailOTPClient()],
-});
-const convex = new ConvexHttpClient(convexUrl);
-
-async function waitForOtp(email) {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const otp = await convex.query(api.devAuth.getOtp, { email });
-    if (otp) return otp;
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error(`Timed out waiting for the verification code for ${email}.`);
-}
-
-async function provision({ email, name }) {
-  const signIn = await auth.signIn.email({ email, password });
-  if (!signIn.error) return;
-
-  const signUp = await auth.signUp.email({ email, name, password });
-  if (!signUp.error) {
-    const otp = await waitForOtp(email);
-    const verified = await auth.emailOtp.verifyEmail({ email, otp });
-    if (verified.error) throw new Error(`${email}: ${verified.error.message}`);
-    return;
+async function upsertUser(email, name, role) {
+  let authUser;
+  try {
+    authUser = await pb
+      .collection('users')
+      .getFirstListItem(pb.filter('email = {:email}', { email }));
+  } catch (error) {
+    if (error?.status !== 404) throw error;
   }
 
-  const requested = await auth.emailOtp.requestPasswordReset({ email });
-  if (requested.error) throw new Error(`${email}: ${requested.error.message}`);
-  const otp = await waitForOtp(email);
-  const reset = await auth.emailOtp.resetPassword({ email, otp, password });
-  if (reset.error) throw new Error(`${email}: ${reset.error.message}`);
+  const body = {
+    email,
+    emailVisibility: true,
+    password,
+    passwordConfirm: password,
+    verified: true,
+  };
+  authUser = authUser
+    ? await pb.collection('users').update(authUser.id, body)
+    : await pb.collection('users').create(body);
+
+  let profile;
+  try {
+    profile = await pb
+      .collection('ballots_profiles')
+      .getFirstListItem(pb.filter('user = {:user}', { user: authUser.id }));
+  } catch (error) {
+    if (error?.status !== 404) throw error;
+  }
+  const profileBody = { user: authUser.id, name, role, archived: false };
+  return profile
+    ? await pb.collection('ballots_profiles').update(profile.id, profileBody)
+    : await pb.collection('ballots_profiles').create(profileBody);
 }
 
-for (const account of accounts) {
-  await provision(account);
+const student = await upsertUser('student@example.com', 'Alice Student', 'student');
+const judge = await upsertUser('judge@example.com', 'Bob Judge', 'parent');
+await upsertUser('admin@example.com', 'Carol Admin', 'admin');
+
+let debate;
+try {
+  debate = await pb
+    .collection('ballots_debates')
+    .getFirstListItem('date = "2024-01-15" && room = "101"');
+  debate = await pb.collection('ballots_debates').update(debate.id, {
+    aff_team: [student.id],
+    neg_team: [],
+    judges: [judge.id],
+    deleted_at: '',
+  });
+} catch (error) {
+  if (error?.status !== 404) throw error;
+  debate = await pb.collection('ballots_debates').create({
+    date: '2024-01-15',
+    room: '101',
+    resolution: 'Resolved: test data should be deterministic.',
+    aff_team: [student.id],
+    neg_team: [],
+    judges: [judge.id],
+  });
 }
 
-console.log(`Seeded ${accounts.map(({ email }) => email).join(', ')}`);
+let ballot;
+try {
+  ballot = await pb.collection('ballots_ballots').getFirstListItem(
+    pb.filter('judge = {:judge} && debate = {:debate}', {
+      judge: judge.id,
+      debate: debate.id,
+    }),
+  );
+  ballot = await pb.collection('ballots_ballots').update(ballot.id, {
+    winner: 'aff',
+    reason_for_decision: 'Affirmative had stronger evidence.',
+    submitted_at: new Date('2024-01-15T18:00:00Z').toISOString(),
+    deleted_at: '',
+  });
+} catch (error) {
+  if (error?.status !== 404) throw error;
+  ballot = await pb.collection('ballots_ballots').create({
+    debate: debate.id,
+    judge: judge.id,
+    winner: 'aff',
+    reason_for_decision: 'Affirmative had stronger evidence.',
+    submitted_at: new Date('2024-01-15T18:00:00Z').toISOString(),
+  });
+}
+
+let evaluation;
+try {
+  evaluation = await pb.collection('ballots_speaker_evals').getFirstListItem(
+    pb.filter('ballot = {:ballot} && position = "aff1"', {
+      ballot: ballot.id,
+    }),
+  );
+} catch (error) {
+  if (error?.status !== 404) throw error;
+}
+const evaluationBody = {
+  ballot: ballot.id,
+  speaker: student.id,
+  position: 'aff1',
+  rank: 1,
+  delivery: 4,
+  organization: 4,
+  evidence_and_support: 5,
+  refutation: 4,
+  cross_examination: 4,
+  conduct: 5,
+  notes: 'Clear and persuasive.',
+};
+if (evaluation) {
+  await pb.collection('ballots_speaker_evals').update(evaluation.id, evaluationBody);
+} else {
+  await pb.collection('ballots_speaker_evals').create(evaluationBody);
+}
+
+console.log(`Seeded student@example.com, judge@example.com, admin@example.com`);
 console.log(`Password: ${password}`);
 console.log(
   JSON.stringify({
-    ballotId: seeded.ballotId,
-    debateId: seeded.debateId,
-    judgeEmail: seeded.judgeEmail,
-    studentEmail: seeded.studentEmail,
+    ballotId: ballot.id,
+    debateId: debate.id,
+    judgeEmail: 'judge@example.com',
+    studentEmail: 'student@example.com',
   }),
 );

@@ -2,15 +2,14 @@ import { useState } from 'react';
 import { cn } from 'cnfast';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { useBallotDraft, useBallotDraftLoader } from '../hooks/useBallotDraft.ts';
-import type { Id } from '../../convex/_generated/dataModel';
 import { AutoTextarea } from './AutoTextarea.tsx';
 import { PageLayout } from './PageLayout.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
 
 interface Props {
-  debateId?: Id<'debates'> | undefined;
-  judgeId: Id<'users'>;
+  debateId?: string | undefined;
+  judgeId: string;
   judgeName: string;
 }
 
@@ -40,8 +39,8 @@ function BallotFormEditor({
   initial,
   judgeId: _judgeId,
 }: {
-  debateId?: Id<'debates'> | undefined;
-  judgeId: Id<'users'>;
+  debateId?: string | undefined;
+  judgeId: string;
   initial: NonNullable<ReturnType<typeof useBallotDraftLoader>['initial']>;
 }): React.JSX.Element {
   const [guideOpen, setGuideOpen] = useState(false);

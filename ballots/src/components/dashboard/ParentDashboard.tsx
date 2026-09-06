@@ -1,12 +1,10 @@
-import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
-import type { Id } from '../../../convex/_generated/dataModel';
+import { useAssignedDebates, useSubmittedBallots } from '../../hooks/data.ts';
 import { navigate } from '../../hooks/useHashRoute.ts';
 import { DebateCard } from '../DebateCard.tsx';
 
-export function ParentDashboard({ userId }: { userId: Id<'users'> }): React.JSX.Element {
-  const debates = useQuery(api.debates.listAssigned);
-  const submittedBallots = useQuery(api.ballots.submittedByMe);
+export function ParentDashboard({ userId }: { userId: string }): React.JSX.Element {
+  const debates = useAssignedDebates();
+  const submittedBallots = useSubmittedBallots();
   const isLoading = debates === undefined || submittedBallots === undefined;
 
   const hasAssigned = !isLoading && debates.length > 0;
@@ -29,7 +27,7 @@ export function ParentDashboard({ userId }: { userId: Id<'users'> }): React.JSX.
           </h2>
           <div className="flex flex-col gap-3">
             {debates.map((d) => (
-              <DebateCard key={d._id} debateId={d._id} onClick={() => navigate(`judge/${d._id}`)} />
+              <DebateCard key={d.id} debateId={d.id} onClick={() => navigate(`judge/${d.id}`)} />
             ))}
           </div>
         </section>
@@ -54,10 +52,10 @@ export function ParentDashboard({ userId }: { userId: Id<'users'> }): React.JSX.
               if (b.debate) {
                 return (
                   <DebateCard
-                    key={b._id}
-                    debateId={b.debate._id}
+                    key={b.id}
+                    debateId={b.debate.id}
                     judgeId={userId}
-                    onClick={() => navigate(`ballot/${b._id}`)}
+                    onClick={() => navigate(`ballot/${b.id}`)}
                   />
                 );
               }
@@ -71,9 +69,9 @@ export function ParentDashboard({ userId }: { userId: Id<'users'> }): React.JSX.
                     : '—';
               return (
                 <button
-                  key={b._id}
+                  key={b.id}
                   className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1 text-left cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all"
-                  onClick={() => navigate(`ballot/${b._id}`)}
+                  onClick={() => navigate(`ballot/${b.id}`)}
                 >
                   <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {displayDate}

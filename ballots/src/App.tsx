@@ -1,6 +1,5 @@
 import { useHashRoute } from './hooks/useHashRoute.ts';
 import { AuthProvider, useAppUser, useAuthState } from './hooks/auth.tsx';
-import { convexId } from './lib/convexId.ts';
 import { Auth } from './components/Auth.tsx';
 import { ProfileSetup } from './components/ProfileSetup.tsx';
 import { Dashboard } from './components/Dashboard.tsx';
@@ -13,11 +12,10 @@ import { AdminBallots } from './components/AdminBallots.tsx';
 import { AdminUsers } from './components/AdminUsers.tsx';
 import { ProfileEdit } from './components/ProfileEdit.tsx';
 import type { Role } from './types.ts';
-import type { Id } from '../convex/_generated/dataModel';
 
 interface RouteCtx {
   param: string;
-  userId: Id<'users'>;
+  userId: string;
   role: Role;
   name: string;
 }
@@ -38,11 +36,7 @@ const ROUTES: {
     segment: 'admin',
     requiredRole: 'admin',
     render: ({ param }) =>
-      param ? (
-        <AdminDebateForm debateId={param === 'new' ? undefined : convexId<'debates'>(param)} />
-      ) : (
-        <AdminDebates />
-      ),
+      param ? <AdminDebateForm debateId={param === 'new' ? undefined : param} /> : <AdminDebates />,
   },
   {
     segment: 'admin-ballots',
@@ -57,26 +51,18 @@ const ROUTES: {
   {
     segment: 'judge',
     render: ({ param, userId, name }) => (
-      <BallotForm
-        {...(param ? { debateId: convexId<'debates'>(param) } : {})}
-        judgeId={userId}
-        judgeName={name}
-      />
+      <BallotForm {...(param ? { debateId: param } : {})} judgeId={userId} judgeName={name} />
     ),
   },
   {
     segment: 'ballot',
     requiresParam: true,
-    render: ({ param, userId }) => (
-      <BallotView ballotId={convexId<'ballots'>(param)} currentUserId={userId} />
-    ),
+    render: ({ param, userId }) => <BallotView ballotId={param} currentUserId={userId} />,
   },
   {
     segment: 'debate',
     requiresParam: true,
-    render: ({ param, userId }) => (
-      <DebateView debateId={convexId<'debates'>(param)} currentUserId={userId} />
-    ),
+    render: ({ param, userId }) => <DebateView debateId={param} currentUserId={userId} />,
   },
 ];
 
@@ -114,10 +100,10 @@ function AppShell(): React.JSX.Element {
 
   if (!user) return <Auth />;
 
-  return <AuthenticatedApp userId={user._id} />;
+  return <AuthenticatedApp userId={user.id} />;
 }
 
-function AuthenticatedApp({ userId }: { userId: Id<'users'> }): React.JSX.Element {
+function AuthenticatedApp({ userId }: { userId: string }): React.JSX.Element {
   const hash = useHashRoute();
   const user = useAppUser();
 

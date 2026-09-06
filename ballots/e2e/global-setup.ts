@@ -28,13 +28,9 @@ function parseEnv(file: string): Record<string, string> {
 
 export default async function globalSetup(): Promise<void> {
   const env = { ...parseEnv(join(root, '.env')), ...parseEnv(join(root, '.env.local')) };
-  const convexUrl = env['VITE_CONVEX_URL'];
-  const siteUrl = env['VITE_CONVEX_SITE_URL'];
-  if (!convexUrl) {
-    throw new Error('Missing VITE_CONVEX_URL — run npx convex dev first');
-  }
-  if (!siteUrl) {
-    throw new Error('Missing VITE_CONVEX_SITE_URL — run npx convex dev first');
+  const pocketbaseUrl = env['POCKETBASE_TEST_URL'] ?? env['VITE_POCKETBASE_URL'];
+  if (!pocketbaseUrl) {
+    throw new Error('Set POCKETBASE_TEST_URL to a PocketBase test instance');
   }
 
   const password = process.env['TEST_ACCOUNT_PASSWORD'] ?? 'test-password';
@@ -61,8 +57,7 @@ export default async function globalSetup(): Promise<void> {
   }
   const seeded = parsed.data;
 
-  process.env['VITE_CONVEX_URL'] = convexUrl;
-  process.env['VITE_CONVEX_SITE_URL'] = siteUrl;
+  process.env['VITE_POCKETBASE_URL'] = pocketbaseUrl;
   process.env['E2E_JUDGE_EMAIL'] = seeded.judgeEmail;
   process.env['E2E_STUDENT_EMAIL'] = seeded.studentEmail;
   process.env['E2E_STUDENT_NAME'] = 'Alice Student';

@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
-import { convexId } from '../lib/convexId.ts';
+import { saveDebate } from '../data/api.ts';
+import type { Debate } from '../data/model.ts';
+import { useDebate, useUsers } from '../hooks/data.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
@@ -14,11 +13,11 @@ interface DebateForm {
   date: string;
   room: string;
   resolution: string;
-  aff1: Id<'users'> | '';
-  aff2: Id<'users'> | '';
-  neg1: Id<'users'> | '';
-  neg2: Id<'users'> | '';
-  judges: Id<'users'>[];
+  aff1: string;
+  aff2: string;
+  neg1: string;
+  neg2: string;
+  judges: string[];
 }
 
 function makeEmpty(): DebateForm {
@@ -34,34 +33,25 @@ function makeEmpty(): DebateForm {
   };
 }
 
-interface LoadedDebate {
-  date: string;
-  room: string;
-  resolution?: string;
-  affTeam: { _id: Id<'users'> }[];
-  negTeam: { _id: Id<'users'> }[];
-  judges: { _id: Id<'users'> }[];
-}
-
-function debateToForm(debate: LoadedDebate): DebateForm {
+function debateToForm(debate: Debate): DebateForm {
   return {
     date: debate.date,
     room: debate.room,
     resolution: debate.resolution ?? '',
-    aff1: debate.affTeam[0]?._id ?? '',
-    aff2: debate.affTeam[1]?._id ?? '',
-    neg1: debate.negTeam[0]?._id ?? '',
-    neg2: debate.negTeam[1]?._id ?? '',
-    judges: debate.judges.map((j) => j._id),
+    aff1: debate.affTeam[0]?.id ?? '',
+    aff2: debate.affTeam[1]?.id ?? '',
+    neg1: debate.negTeam[0]?.id ?? '',
+    neg2: debate.negTeam[1]?.id ?? '',
+    judges: debate.judges.map((judge) => judge.id),
   };
 }
 
 interface Props {
-  debateId?: Id<'debates'> | undefined;
+  debateId?: string | undefined;
 }
 
 export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
-  const debate = useQuery(api.debates.get, debateId ? { debateId } : 'skip');
+  const debate = useDebate(debateId);
 
   if (debateId && debate === undefined) {
     return (
@@ -80,15 +70,14 @@ function AdminDebateFormEditor({
   debateId,
   initial,
 }: {
-  debateId?: Id<'debates'> | undefined;
+  debateId?: string | undefined;
   initial: DebateForm;
 }): React.JSX.Element {
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const users = useQuery(api.users.list, { includeArchived: true }) ?? [];
-  const saveDebate = useMutation(api.debates.save);
+  const users = useUsers(true) ?? [];
 
   const selectedIds = [form.aff1, form.aff2, form.neg1, form.neg2, ...form.judges];
   const students = users.filter((u) => u.role === 'student' && isPickerEligible(u, selectedIds));
@@ -114,8 +103,8 @@ function AdminDebateFormEditor({
         date: form.date,
         room: form.room,
         resolution: form.resolution,
-        affTeam: [form.aff1, form.aff2].filter((id): id is Id<'users'> => id !== ''),
-        negTeam: [form.neg1, form.neg2].filter((id): id is Id<'users'> => id !== ''),
+        affTeam: [form.aff1, form.aff2].filter(Boolean),
+        negTeam: [form.neg1, form.neg2].filter(Boolean),
         judges: form.judges,
       });
       navigate('admin');
@@ -127,15 +116,15 @@ function AdminDebateFormEditor({
   }
 
   const studentOptions = students.map((s) => ({
-    id: s._id,
+    id: s.id,
     name: s.name,
     avatarURLs: s.avatarUrl ?? undefined,
   }));
-  const judgeOptions = judges.map((j) => ({ id: j._id, name: j.name }));
+  const judgeOptions = judges.map((judge) => ({ id: judge.id, name: judge.name }));
   const studentAvatarURLs = Object.fromEntries(
     students
       .filter((s): s is typeof s & { avatarUrl: string } => s.avatarUrl != null)
-      .map((s) => [s._id, s.avatarUrl]),
+      .map((student) => [student.id, student.avatarUrl]),
   );
 
   return (
@@ -185,7 +174,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="aff1"
                   value={form.aff1}
-                  onChange={(v) => patch({ aff1: v ? convexId<'users'>(v) : '' })}
+                  onChange={(value) => patch({ aff1: value })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -195,7 +184,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="aff2"
                   value={form.aff2}
-                  onChange={(v) => patch({ aff2: v ? convexId<'users'>(v) : '' })}
+                  onChange={(value) => patch({ aff2: value })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -213,7 +202,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="neg1"
                   value={form.neg1}
-                  onChange={(v) => patch({ neg1: v ? convexId<'users'>(v) : '' })}
+                  onChange={(value) => patch({ neg1: value })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -223,7 +212,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="neg2"
                   value={form.neg2}
-                  onChange={(v) => patch({ neg2: v ? convexId<'users'>(v) : '' })}
+                  onChange={(value) => patch({ neg2: value })}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -236,7 +225,7 @@ function AdminDebateFormEditor({
           <label>Judges</label>
           <JudgePicker
             value={form.judges}
-            onChange={(j) => patch({ judges: j.map((id) => convexId<'users'>(id)) })}
+            onChange={(judges) => patch({ judges })}
             judges={judgeOptions}
           />
         </div>

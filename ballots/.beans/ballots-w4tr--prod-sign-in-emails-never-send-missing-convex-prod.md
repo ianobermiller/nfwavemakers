@@ -1,11 +1,11 @@
 ---
 # ballots-w4tr
 title: 'Prod sign-in emails never send: missing Convex prod env vars'
-status: in-progress
+status: scrapped
 type: bug
 priority: high
 created_at: 2026-09-04T21:45:36Z
-updated_at: 2026-09-04T21:50:01Z
+updated_at: 2026-09-06T12:08:27Z
 ---
 
 Sign-in at https://ballots.nfwavemakers.com advances to the "enter code" screen but no magic code email ever arrives, and no error is shown.
@@ -38,3 +38,6 @@ Verified by POSTing to prod's `/api/auth/email-otp/send-verification-otp`: the o
 `convex/auth.ts` now throws at module load when `SITE_URL` is non-local and `AUTH_RESEND_KEY` or `BETTER_AUTH_SECRET` is unset. Confirmed empirically that a module-level throw fails `convex deploy` with a readable message rather than deploying a silently broken backend.
 
 Not done (declined): persisting the login step across reloads, and a README prod env checklist.
+
+
+Scrapped: obsolete after the PocketBase migration; Convex production env vars no longer apply.

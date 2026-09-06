@@ -1,20 +1,18 @@
 import { cn } from 'cnfast';
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
+import { useDebateDetail } from '../hooks/data.ts';
 import { formatSpeakerName } from '../utils.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
 
 interface Props {
-  debateId: Id<'debates'>;
-  currentUserId: Id<'users'>;
+  debateId: string;
+  currentUserId: string;
 }
 
 export function DebateView({ debateId, currentUserId }: Props): React.JSX.Element {
-  const data = useQuery(api.ballots.debateDetail, { debateId });
+  const data = useDebateDetail(debateId);
   const isLoading = data === undefined;
 
   if (isLoading) {
@@ -34,8 +32,8 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
     );
   }
 
-  const affIds = debate.affTeam.map((u) => u._id);
-  const negIds = debate.negTeam.map((u) => u._id);
+  const affIds = debate.affTeam.map((user) => user.id);
+  const negIds = debate.negTeam.map((user) => user.id);
   const isMember = affIds.includes(currentUserId) || negIds.includes(currentUserId);
   if (!isMember) {
     return (
@@ -82,7 +80,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
         );
         return (
           <div
-            key={ballot._id}
+            key={ballot.id}
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-5 shadow-sm"
           >
             <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">

@@ -1,22 +1,12 @@
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
-import { useConvexAuth, useMutation, useQuery } from 'convex/react';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Role } from '../types.ts';
-
-export interface AppUser {
-  _id: Id<'users'>;
-  archived: boolean;
-  avatarUrl: string | null;
-  email?: string;
-  name?: string;
-  role?: Role;
-}
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { clearCurrentUser, loadCurrentUser } from '../data/api.ts';
+import type { User } from '../data/model.ts';
+import { collections, errorMessage, pb } from '../data/pocketbase.ts';
 
 interface AuthContextValue {
   isLoading: boolean;
   queryError: string | undefined;
-  user: AppUser | undefined;
+  user: User | undefined;
 }
 
 const loggedOut: AuthContextValue = {
@@ -25,86 +15,59 @@ const loggedOut: AuthContextValue = {
   user: undefined,
 };
 
-const loading: AuthContextValue = {
-  ...loggedOut,
-  isLoading: true,
-};
-
 const AuthContext = createContext<AuthContextValue>(loggedOut);
 
 export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
-
-  return (
-    <AuthSession
-      key={String(isAuthenticated)}
-      authLoading={authLoading}
-      isAuthenticated={isAuthenticated}
-    >
-      {children}
-    </AuthSession>
+  const [state, setState] = useState<AuthContextValue>(() =>
+    pb.authStore.isValid ? { ...loggedOut, isLoading: true } : loggedOut,
   );
-}
-
-function AuthSession({
-  authLoading,
-  children,
-  isAuthenticated,
-}: {
-  authLoading: boolean;
-  children: ReactNode;
-  isAuthenticated: boolean;
-}): React.JSX.Element {
-  const ensureCurrentUser = useMutation(api.users.ensureCurrent);
-  const [ensureError, setEnsureError] = useState<string>();
-  const [userEnsured, setUserEnsured] = useState(false);
-  const session = useQuery(api.users.current, isAuthenticated && userEnsured ? {} : 'skip');
 
   useEffect(() => {
-    if (!isAuthenticated || authLoading || userEnsured) return;
+    const loadProfile = async (): Promise<void> => {
+      if (!pb.authStore.isValid) {
+        clearCurrentUser();
+        setState(loggedOut);
+        return;
+      }
+      try {
+        const user = await loadCurrentUser();
+        setState({ isLoading: false, queryError: undefined, user });
+      } catch (error: unknown) {
+        setState({
+          isLoading: false,
+          queryError: errorMessage(error, 'Could not load your ballots profile'),
+          user: undefined,
+        });
+      }
+    };
 
-    ensureCurrentUser({})
-      .then(() => setUserEnsured(true))
-      .catch((error: unknown) => {
-        setEnsureError(
-          error instanceof Error ? error.message : 'Could not initialize your account',
-        );
-      });
-  }, [authLoading, ensureCurrentUser, isAuthenticated, userEnsured]);
-
-  const resolved = useMemo((): AuthContextValue | undefined => {
-    if (ensureError) {
-      return { ...loggedOut, queryError: ensureError };
+    const unsubscribe = pb.authStore.onChange(() => void loadProfile(), true);
+    const handleProfileChanged = (): void => void loadProfile();
+    window.addEventListener('ballots-profile-changed', handleProfileChanged);
+    if (pb.authStore.isValid) {
+      void pb
+        .collection(collections.authUsers)
+        .authRefresh()
+        .catch((error: unknown) => {
+          pb.authStore.clear();
+          setState({
+            isLoading: false,
+            queryError: errorMessage(error, 'Could not restore your session'),
+            user: undefined,
+          });
+        });
     }
 
-    const isAuthSettling = authLoading && !isAuthenticated;
-    const isSessionLoading = isAuthenticated && (!userEnsured || session === undefined);
-    if (isAuthSettling || isSessionLoading) {
-      return undefined;
-    }
+    return () => {
+      unsubscribe();
+      window.removeEventListener('ballots-profile-changed', handleProfileChanged);
+    };
+  }, []);
 
-    if (isAuthenticated && session) {
-      return { isLoading: false, queryError: undefined, user: session };
-    }
-
-    return loggedOut;
-  }, [authLoading, ensureError, isAuthenticated, session, userEnsured]);
-
-  // Better Auth refetches the session every time the tab becomes visible again. Reporting
-  // that as loading would swap the whole tree for the loading screen and remount it, so a
-  // half-typed sign-in form would be wiped just by switching tabs. Hold the last settled
-  // state until the refetch lands; only the very first resolve shows the loading screen.
-  const [lastResolved, setLastResolved] = useState<AuthContextValue>();
-  if (resolved && resolved !== lastResolved) {
-    setLastResolved(resolved);
-  }
-
-  const value = resolved ?? lastResolved ?? loading;
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }
 
-export function useAppUser(): AppUser | undefined {
+export function useAppUser(): User | undefined {
   return useContext(AuthContext).user;
 }
 

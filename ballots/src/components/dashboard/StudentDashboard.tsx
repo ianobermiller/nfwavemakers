@@ -1,14 +1,13 @@
-import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { useSpeakerBallots } from '../../hooks/data.ts';
 import { navigate } from '../../hooks/useHashRoute.ts';
 
 export function StudentDashboard({ userId: _userId }: { userId: string }): React.JSX.Element {
-  const ballots = useQuery(api.ballots.forSpeaker);
+  const ballots = useSpeakerBallots();
   const isLoading = ballots === undefined;
 
   const byGroup = new Map<string, NonNullable<typeof ballots>>();
   for (const b of ballots ?? []) {
-    const key = b.debate?._id ?? b._id;
+    const key = b.debate?.id ?? b.id;
     const arr = byGroup.get(key) ?? [];
     arr.push(b);
     byGroup.set(key, arr);
@@ -30,7 +29,7 @@ export function StudentDashboard({ userId: _userId }: { userId: string }): React
           const displayDate =
             debate?.date ??
             (ballot?.submittedAt != null ? new Date(ballot.submittedAt).toLocaleDateString() : '—');
-          const viewRoute = debate?._id ? `debate/${debate._id}` : `ballot/${ballot?._id}`;
+          const viewRoute = debate?.id ? `debate/${debate.id}` : `ballot/${ballot?.id}`;
           const judgeNames = [
             ...new Set(
               evs.map((ev) => ev.judge?.name).filter((name): name is string => name != null),

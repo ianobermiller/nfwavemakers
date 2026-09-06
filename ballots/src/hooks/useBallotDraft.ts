@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
-import type { Id } from '../../convex/_generated/dataModel';
+import { saveBallot } from '../data/api.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from './useHashRoute.ts';
 import { useDebouncedSave } from './useDebouncedSave.ts';
@@ -16,10 +14,11 @@ import {
   type BallotFormInit,
   type BallotIds,
 } from '../services/ballot.ts';
+import { useBallotDraft as useBallotDraftRecord, useDebate, useUsers } from './data.ts';
 
 interface Props {
   initial: BallotFormInit;
-  debateId?: Id<'debates'> | undefined;
+  debateId?: string | undefined;
 }
 
 export function useBallotDraft({ initial, debateId }: Props) {
@@ -30,20 +29,19 @@ export function useBallotDraft({ initial, debateId }: Props) {
   const [rankOrder, setRankOrder] = useState<Position[]>(initial.rankOrder);
   const [submitting, setSubmitting] = useState(false);
 
-  const users = useQuery(api.users.list, { includeArchived: true });
+  const users = useUsers(true);
   const selectedStudentIds = POSITIONS.map((pos) => speakers[pos].userId).filter(Boolean);
   const students = (users ?? []).filter(
     (u) => u.role === 'student' && isPickerEligible(u, selectedStudentIds),
   );
 
-  const debate = useQuery(api.debates.get, debateId ? { debateId } : 'skip');
-  const saveDraft = useMutation(api.ballots.saveDraft);
+  const debate = useDebate(debateId);
 
   const speakersLocked = debate != null;
 
   const { schedule: scheduleSave, cancel: cancelSave } = useDebouncedSave(
     () => {
-      void saveDraft({
+      void saveBallot({
         ...(ids.ballotId ? { ballotId: ids.ballotId } : {}),
         ...(debateId ? { debateId } : {}),
         evals: buildEvalPayload(speakers, ids, rankOrder),
@@ -104,7 +102,7 @@ export function useBallotDraft({ initial, debateId }: Props) {
     if (!canSubmitBallot(speakers, winner, rankOrder) || !winner) return;
     setSubmitting(true);
     cancelSave();
-    await saveDraft({
+    await saveBallot({
       ...(ids.ballotId ? { ballotId: ids.ballotId } : {}),
       ...(debateId ? { debateId } : {}),
       evals: buildEvalPayload(speakers, ids, rankOrder),
@@ -117,7 +115,11 @@ export function useBallotDraft({ initial, debateId }: Props) {
 
   return {
     debate,
-    students: students.map((s) => ({ id: s._id, name: s.name, avatarUrl: s.avatarUrl })),
+    students: students.map((student) => ({
+      id: student.id,
+      name: student.name,
+      avatarUrl: student.avatarUrl,
+    })),
 
     winner,
     rfd,
@@ -137,9 +139,9 @@ export function useBallotDraft({ initial, debateId }: Props) {
   };
 }
 
-export function useBallotDraftLoader(debateId?: Id<'debates'>) {
-  const debate = useQuery(api.debates.get, debateId ? { debateId } : 'skip');
-  const existing = useQuery(api.ballots.draftForJudge, debateId ? { debateId } : {});
+export function useBallotDraftLoader(debateId?: string) {
+  const debate = useDebate(debateId);
+  const existing = useBallotDraftRecord(debateId);
 
   const isLoading = existing === undefined || (debateId !== undefined && debate === undefined);
   const initial =

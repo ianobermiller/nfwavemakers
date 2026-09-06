@@ -6,16 +6,10 @@ Issues live in Beans (flat-file markdown in `.beans/`). See `docs/agents/issue-t
 
 When making a commit, include the relevant bean IDs in the commit message.
 
-<!-- convex-ai-start -->
+## Backend
 
-This project uses [Convex](https://convex.dev) as its backend.
-
-When working on Convex code, **always read
-`convex/_generated/ai/guidelines.md` first** for important guidelines on
-how to correctly use Convex APIs and patterns. The file contains rules that
-override what you may have learned about Convex from training data.
-
-Convex agent skills for common tasks can be installed by running
-`npx convex ai-files install`.
-
-<!-- convex-ai-end -->
+This app uses PocketBase at `pb.obermillers.com`. Keep authorization in
+PocketBase collection API rules, use the official JavaScript SDK, and use batch
+requests for multi-record writes that must be atomic. The instance is shared:
+prefix every app-owned collection with `ballots_` and do not add app-specific
+fields or rules to the shared `users` auth collection.
