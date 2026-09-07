@@ -73,6 +73,8 @@ npm run pages:deploy
 ```
 
 Cloudflare Pages should use root directory `ballots`, build command
-`npm run build`, and output directory `dist`. `VITE_POCKETBASE_URL` is public and
+`npm run build`, and output directory `dist`. Routing is path based, and Pages
+already serves `index.html` for paths that match no asset, so no `_redirects`
+rewrite is needed; Pages rejects the usual `/* /index.html 200` rule as a loop. `VITE_POCKETBASE_URL` is public and
 is checked into `.env.production`; PocketBase superuser credentials must never be
 added to the frontend or committed.
