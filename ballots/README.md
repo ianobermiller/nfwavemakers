@@ -64,6 +64,9 @@ explicitly set.
 The SPA is deployed as the `nfwm-ballots` Cloudflare Pages project at
 `https://ballots.nfwavemakers.com`.
 
+Pushing to `main` deploys automatically; nothing else is required. Use the
+manual path only to publish a build that is not on `main`:
+
 ```bash
 npx wrangler login
 npm run pages:deploy
