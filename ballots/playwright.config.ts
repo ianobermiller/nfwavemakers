@@ -12,8 +12,22 @@ function availablePort(): string {
     .trim();
 }
 
-const port = process.env['PLAYWRIGHT_PORT'] ?? availablePort();
+// Cached in the environment because workers re-evaluate this file and must
+// agree with the servers the runner already started.
+const port = (process.env['PLAYWRIGHT_PORT'] ??= availablePort());
 const baseURL = `http://localhost:${port}/`;
+
+// Tests run against a throwaway PocketBase, never the production instance.
+const pocketbasePort = (process.env['POCKETBASE_TEST_PORT'] ??= availablePort());
+const pocketbaseURL = `http://127.0.0.1:${pocketbasePort}`;
+const superuser = {
+  PB_SUPERUSER_EMAIL: process.env['PB_SUPERUSER_EMAIL'] ?? 'admin@ballots.test',
+  PB_SUPERUSER_PASSWORD: process.env['PB_SUPERUSER_PASSWORD'] ?? 'ballots-local-test',
+};
+
+// Global setup reads these from the environment it shares with this file.
+process.env['POCKETBASE_TEST_URL'] = pocketbaseURL;
+Object.assign(process.env, superuser);
 
 export default defineConfig({
   testDir: './e2e',
@@ -37,9 +51,18 @@ export default defineConfig({
       use: { ...devices['Pixel 7'], channel: 'chrome' },
     },
   ],
-  webServer: {
-    command: `vite --port ${port}`,
-    url: baseURL,
-    reuseExistingServer: false,
-  },
+  webServer: [
+    {
+      command: `node scripts/local-pocketbase.mjs --port ${pocketbasePort}`,
+      env: { ...superuser },
+      url: `${pocketbaseURL}/api/health`,
+      reuseExistingServer: false,
+    },
+    {
+      command: `vite --port ${port}`,
+      env: { VITE_POCKETBASE_URL: pocketbaseURL },
+      url: baseURL,
+      reuseExistingServer: false,
+    },
+  ],
 });

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 test-results/
+.pb-test/
 .wrangler/
 .convex/
 .env

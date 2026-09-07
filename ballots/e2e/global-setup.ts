@@ -3,6 +3,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+// @ts-expect-error -- plain script shared with the command line, no types
+import { applyCollections } from '../scripts/apply-collections.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -28,10 +30,24 @@ function parseEnv(file: string): Record<string, string> {
 
 export default async function globalSetup(): Promise<void> {
   const env = { ...parseEnv(join(root, '.env')), ...parseEnv(join(root, '.env.local')) };
-  const pocketbaseUrl = env['POCKETBASE_TEST_URL'] ?? env['VITE_POCKETBASE_URL'];
+  // The config points this at the throwaway instance it just started.
+  const pocketbaseUrl =
+    process.env['POCKETBASE_TEST_URL'] ?? env['POCKETBASE_TEST_URL'] ?? env['VITE_POCKETBASE_URL'];
   if (!pocketbaseUrl) {
     throw new Error('Set POCKETBASE_TEST_URL to a PocketBase test instance');
   }
+
+  const superuserEmail = process.env['PB_SUPERUSER_EMAIL'] ?? env['POCKETBASE_ADMIN_EMAIL'];
+  const superuserPassword = process.env['PB_SUPERUSER_PASSWORD'] ?? env['POCKETBASE_ADMIN_PASSWORD'];
+  if (!superuserEmail || !superuserPassword) {
+    throw new Error('Set PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD for the test instance');
+  }
+
+  await applyCollections({
+    url: pocketbaseUrl,
+    email: superuserEmail,
+    password: superuserPassword,
+  });
 
   const password = process.env['TEST_ACCOUNT_PASSWORD'] ?? 'test-password';
   const seed = spawnSync(
