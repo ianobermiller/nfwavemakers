@@ -67,6 +67,11 @@ header {
   color: var(--white);
   flex-shrink: 0;
 }
+.logo:hover { text-decoration: none; }
+nav a[aria-current="page"] {
+  color: var(--white);
+  background: rgba(255,255,255,.12);
+}
 .logo-svg {
   height: 40px;
   width: auto;
@@ -213,7 +218,7 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 .btn-outline:hover { border-color: var(--white); background: rgba(255,255,255,.08); }
 
 /* ── Sections ── */
-.section { padding: 4rem 0; }
+.section { padding: 4rem 0; scroll-margin-top: 5.25rem; }
 .section-alt { background: var(--bg-alt); }
 
 .section h2 {
@@ -699,6 +704,127 @@ footer a:hover { color: #9bb8d8; }
   line-height: 1.4;
 }
 
+/* ── Lessons ── */
+.page-hero {
+  background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+  color: var(--white);
+  padding: 3.25rem 1.25rem 2.75rem;
+  text-align: center;
+}
+.page-hero h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+}
+.page-hero p {
+  color: #bdd4ee;
+  max-width: 40rem;
+  margin: .85rem auto 0;
+}
+.page-hero a { color: var(--white); font-weight: 600; }
+.page-hero a:hover { color: var(--white); }
+.lesson-kicker {
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #bdd4ee;
+  margin-bottom: .6rem;
+}
+.lesson-list {
+  display: grid;
+  gap: .75rem;
+  max-width: 46rem;
+}
+.lesson-card {
+  display: block;
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--wave);
+  color: inherit;
+}
+.lesson-card:hover { text-decoration: none; }
+.lesson-card-kicker {
+  display: block;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--blue-mid);
+}
+.lesson-card-title {
+  display: block;
+  margin-top: .2rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--blue-dark);
+}
+.lesson-body { max-width: 46rem; }
+.lesson-body p { margin: 0 0 .85rem; }
+.lesson-body h3 {
+  font-size: 1.15rem;
+  color: var(--blue-dark);
+  margin: 1.75rem 0 .65rem;
+}
+.lesson-body h3:first-child { margin-top: 0; }
+.lesson-body h4 {
+  font-size: 1rem;
+  color: var(--blue-dark);
+  margin: 1.15rem 0 .4rem;
+}
+.lesson-body ul,
+.lesson-body ol {
+  margin: .4rem 0 1rem;
+  padding-left: 1.3rem;
+}
+.lesson-body li { margin: .35rem 0; }
+.lesson-body li ul,
+.lesson-body li ol { margin-top: .35rem; }
+.lesson-pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: .75rem 1rem;
+  align-items: center;
+  margin-top: 2.5rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+.lesson-pager .next { text-align: right; }
+.lesson-pager .all { text-align: center; }
+.track {
+  display: inline-block;
+  font-size: .68rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: .12rem .4rem;
+  border-radius: 4px;
+  margin-right: .35rem;
+  vertical-align: .15em;
+}
+.track-speech { background: #dbeafe; color: var(--blue-dark); }
+.track-debate { background: #fdecc8; color: #7a4e00; }
+.homework {
+  background: var(--white);
+  border-left: 4px solid var(--gold);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 1rem 1.2rem .4rem;
+  margin-top: 1.5rem;
+  box-shadow: var(--shadow);
+}
+.homework h3 { margin-top: 0; }
+.story {
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  padding: .25rem 1.1rem;
+  margin: .75rem 0 1rem;
+}
+.story p { font-size: .95rem; }
+
 /* ── Smooth section reveal (optional, no-JS fallback still works) ── */
 @media (prefers-reduced-motion: no-preference) {
   .section { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
@@ -730,6 +856,9 @@ footer a:hover { color: #9bb8d8; }
   .card-has-photo .card-body h3,
   .schedule-subhead,
   .schedule-block h3,
+  .lesson-body h3,
+  .lesson-body h4,
+  .lesson-card-title,
   .region-label,
   .schedule-table td:first-child,
   .faq-item summary,
@@ -746,6 +875,12 @@ footer a:hover { color: #9bb8d8; }
   /* Age note & region tag (light-blue tinted backgrounds) */
   .age-note   { background: rgba(59,158,221,.1); color: var(--text); }
   .region-tag { background: rgba(59,158,221,.1); }
+  .track-speech { background: rgba(59,158,221,.18); color: var(--text); }
+  .track-debate { background: rgba(212,149,42,.18); color: #e8c27a; }
+  .homework,
+  .story,
+  .lesson-card { background: #1a2b42; }
+  .lesson-pager { border-top-color: rgba(255,255,255,.07); }
 
   /* Exclusive camp block */
   .camp-exclusive {

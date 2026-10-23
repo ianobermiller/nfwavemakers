@@ -6,6 +6,7 @@ for (const f of ['index.html', 'style.css', 'main.js']) {
   await copyFile(f, `_site/${f}`);
 }
 await cp('images', '_site/images', { recursive: true });
+await cp('lessons', '_site/lessons', { recursive: true });
 
 await writeFile(
   '_site/_redirects',
