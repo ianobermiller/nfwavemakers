@@ -1,22 +1,26 @@
-# Issue tracker: GitHub
+# Issue tracker: Beans
 
-Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+Issues for this repo live as markdown files in `.beans/` at the repo root. Use the `beans` CLI for all operations. Run `beans prime` at the start of each session for agent instructions.
+
+The ballots app keeps a separate tracker in `ballots/.beans/`. From the repo root, `beans` uses this file's tracker. Inside `ballots/`, the CLI finds the ballots tracker. Do not mix them.
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
+- **Create an issue**: `beans create "Title" -t task -d "Description..." -s todo --json`
+- **List issues**: `beans list --json` (add `--ready` for unblocked work)
+- **View an issue**: `beans show --json <id>`
+- **Update status**: `beans update --json <id> -s in-progress`
+- **Complete**: `beans update --json <id> -s completed`
+- **Archive**: `beans archive` (completed/scrapped beans, when requested)
 
-Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
+Create the bean before writing code. Commit a new bean on `main` in its own commit (bean file only) before `npm run worktree:new`, because a workspace branches from `main` and cannot see an uncommitted bean.
+
+Use `beans help` for full options. Prefer `--json` for machine-readable output.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a GitHub issue.
+Create a bean with `beans create`.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `gh issue view <number> --comments`.
+Run `beans show --json <id>`.

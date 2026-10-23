@@ -1,5 +1,7 @@
 # Triage Labels
 
+Beans (see `issue-tracker.md`) track work with status, type, and priority. When a skill names a triage role, map it onto a bean: `needs-triage` and `needs-info` stay `draft`, `ready-for-agent` is `todo`, `ready-for-human` stays unstarted until you ask, and `wontfix` is `scrapped`.
+
 The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
 
 | Label in mattpocock/skills | Label in our tracker | Meaning                                  |

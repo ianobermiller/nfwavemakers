@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000",
-    "build": "node _build.mjs"
+    "build": "node _build.mjs",
+    "worktree:new": "node scripts/worktree-new.mjs",
+    "worktree:merge": "node scripts/worktree-merge.mjs",
+    "worktree:done": "node scripts/worktree-done.mjs"
   },
   "devDependencies": {
     "vite": "^8.2.1"

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/beans-prime.sh",
+        "timeout": 15
+      }
+    ],
+    "preCompact": [
+      {
+        "command": ".cursor/hooks/beans-prime.sh",
+        "timeout": 15
+      }
+    ]
+  }
+}
