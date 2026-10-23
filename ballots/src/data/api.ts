@@ -18,6 +18,7 @@ interface AuthUserRecord extends RecordModel {
 interface ProfileRecord extends RecordModel {
   archived: boolean;
   avatar: string;
+  email: string;
   name: string;
   role: Role | '';
   user: string;
@@ -25,6 +26,17 @@ interface ProfileRecord extends RecordModel {
     user?: AuthUserRecord;
   };
 }
+
+export interface CreateAccountInput {
+  email: string;
+  name: string;
+  role: Role;
+}
+
+export type CreateAccountResult =
+  | { status: 'created'; email: string; name: string; role: Role; userId: string }
+  | { status: 'skipped'; email: string; name: string; reason: string }
+  | { status: 'invalid'; email: string; name: string; reason: string };
 
 interface DebateRecord extends RecordModel {
   aff_team: string[];
@@ -135,10 +147,26 @@ function mapUser(record: ProfileRecord): User {
     id: record.id,
     archived: record.archived,
     avatarUrl: record.avatar ? pb.files.getURL(record, record.avatar, { thumb: '100x100' }) : null,
-    email: optionalText(record.expand?.user?.email ?? ''),
+    // Prefer the denormalized profile email: other members' auth emails are not readable.
+    email: optionalText(record.email || record.expand?.user?.email || ''),
     name: optionalText(record.name),
     role: record.role || undefined,
   };
+}
+
+function randomPassword(): string {
+  // PocketBase caps password length at 71 characters.
+  return (
+    crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '').slice(0, 8)
+  );
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export function clearCurrentUser(): void {
@@ -152,17 +180,29 @@ export async function loadCurrentUser(): Promise<User | undefined> {
   }
 
   const filter = pb.filter('user = {:user}', { user: authUserId() });
+  const authEmail = optionalText(
+    typeof pb.authStore.record?.['email'] === 'string' ? pb.authStore.record['email'] : '',
+  );
   let record: ProfileRecord;
   try {
     record = await pb.collection<ProfileRecord>(collections.profiles).getFirstListItem(filter, {
       expand: 'user',
     });
+    if (authEmail && !record.email) {
+      record = await pb
+        .collection<ProfileRecord>(collections.profiles)
+        .update(record.id, { email: authEmail }, { expand: 'user' });
+    }
   } catch (error: unknown) {
     if (!isNotFound(error)) throw error;
     try {
-      record = await pb
-        .collection<ProfileRecord>(collections.profiles)
-        .create({ user: authUserId() }, { expand: 'user' });
+      record = await pb.collection<ProfileRecord>(collections.profiles).create(
+        {
+          user: authUserId(),
+          ...(authEmail ? { email: authEmail } : {}),
+        },
+        { expand: 'user' },
+      );
     } catch (createError: unknown) {
       if (!isConflict(createError)) throw createError;
       record = await pb.collection<ProfileRecord>(collections.profiles).getFirstListItem(filter, {
@@ -295,6 +335,94 @@ export async function updateAvatar(file: Blob): Promise<User> {
 export async function setUserArchived(userId: string, archived: boolean): Promise<void> {
   if (userId === currentUserId()) throw new Error('You cannot archive your own account');
   await pb.collection(collections.profiles).update(userId, { archived });
+}
+
+async function profileExistsForEmail(email: string): Promise<boolean> {
+  try {
+    await pb
+      .collection(collections.profiles)
+      .getFirstListItem(pb.filter('email = {:email}', { email }));
+    return true;
+  } catch (error: unknown) {
+    if (isNotFound(error)) return false;
+    throw error;
+  }
+}
+
+function isEmailTakenError(error: unknown): boolean {
+  if (!isConflict(error) || typeof error !== 'object' || error === null) return false;
+  const response = 'response' in error ? error.response : undefined;
+  if (!response || typeof response !== 'object') return false;
+  const data = 'data' in response ? response.data : undefined;
+  if (!data || typeof data !== 'object') return false;
+  const email = 'email' in data ? data.email : undefined;
+  if (!email || typeof email !== 'object') return false;
+  const code = 'code' in email ? email.code : undefined;
+  return code === 'validation_not_unique';
+}
+
+async function createOneAccount(input: CreateAccountInput): Promise<CreateAccountResult> {
+  const email = normalizeEmail(input.email);
+  const name = input.name.trim();
+  const role = input.role;
+
+  if (!name) return { status: 'invalid', email, name: input.name, reason: 'Name is required' };
+  if (!isValidEmail(email)) {
+    return { status: 'invalid', email: input.email, name, reason: 'Invalid email' };
+  }
+
+  if (await profileExistsForEmail(email)) {
+    return { status: 'skipped', email, name, reason: 'Already has a ballots profile' };
+  }
+
+  const password = randomPassword();
+  let authUserId: string;
+  try {
+    const authUser = await pb.collection(collections.authUsers).create({
+      email,
+      password,
+      passwordConfirm: password,
+    });
+    authUserId = authUser.id;
+  } catch (error: unknown) {
+    if (isEmailTakenError(error)) {
+      return { status: 'skipped', email, name, reason: 'Email already registered' };
+    }
+    return {
+      status: 'invalid',
+      email,
+      name,
+      reason: error instanceof Error ? error.message : 'Could not create auth user',
+    };
+  }
+
+  try {
+    const profile = await pb.collection<ProfileRecord>(collections.profiles).create({
+      user: authUserId,
+      name,
+      email,
+      role,
+      archived: false,
+    });
+    return { status: 'created', email, name, role, userId: profile.id };
+  } catch (error: unknown) {
+    // Auth user was created; leave it so a retry can attach a profile, but surface the failure.
+    return {
+      status: 'invalid',
+      email,
+      name,
+      reason: error instanceof Error ? error.message : 'Could not create profile',
+    };
+  }
+}
+
+/** Create auth users + ballots profiles. Does not send email. Continues after skips. */
+export async function createAccounts(inputs: CreateAccountInput[]): Promise<CreateAccountResult[]> {
+  const results: CreateAccountResult[] = [];
+  for (const input of inputs) {
+    results.push(await createOneAccount(input));
+  }
+  return results;
 }
 
 export async function getDebate(debateId: string): Promise<Debate | null> {

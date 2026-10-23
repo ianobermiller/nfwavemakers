@@ -33,9 +33,12 @@ and speaker-evaluation changes use PocketBase's batch API so autosaves remain
 transactional. The PocketBase batch API must be enabled.
 
 Make the first administrator by setting their `ballots_profiles.role` to `admin`
-in the PocketBase dashboard. Users can then register with email/password or sign
-in with an email OTP. Password resets use PocketBase's configured email flow.
-Passkey sign-in will be wired to the shared PocketBase instance separately.
+in the PocketBase dashboard. Admins can create student, parent, and admin
+accounts from Manage Users (one at a time or from a CSV of names and emails).
+Created accounts store email on the profile so they appear in assignment pickers
+before the person signs in. Users can also register themselves with
+email/password or sign in with an email OTP. Password resets use PocketBase's
+configured email flow.
 
 ## Test data
 

@@ -10,8 +10,9 @@ migrate(
       type: "base",
       listRule: authenticated,
       viewRule: authenticated,
-      createRule:
-        'user = @request.auth.id && @request.body.role:isset = false && @request.body.archived:isset = false',
+      // Self-signup may only attach a bare profile. Admins may create profiles for
+      // other auth users with name, role, and the denormalized email used in the UI.
+      createRule: `${admin} || (user = @request.auth.id && @request.body.role:isset = false && @request.body.archived:isset = false)`,
       updateRule: `${admin} || (user = @request.auth.id && @request.body.user:changed = false && @request.body.archived:changed = false && (@request.body.role:changed = false || @request.body.role = "student" || @request.body.role = "parent"))`,
       deleteRule: admin,
       fields: [
@@ -24,6 +25,9 @@ migrate(
           cascadeDelete: true,
         },
         { name: "name", type: "text", max: 200 },
+        // Copied at create time: the shared users collection only lets a member
+        // view their own email, so admins need this for Manage Users / pickers.
+        { name: "email", type: "email" },
         {
           name: "role",
           type: "select",
@@ -43,6 +47,7 @@ migrate(
       indexes: [
         "CREATE UNIQUE INDEX idx_ballots_profiles_user ON ballots_profiles (user)",
         "CREATE INDEX idx_ballots_profiles_name ON ballots_profiles (name)",
+        "CREATE UNIQUE INDEX idx_ballots_profiles_email ON ballots_profiles (email) WHERE email != ''",
       ],
     });
     app.save(profiles);

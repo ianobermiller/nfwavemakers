@@ -1,10 +1,11 @@
 ---
 # nfw-sbxe
 title: Admins can create accounts from a CSV
-status: todo
+status: completed
 type: feature
+priority: normal
 created_at: 2026-10-23T21:01:06Z
-updated_at: 2026-10-23T21:01:06Z
+updated_at: 2026-10-23T21:07:58Z
 ---
 
 Admins need ballots profiles for students, parents, and other admins before those people have signed up, so they can assign them to debates.
@@ -19,4 +20,10 @@ The shared users collection only lets someone view their own record, so the prof
 - [ ] Store the entered email on the profile so it shows in Manage Users
 - [ ] Add a Manage Users tool for one account or a CSV of names and emails
 - [ ] Default the role to student, and let an admin choose parent or admin
-- [ ] Report invalid rows and emails that already exist without failing the rest of the batch
+- [x] Report invalid rows and emails that already exist without failing the rest of the batch
+
+## Summary of Changes
+
+Admins can create accounts from Manage Users (one person or a CSV of names and emails). Role defaults to student; parent and admin are available, and a CSV `role` column overrides the default per row. Each create writes a shared `users` auth record plus a `ballots_profiles` row with denormalized email so the person shows up in assignment pickers before they sign in. No email is sent on create; duplicates and bad rows are reported while the rest of the batch continues.
+
+PocketBase: `ballots_profiles` gained an `email` field and unique index, and admins may create profiles for other auth users. `scripts/apply-collections.mjs` now syncs rules/fields onto existing collections; schema was applied to pb.obermillers.com.
