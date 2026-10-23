@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * `npm run worktree:done -- <bean-id> [--force]`: tear down a bean's workspace
- * after merge (or abandonment): remove the worktree and delete the
- * bean/<bean-id> branch.
+ * `npm run worktree:done -- <bean-id> [--force]`: tear down a bean's workspace.
+ * worktree:merge runs this after a successful land. Run it yourself only to
+ * abandon a workspace you are not landing, or to retry a cleanup that failed.
  *
  * Refuses to delete an unmerged branch unless --force is passed. Run from the
  * main checkout.

@@ -2,17 +2,22 @@
 /**
  * `npm run worktree:merge -- <bean-id> [-m "subject"] [--commit-only]`: land a
  * bean branch on main as a single squash commit — but only after the merged
- * tree builds. Run from the main checkout.
+ * tree builds — then remove the workspace and branch. Run from the main checkout.
  *
  *   1. git merge --squash bean/<bean-id>
  *   2. npm run build
  *   3. npm run check in ballots/, when the merge touches that app
  *   4. only then git commit
+ *   5. remove the workspace and branch (same checks as worktree:done)
  *
- * If verification fails the staged merge is left in place. Fix the tree, then
- * finish with `npm run worktree:merge -- <bean-id> --commit-only` (re-runs the
- * same gates before committing), or abandon with `git reset --hard HEAD`.
- * `--commit-only` is also the path after resolving merge conflicts by hand.
+ * If verification fails, or the squash stops on conflicts, the workspace stays.
+ * Fix the staged tree, then finish with
+ * `npm run worktree:merge -- <bean-id> --commit-only` (re-runs the same gates,
+ * commits, then removes the workspace), or abandon the staged merge with
+ * `git reset --hard HEAD`. `--commit-only` is also the path after resolving
+ * merge conflicts by hand.
+ *
+ * `worktree:done` on its own is for a workspace you are not landing.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -49,6 +54,30 @@ function fail(msg) {
   process.exit(1);
 }
 
+// True when landing the branch would not change main: a real merge ancestor,
+// or a squash whose tree is already on HEAD. Squash commits are not ancestors.
+function branchAlreadyLanded() {
+  if (git(["merge-base", "--is-ancestor", branch, "HEAD"]).status === 0) return true;
+  const headTree = git(["rev-parse", "HEAD^{tree}"]).stdout.trim();
+  const merged = git(["merge-tree", "--write-tree", "HEAD", branch]);
+  return merged.status === 0 && merged.stdout.trim() === headTree;
+}
+
+function removeWorkspace() {
+  console.log("\nRemoving workspace and branch…");
+  const done = spawnSync(process.execPath, [path.join(root, "scripts", "worktree-done.mjs"), bean], {
+    cwd: root,
+    stdio: "inherit",
+  });
+  if (done.status !== 0) {
+    fail(
+      "\nMain already has this work, but the workspace is still there.\n" +
+        `Retry: npm run worktree:done -- ${bean}\n` +
+        `Discard an unmerged branch or uncommitted workspace files: npm run worktree:done -- ${bean} --force`,
+    );
+  }
+}
+
 // --- Guard: must run from the main checkout, on main, with a clean tree ----
 const gitDir = git(["rev-parse", "--git-dir"]).stdout.trim();
 if (path.resolve(root, gitDir) !== path.join(root, ".git")) {
@@ -81,8 +110,9 @@ if (!commitOnly) {
   if (git(["rev-parse", "--verify", "--quiet", branch]).status !== 0) {
     fail(`No branch ${branch}. Create it with: npm run worktree:new -- ${bean}`);
   }
-  if (git(["merge-base", "--is-ancestor", branch, "HEAD"]).status === 0) {
-    console.log(`${branch} is already merged into main — nothing to do.`);
+  if (branchAlreadyLanded()) {
+    console.log(`${branch} is already on main.`);
+    removeWorkspace();
     process.exit(0);
   }
 
@@ -90,10 +120,16 @@ if (!commitOnly) {
   const merged = git(["merge", "--squash", branch], { stdio: "inherit" });
   if (merged.status !== 0) {
     fail(
-      "\nMerge stopped on conflicts. Resolve them, then finish with:\n" +
+      "\nMerge stopped on conflicts. The workspace is unchanged. Resolve them, then finish with:\n" +
         `  npm run worktree:merge -- ${bean} --commit-only${message ? ` -m ${JSON.stringify(message)}` : ""}\n` +
-        "(the same build gates will run before anything is committed)",
+        "(the same build gates run before the commit, which then removes the workspace)",
     );
+  }
+  const pending = git(["status", "--porcelain", "--untracked-files=no"]).stdout.trim();
+  if (!pending) {
+    console.log(`${branch} is already on main.`);
+    removeWorkspace();
+    process.exit(0);
   }
 } else if (!dirty) {
   fail("--commit-only given but there are no staged/unstaged changes to commit.");
@@ -116,10 +152,10 @@ if (touchesBallots) {
 
 if (siteCheck.status !== 0 || ballotsCheck.status !== 0) {
   fail(
-    "\nVerification FAILED — the merge is staged but NOT committed.\n" +
+    "\nVerification FAILED — the merge is staged but NOT committed, and the workspace is still there.\n" +
       "Fix the tree, then finish with:\n" +
       `  npm run worktree:merge -- ${bean} --commit-only${message ? ` -m ${JSON.stringify(message)}` : ""}\n` +
-      "or abandon the merge with:\n" +
+      "or abandon the staged merge with:\n" +
       "  git reset --hard HEAD",
   );
 }
@@ -133,4 +169,4 @@ const commit = git(
 if (commit.status !== 0) process.exit(commit.status ?? 1);
 
 console.log(`\nLanded on main: ${subject}`);
-console.log(`Clean up with: npm run worktree:done -- ${bean}`);
+removeWorkspace();

@@ -104,13 +104,14 @@ As each subagent completes, post a compact per-bean update:
 
 When the user reports a verification pass (or tells you to merge a bean):
 from the main checkout on `main`, land it with
-`npm run worktree:merge -- {BEAN_ID}`, then clean up with
-`npm run worktree:done -- {BEAN_ID}`.
+`npm run worktree:merge -- {BEAN_ID}`. That also removes the workspace and
+branch. Do not run `worktree:done` afterward, and do not ask them to say
+"cleanup".
 
 Never create a merge commit (`git merge` without `--squash`) or fast-forward
 multi-commit histories when landing a dispatched bean onto main. Always land
-it through `worktree:merge`, which squash-merges and refuses to commit until
-the build gates pass.
+it through `worktree:merge`, which squash-merges, refuses to commit until
+the build gates pass, and then removes the workspace.
 
 When the user wants changes: resume the subagent with the feedback (it should set
 the bean back to in-progress, fix, re-verify, re-commit).
