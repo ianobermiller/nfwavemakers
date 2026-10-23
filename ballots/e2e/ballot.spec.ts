@@ -8,7 +8,6 @@ async function signIn(page: Page, email: string): Promise<void> {
   if (!password) throw new Error('Missing E2E_PASSWORD — run full test suite with globalSetup');
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Use a password' }).click();
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
@@ -16,10 +15,13 @@ async function signIn(page: Page, email: string): Promise<void> {
 }
 
 test.describe('Auth flow', () => {
-  test('shows email input on landing', async ({ page }) => {
+  test('shows sign-in form on landing', async ({ page }) => {
     await page.goto('/');
+    await expect(page.getByRole('tab', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Sign up' })).toBeVisible();
     await expect(page.locator('#email')).toBeVisible();
-    await expect(page.locator('button:has-text("Send Sign-in Code")')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign In', exact: true })).toBeVisible();
   });
 
   test('registers and signs back in with a passkey', async ({ page }, testInfo) => {

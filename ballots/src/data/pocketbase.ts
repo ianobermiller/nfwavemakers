@@ -13,8 +13,21 @@ export const collections = {
   speakerEvals: 'ballots_speaker_evals',
 } as const;
 
+function fieldErrorMessage(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || !('message' in value)) return undefined;
+  const message = Reflect.get(value, 'message');
+  return typeof message === 'string' && message ? message : undefined;
+}
+
 export function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof ClientResponseError) {
+    const data = error.response['data'];
+    if (data && typeof data === 'object') {
+      for (const value of Object.values(data)) {
+        const fieldMessage = fieldErrorMessage(value);
+        if (fieldMessage) return fieldMessage;
+      }
+    }
     return error.response['message'] || error.message || fallback;
   }
   return error instanceof Error ? error.message : fallback;

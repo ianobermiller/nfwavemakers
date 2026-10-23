@@ -9,6 +9,7 @@ import { PageLayout } from './PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
 import { AvatarCropDialog } from './AvatarCropDialog.tsx';
 import { PasskeyRegistration } from './PasskeyRegistration.tsx';
+import { PasswordSettings } from './PasswordSettings.tsx';
 import { Input } from './ui/Input.tsx';
 
 interface Props {
@@ -170,6 +171,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
           {loading ? 'Saving…' : 'Save'}
         </button>
 
+        <PasswordSettings />
         <PasskeyRegistration />
       </div>
 
