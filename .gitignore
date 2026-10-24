@@ -3,3 +3,9 @@ _site/
 node_modules/
 .claude
 .DS_Store
+dist/
+test-results/
+.wrangler/
+.env
+.env.local
+ballots/.pb-test/

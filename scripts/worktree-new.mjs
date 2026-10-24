@@ -79,9 +79,6 @@ function install(label, cwd) {
 }
 
 install("repo root", worktreeDir);
-if (fs.existsSync(path.join(worktreeDir, "ballots", "package-lock.json"))) {
-  install("ballots", path.join(worktreeDir, "ballots"));
-}
 
 // Mark in-progress inside the workspace: main's .beans stays untouched, and the
 // agent's first commit on the branch carries the status change.
@@ -101,8 +98,7 @@ Ready. Work entirely inside the workspace:
 
   cd ${path.relative(root, worktreeDir)}
 
-Commit with the bean id (${bean}). Verify with \`npm run build\`. If you
-changed ballots/, also run \`npm run check\` in ballots/. The main checkout
-owns port 3000. Serve this workspace with \`npx vite --port 0\` (from
-ballots/ if you are working on that app).
+Commit with the bean id (${bean}). Verify with \`npm run build\` and
+\`npm run check\`. The main checkout owns port 3000. Serve this workspace
+with \`npx vite --port 0\`.
 `);

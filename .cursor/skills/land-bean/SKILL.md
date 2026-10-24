@@ -20,7 +20,7 @@ Never `git merge` or `git commit` the land yourself. If they name several beans,
 
 ## When it stops
 
-Conflicts, or a failed `npm run build` (or `npm run check` in `ballots/` when that app changed), leave the merge staged and the workspace in place.
+Conflicts, or a failed `npm run build` or `npm run check`, leave the merge staged and the workspace in place.
 
 - Fix the staged tree, then `npm run worktree:merge -- <bean-id> --commit-only`. That commits and then removes the workspace.
 - Abandon the staged merge with `git reset --hard HEAD` in the main checkout. The workspace stays until it is torn down.

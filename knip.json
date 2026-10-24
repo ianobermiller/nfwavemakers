@@ -1,0 +1,8 @@
+{
+  "entry": [
+    "ballots/**/*.test.ts",
+    "ballots/scripts/*.mjs",
+    "ballots/pocketbase/pb_migrations/*.js"
+  ],
+  "ignore": ["**/*.pb.js"]
+}

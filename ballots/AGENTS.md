@@ -6,6 +6,10 @@ Issues live in Beans (flat-file markdown in `.beans/`). See `docs/agents/issue-t
 
 When making a commit, include the relevant bean IDs in the commit message.
 
+## App layout
+
+Ballot screens, hooks, and data live in this directory. The club site and the Vite app are at the repo root, so run `npm run dev`, `npm run check`, and `npm run build` from there. PocketBase migrations and hooks stay here.
+
 ## Backend
 
 This app uses PocketBase at `pb.obermillers.com`. Keep authorization in

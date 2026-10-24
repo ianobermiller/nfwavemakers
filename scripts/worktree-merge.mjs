@@ -6,7 +6,7 @@
  *
  *   1. git merge --squash bean/<bean-id>
  *   2. npm run build
- *   3. npm run check in ballots/, when the merge touches that app
+ *   3. npm run check
  *   4. only then git commit
  *   5. remove the workspace and branch (same checks as worktree:done)
  *
@@ -139,18 +139,10 @@ if (!commitOnly) {
 console.log("\nVerifying merged tree before committing (npm run build)…");
 const siteCheck = spawnSync("npm", ["run", "build"], { cwd: root, stdio: "inherit" });
 
-const names = git(["diff", "--name-only", "HEAD"]).stdout;
-const touchesBallots = names.split("\n").some((n) => n === "ballots" || n.startsWith("ballots/"));
-let ballotsCheck = { status: 0 };
-if (touchesBallots) {
-  console.log("\nVerifying ballots (npm run check)…");
-  ballotsCheck = spawnSync("npm", ["run", "check"], {
-    cwd: path.join(root, "ballots"),
-    stdio: "inherit",
-  });
-}
+console.log("\nVerifying types and lint (npm run check)…");
+const check = spawnSync("npm", ["run", "check"], { cwd: root, stdio: "inherit" });
 
-if (siteCheck.status !== 0 || ballotsCheck.status !== 0) {
+if (siteCheck.status !== 0 || check.status !== 0) {
   fail(
     "\nVerification FAILED — the merge is staged but NOT committed, and the workspace is still there.\n" +
       "Fix the tree, then finish with:\n" +

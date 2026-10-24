@@ -1,3 +1,0 @@
-{
-  "entry": ["scripts/*.mjs", "pocketbase/pb_migrations/*.js"]
-}

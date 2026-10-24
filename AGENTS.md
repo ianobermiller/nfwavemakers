@@ -4,7 +4,7 @@
 
 ## Project
 
-nfwavemakers is the club site (static HTML at the repo root, built by `npm run build` into `_site/`) plus the ballots app in `ballots/`.
+nfwavemakers is one React app. Club pages live in `src/`. Ballot screens, data, and hooks live in `ballots/`, next to the PocketBase migrations and hooks. `npm run build` writes `_site/`.
 
 ## Work tracking
 
@@ -22,8 +22,8 @@ The main checkout stays on `main`. Agents never edit, build, or commit in the ma
 
 - **Start**: `npm run worktree:new -- <bean-id>` creates `.agents/worktrees/<bean-id>` on branch `bean/<bean-id>`, installs dependencies, and marks the bean in-progress inside the workspace.
 - **Work** entirely inside that directory. Commits include the bean file and the bean id.
-- **Verify**: `npm run build` in the workspace. If the change touches `ballots/`, also run `npm run check` there. The main checkout owns port 3000; a workspace dev server must use another port (`npx vite --port 0`).
-- **Land**: when landing a bean on `main`, run `npm run worktree:merge -- <bean-id>` from the main checkout — never raw `git merge` / `git commit`. It creates one squash commit, refuses to commit until `npm run build` passes (and `npm run check` in `ballots/` when that app changed), then removes the workspace and branch. If verification fails, the workspace stays; fix the staged tree and finish with `npm run worktree:merge -- <bean-id> --commit-only`. `git reset --hard HEAD` abandons the staged merge. The `land-bean` skill (`.cursor/skills/land-bean`) does this when asked to merge or land — do not wait for a separate cleanup request.
+- **Verify**: `npm run build` and `npm run check` in the workspace. The main checkout owns port 3000; a workspace dev server must use another port (`npx vite --port 0`).
+- **Land**: when landing a bean on `main`, run `npm run worktree:merge -- <bean-id>` from the main checkout — never raw `git merge` / `git commit`. It creates one squash commit, refuses to commit until `npm run build` and `npm run check` pass, then removes the workspace and branch. If verification fails, the workspace stays; fix the staged tree and finish with `npm run worktree:merge -- <bean-id> --commit-only`. `git reset --hard HEAD` abandons the staged merge. The `land-bean` skill (`.cursor/skills/land-bean`) does this when asked to merge or land — do not wait for a separate cleanup request.
 - **Abandon**: `npm run worktree:done -- <bean-id> [--force]` removes a workspace you are not landing. `--force` discards an unmerged branch and uncommitted workspace files.
 - **Fan out**: the `/dispatch` skill (`.cursor/skills/dispatch`) picks ready beans, shows the numbered selection, and waits for a swap-or-continue answer before running this workflow with one background subagent per bean.
 

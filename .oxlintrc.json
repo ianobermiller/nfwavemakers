@@ -1,0 +1,47 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "env": {
+    "browser": true
+  },
+  "ignorePatterns": ["dist"],
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-confusing-void-expression": "off",
+    "typescript/no-misused-promises": "off",
+    "object-shorthand": ["error", "always"],
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "typescript/array-type": "error",
+    "typescript/consistent-generic-constructors": "error",
+    "typescript/consistent-indexed-object-style": "error",
+    "typescript/consistent-type-definitions": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-inferrable-types": "error",
+    "typescript/no-unnecessary-condition": "error",
+    "no-shadow": "off",
+    "no-unmodified-loop-condition": "off"
+  },
+  "overrides": [
+    {
+      "files": ["*.js", "*.mjs"],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": ["ballots/components/ProfileEdit.tsx"],
+      "rules": {
+        "react/set-state-in-effect": "off"
+      }
+    }
+  ]
+}
