@@ -9,6 +9,10 @@ function isRole(value: string): value is Role {
   return value === 'admin' || value === 'student' || value === 'parent';
 }
 
+function looksLikeEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function splitCsvLine(line: string): string[] {
   const cells: string[] = [];
   let current = '';
@@ -49,6 +53,29 @@ function parseRole(value: string | undefined): Role | undefined {
   return isRole(normalized) ? normalized : undefined;
 }
 
+/** Align name/email when a row clearly has them swapped. */
+function resolveNameAndEmail(
+  rawName: string,
+  rawEmail: string,
+): { name: string; email: string } | { reason: string } {
+  const name = rawName.trim();
+  const email = rawEmail.trim();
+  if (!name || !email) {
+    return { reason: 'Each row needs a name and an email' };
+  }
+
+  const nameIsEmail = looksLikeEmail(name);
+  const emailIsEmail = looksLikeEmail(email);
+
+  if (nameIsEmail && !emailIsEmail) {
+    return { name: email, email: name };
+  }
+  if (!emailIsEmail) {
+    return { reason: `"${email}" is not a valid email` };
+  }
+  return { name, email };
+}
+
 /** Parse a CSV of name,email[,role]. A header row is optional. */
 export function parseAccountCsv(text: string, defaultRole: Role): CsvParseResult {
   const lines = text
@@ -79,14 +106,15 @@ export function parseAccountCsv(text: string, defaultRole: Role): CsvParseResult
   for (let i = start; i < lines.length; i++) {
     const lineNumber = i + 1;
     const cells = splitCsvLine(lines[i] ?? '');
-    const name = cells[nameIdx] ?? '';
-    const email = cells[emailIdx] ?? '';
+    const rawName = cells[nameIdx] ?? '';
+    const rawEmail = cells[emailIdx] ?? '';
     const roleCell = roleIdx >= 0 ? cells[roleIdx] : undefined;
 
-    if (!name && !email) continue;
+    if (!rawName && !rawEmail) continue;
 
-    if (!name || !email) {
-      issues.push({ line: lineNumber, reason: 'Each row needs a name and an email' });
+    const resolved = resolveNameAndEmail(rawName, rawEmail);
+    if ('reason' in resolved) {
+      issues.push({ line: lineNumber, reason: resolved.reason });
       continue;
     }
 
@@ -104,8 +132,8 @@ export function parseAccountCsv(text: string, defaultRole: Role): CsvParseResult
     }
 
     rows.push({
-      name,
-      email,
+      name: resolved.name,
+      email: resolved.email,
       role,
       line: lineNumber,
     });

@@ -36,9 +36,13 @@ Make the first administrator by setting their `ballots_profiles.role` to `admin`
 in the PocketBase dashboard. Admins can create student, parent, and admin
 accounts from Manage Users (one at a time or from a CSV of names and emails).
 Created accounts store email on the profile so they appear in assignment pickers
-before the person signs in. Users can also register themselves with
-email/password or sign in with an email OTP. Password resets use PocketBase's
-configured email flow.
+before the person signs in. If the email already has a shared `users` auth
+record (and no ballots profile yet), Manage Users attaches a profile through
+the admin-only `/api/ballots/link-profile` hook instead of failing. The
+PocketBase process must load `pb_hooks` (JSVM). Deploy hook changes with
+`npm run deploy:hooks`. Users can also register themselves with email/password
+or sign in with an email OTP. Password resets use PocketBase's configured
+email flow.
 
 ## Test data
 

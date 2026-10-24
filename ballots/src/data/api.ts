@@ -35,6 +35,7 @@ export interface CreateAccountInput {
 
 export type CreateAccountResult =
   | { status: 'created'; email: string; name: string; role: Role; userId: string }
+  | { status: 'linked'; email: string; name: string; role: Role; userId: string }
   | { status: 'skipped'; email: string; name: string; reason: string }
   | { status: 'invalid'; email: string; name: string; reason: string };
 
@@ -361,6 +362,44 @@ function isEmailTakenError(error: unknown): boolean {
   return code === 'validation_not_unique';
 }
 
+interface LinkProfileResponse {
+  email: string;
+  name: string;
+  role: Role;
+  status: 'created' | 'exists';
+  userId: string;
+}
+
+/** Attach a ballots profile to an auth user the SPA cannot look up (users view rule). */
+async function linkProfileToExistingAuth(input: CreateAccountInput): Promise<CreateAccountResult> {
+  const email = normalizeEmail(input.email);
+  const name = input.name.trim();
+  const role = input.role;
+  try {
+    const linked = await pb.send<LinkProfileResponse>('/api/ballots/link-profile', {
+      method: 'POST',
+      body: { email, name, role },
+    });
+    if (linked.status === 'exists') {
+      return { status: 'skipped', email, name, reason: 'Already has a ballots profile' };
+    }
+    return {
+      status: 'linked',
+      email: linked.email,
+      name: linked.name,
+      role: linked.role,
+      userId: linked.userId,
+    };
+  } catch (error: unknown) {
+    return {
+      status: 'invalid',
+      email,
+      name,
+      reason: error instanceof Error ? error.message : 'Could not link profile to existing account',
+    };
+  }
+}
+
 async function createOneAccount(input: CreateAccountInput): Promise<CreateAccountResult> {
   const email = normalizeEmail(input.email);
   const name = input.name.trim();
@@ -386,7 +425,9 @@ async function createOneAccount(input: CreateAccountInput): Promise<CreateAccoun
     authUserId = authUser.id;
   } catch (error: unknown) {
     if (isEmailTakenError(error)) {
-      return { status: 'skipped', email, name, reason: 'Email already registered' };
+      // Auth account already exists (often from another app on the shared users
+      // collection). Link a ballots profile to that record instead of skipping.
+      return await linkProfileToExistingAuth({ email, name, role });
     }
     return {
       status: 'invalid',

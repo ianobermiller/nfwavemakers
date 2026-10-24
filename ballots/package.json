@@ -13,8 +13,10 @@
     "knip": "knip",
     "check": "run-p --print-label types lint knip",
     "check:push": "run-p --print-label types lint knip test:e2e",
+    "test:unit": "node --experimental-strip-types --test src/lib/**/*.test.ts",
     "test:e2e": "playwright test",
     "seed:test": "node --env-file=.env --env-file=.env.local scripts/seed-test-accounts.mjs",
+    "deploy:hooks": "node scripts/deploy-hooks.mjs",
     "pages:deploy": "npm run build && wrangler pages deploy dist --project-name nfwm-ballots"
   },
   "dependencies": {
@@ -25,6 +27,10 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "^4.4.3"
+  },
+  "knip": {
+    "entry": ["src/**/*.test.ts"],
+    "ignore": ["**/*.pb.js"]
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

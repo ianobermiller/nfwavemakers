@@ -177,7 +177,7 @@ function CreateAccountsDialog({
       if (mode === 'single') {
         const created = await createAccounts([{ name, email, role }]);
         setResults(created);
-        if (created[0]?.status === 'created') {
+        if (created[0]?.status === 'created' || created[0]?.status === 'linked') {
           setName('');
           setEmail('');
         }
@@ -213,7 +213,7 @@ function CreateAccountsDialog({
   const canSubmit =
     mode === 'single'
       ? name.trim().length > 0 && email.trim().length > 0
-      : csvText.trim().length > 0;
+      : parsedPreview.rows.length > 0;
 
   return (
     <Dialog.Root
@@ -342,12 +342,37 @@ function CreateAccountsDialog({
                 />
               </div>
               {csvText.trim() && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {parsedPreview.rows.length} ready
-                  {parsedPreview.issues.length > 0
-                    ? `, ${parsedPreview.issues.length} row issue${parsedPreview.issues.length === 1 ? '' : 's'}`
-                    : ''}
-                </p>
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {parsedPreview.rows.length} ready
+                    {parsedPreview.issues.length > 0
+                      ? `, ${parsedPreview.issues.length} row issue${parsedPreview.issues.length === 1 ? '' : 's'}`
+                      : ''}
+                  </p>
+                  {(parsedPreview.rows.length > 0 || parsedPreview.issues.length > 0) &&
+                    !results && (
+                      <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                        <ul className="max-h-40 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700 text-sm">
+                          {parsedPreview.rows.map((row) => (
+                            <li
+                              key={`preview-${row.line}-${row.email}`}
+                              className="px-3 py-2 text-slate-700 dark:text-slate-200"
+                            >
+                              {row.name} ({row.email}) as {row.role}
+                            </li>
+                          ))}
+                          {parsedPreview.issues.map((issue) => (
+                            <li
+                              key={`preview-issue-${issue.line}-${issue.reason}`}
+                              className="px-3 py-2 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30"
+                            >
+                              Line {issue.line}: {issue.reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                </div>
               )}
             </div>
           )}
@@ -369,7 +394,7 @@ function CreateAccountsDialog({
                   <li
                     key={`${result.status}-${result.email}-${result.name}`}
                     className={`px-3 py-2 ${
-                      result.status === 'created'
+                      result.status === 'created' || result.status === 'linked'
                         ? 'text-aff dark:text-aff-d'
                         : result.status === 'skipped'
                           ? 'text-amber-800 dark:text-amber-200'
@@ -378,7 +403,14 @@ function CreateAccountsDialog({
                   >
                     {result.status === 'created' && (
                       <>
-                        Created {result.name} ({result.email}) as {result.role}
+                        Created sign-in account and profile for {result.name} ({result.email}) as{' '}
+                        {result.role}
+                      </>
+                    )}
+                    {result.status === 'linked' && (
+                      <>
+                        Linked profile for {result.name} ({result.email}) to existing sign-in
+                        account as {result.role}
                       </>
                     )}
                     {result.status === 'skipped' && (
