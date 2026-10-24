@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import { cn } from 'cnfast';
@@ -13,6 +13,7 @@ import { errorMessage } from '../data/pocketbase.ts';
 import { useAppUser } from '../hooks/auth.tsx';
 import { useUsers } from '../hooks/data.ts';
 import { parseAccountCsv } from '../lib/accountCsv.ts';
+import { fuzzyRank } from '../lib/fuzzySearch.ts';
 import type { Role } from '../types.ts';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
@@ -47,8 +48,84 @@ function roleFromSelect(value: string): Role {
   return 'student';
 }
 
+function UserListToggle({
+  value,
+  onChange,
+}: {
+  value: UserListView;
+  onChange: (value: UserListView) => void;
+}): React.JSX.Element {
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
+    const delta =
+      event.key === 'ArrowRight' || event.key === 'ArrowDown'
+        ? 1
+        : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+          ? -1
+          : event.key === 'Home'
+            ? 'home'
+            : event.key === 'End'
+              ? 'end'
+              : null;
+    if (delta === null) return;
+    event.preventDefault();
+    const index = USER_LIST_VIEWS.findIndex((tab) => tab.value === value);
+    const nextIndex =
+      delta === 'home'
+        ? 0
+        : delta === 'end'
+          ? USER_LIST_VIEWS.length - 1
+          : (index + delta + USER_LIST_VIEWS.length) % USER_LIST_VIEWS.length;
+    const next = USER_LIST_VIEWS[nextIndex];
+    if (!next) return;
+    onChange(next.value);
+    buttons.current[nextIndex]?.focus();
+  }
+
+  return (
+    <div
+      aria-label="User list"
+      className="inline-flex h-11 max-w-full shrink-0 items-stretch overflow-x-auto rounded-lg border-2 border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
+      onKeyDown={onKeyDown}
+      role="radiogroup"
+    >
+      {USER_LIST_VIEWS.map((tab, index) => {
+        const selected = value === tab.value;
+        const previousSelected = index > 0 && value === USER_LIST_VIEWS[index - 1]?.value;
+        return (
+          <button
+            key={tab.value}
+            ref={(node) => {
+              buttons.current[index] = node;
+            }}
+            aria-checked={selected}
+            className={cn(
+              'flex items-center px-4 text-sm font-semibold whitespace-nowrap cursor-pointer transition-colors',
+              index > 0 &&
+                !selected &&
+                !previousSelected &&
+                'border-l border-slate-200 dark:border-slate-600',
+              selected
+                ? 'bg-nf-blue text-white dark:bg-nf-blue-d'
+                : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700',
+            )}
+            onClick={() => onChange(tab.value)}
+            role="radio"
+            tabIndex={selected ? 0 : -1}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function AdminUsers(): React.JSX.Element {
   const [view, setView] = useState<UserListView>('student');
+  const [query, setQuery] = useState('');
   const me = useAppUser();
   // Load active and archived together so tab switches can filter without a refetch race.
   const allUsers = useUsers(true);
@@ -61,6 +138,8 @@ export function AdminUsers(): React.JSX.Element {
   const visibleUsers = (allUsers ?? []).filter((u) =>
     view === 'archived' ? u.archived : !u.archived && u.role === view,
   );
+  const listedUsers = fuzzyRank(visibleUsers, query, (user) => [user.name ?? '', user.email ?? '']);
+  const searching = query.trim().length > 0;
 
   async function toggleArchived(userId: string, archived: boolean): Promise<void> {
     setPendingId(userId);
@@ -86,34 +165,28 @@ export function AdminUsers(): React.JSX.Element {
           Create accounts
         </button>
       </div>
-      <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="User list">
-        {USER_LIST_VIEWS.map((tab) => (
-          <button
-            key={tab.value}
-            aria-selected={view === tab.value}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors',
-              view === tab.value
-                ? 'bg-nf-blue dark:bg-nf-blue-d text-white border-nf-blue dark:border-nf-blue-d'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent',
-            )}
-            onClick={() => setView(tab.value)}
-            role="tab"
-            type="button"
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <UserListToggle value={view} onChange={setView} />
+        <div className="min-w-48 flex-1">
+          <Input
+            aria-label="Search users"
+            className="h-11"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search name or email"
+            type="search"
+            value={query}
+          />
+        </div>
       </div>
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
       {isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
-      {!isLoading && visibleUsers.length === 0 && (
+      {!isLoading && listedUsers.length === 0 && (
         <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
-          {EMPTY_COPY[view]}
+          {searching ? `No matches for "${query.trim()}".` : EMPTY_COPY[view]}
         </p>
       )}
       <div className="flex flex-col gap-3">
-        {visibleUsers.map((u) => {
+        {listedUsers.map((u) => {
           const isMe = me?.id === u.id;
           const busy = pendingId === u.id;
           return (
