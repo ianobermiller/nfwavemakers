@@ -14,7 +14,7 @@ export function LessonsIndex(): React.JSX.Element {
     <SiteLayout current="lessons">
       <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
         <h1 className="text-4xl font-extrabold tracking-tight">Lessons</h1>
-        <p className="mx-auto mt-3 max-w-xl text-sky-100">
+        <p className="mx-auto mt-3 max-w-xl text-balance text-sky-100">
           Topics and homework from Coach Shannon’s club emails for the 2026–27 season. Most recent
           lesson first.
         </p>

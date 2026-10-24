@@ -130,7 +130,7 @@ export function SchedulePage(): React.JSX.Element {
     <SiteLayout current="schedule">
       <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
         <h1 className="text-4xl font-extrabold tracking-tight">Schedule</h1>
-        <p className="mx-auto mt-3 max-w-xl text-sky-100">
+        <p className="mx-auto mt-3 max-w-xl text-balance text-sky-100">
           Tuesday meetings at Cross Creek, and the 2026–27 tournaments our members attend.
         </p>
       </div>
@@ -138,7 +138,7 @@ export function SchedulePage(): React.JSX.Element {
       <section className="px-5 py-16">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-3xl font-bold text-nf-blue dark:text-white">Weekly meetings</h2>
-          <p className="mt-4 max-w-3xl leading-relaxed text-slate-600 dark:text-slate-300">
+          <p className="mt-4 max-w-3xl leading-relaxed text-balance text-slate-600 dark:text-slate-300">
             Meetings are held <strong>every Tuesday</strong> from September through May at{' '}
             <a
               href={CHURCH}
@@ -150,7 +150,7 @@ export function SchedulePage(): React.JSX.Element {
             </a>{' '}
             in north St. Johns County, near Race Track Road off Route 13.
           </p>
-          <table className="mt-6 w-full max-w-md text-sm [&_td]:border-b [&_td]:border-slate-200 [&_td]:py-2 dark:[&_td]:border-white/10 [&_td:first-child]:font-semibold [&_td:first-child]:text-nf-blue dark:[&_td:first-child]:text-white [&_td:last-child]:text-right [&_td:last-child]:text-slate-500 [&_tr:last-child_td]:border-b-0">
+          <table className="mt-6 w-full max-w-50 text-sm [&_td]:border-b [&_td]:border-slate-200 [&_td]:py-2 dark:[&_td]:border-white/10 [&_td:first-child]:font-semibold [&_td:first-child]:text-nf-blue dark:[&_td:first-child]:text-white [&_td:last-child]:text-right [&_td:last-child]:text-slate-200 [&_tr:last-child_td]:border-b-0">
             <tbody>
               {MEETINGS.map(([label, time]) => (
                 <tr key={label}>
