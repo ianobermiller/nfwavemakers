@@ -332,9 +332,6 @@ nav a.nav-cta:hover { background: #2e8bc7; }
   margin-bottom: 1rem;
 }
 .schedule-block p { color: var(--text-muted); font-size: .93rem; margin-bottom: 1rem; }
-.schedule-block .camp-exclusive p { color: var(--text-muted); }
-.schedule-block .camp-exclusive .camp-exclusive-detail { color: var(--text-muted); }
-.schedule-block .camp-exclusive .camp-costs { color: var(--text-muted); }
 
 .schedule-table {
   width: 100%;
@@ -350,52 +347,6 @@ nav a.nav-cta:hover { background: #2e8bc7; }
 .schedule-table td:first-child { font-weight: 600; color: var(--blue-dark); }
 .schedule-table td:last-child { color: var(--text-muted); text-align: right; }
 .schedule-table tr:last-child td { border-bottom: none; }
-
-.camp-exclusive {
-  background: #eef4fb;
-  border-left: 3px solid var(--blue-mid);
-  border-radius: var(--radius);
-  padding: 1.1rem 1.25rem;
-  margin-bottom: 1rem;
-}
-.camp-exclusive-badge {
-  display: inline-block;
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--blue-mid);
-  margin-bottom: .45rem;
-}
-.camp-exclusive-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--blue-dark);
-  margin-bottom: .25rem;
-}
-.camp-exclusive-detail {
-  font-size: .82rem;
-  color: var(--text-muted);
-  margin-bottom: .75rem;
-}
-.camp-exclusive-desc {
-  font-size: .88rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  margin-bottom: .85rem;
-}
-.camp-costs {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: .3rem;
-  font-size: .83rem;
-  color: var(--text-muted);
-  padding: 0;
-  border-top: 1px solid #d0dcea;
-  padding-top: .75rem;
-}
-.camp-costs li strong { color: var(--blue-dark); }
 
 .schedule-note {
   font-size: .88rem;
@@ -436,33 +387,6 @@ nav a.nav-cta:hover { background: #2e8bc7; }
   border-radius: 99px;
   text-transform: none;
 }
-
-.event-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: .65rem;
-  margin-top: 1.25rem;
-}
-.event-list li {
-  display: flex;
-  align-items: baseline;
-  gap: .75rem;
-  font-size: .93rem;
-  padding-bottom: .65rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-.event-list li:last-child { border-bottom: none; }
-.event-date {
-  font-size: .8rem;
-  font-weight: 600;
-  color: var(--wave);
-  white-space: nowrap;
-  min-width: 115px;
-}
-.event-name { color: var(--text); font-weight: 500; display: flex; flex-direction: column; gap: .1rem; }
-.event-loc { font-size: .8rem; font-weight: 400; color: var(--text-muted); }
-.event-detail { font-size: .8rem; font-weight: 400; color: var(--text-muted); margin-top: .2rem; }
 
 /* ── Achievements ── */
 .achievement-grid {
@@ -867,7 +791,6 @@ footer a:hover { color: #9bb8d8; }
 
   /* Borders */
   .schedule-table td   { border-bottom-color: rgba(255,255,255,.07); }
-  .event-list li       { border-bottom-color: rgba(255,255,255,.07); }
   .faq-item > p,
   .faq-item > ul,
   .faq-item > div      { border-top-color: rgba(255,255,255,.07); }
@@ -881,15 +804,6 @@ footer a:hover { color: #9bb8d8; }
   .story,
   .lesson-card { background: #1a2b42; }
   .lesson-pager { border-top-color: rgba(255,255,255,.07); }
-
-  /* Exclusive camp block */
-  .camp-exclusive {
-    background: #1a2b42;
-    border-left-color: var(--blue-mid);
-  }
-  .camp-exclusive-name { color: var(--text); }
-  .camp-costs { border-top-color: rgba(255,255,255,.07); }
-  .camp-costs li strong { color: var(--text); }
 
   /* Achievement place badges */
   .place        { background: #253346; color: var(--text-muted); }
