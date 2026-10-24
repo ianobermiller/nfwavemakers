@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { saveDebate } from '../data/api.ts';
 import type { Debate } from '../data/model.ts';
 import { useDebate, useUsers } from '../hooks/data.ts';
+import { assignSpeaker, debatePartnerId, type SpeakerSlot } from '../lib/debatePartners.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageLayout } from './PageLayout.tsx';
@@ -89,6 +90,12 @@ function AdminDebateFormEditor({
     setForm((f) => ({ ...f, ...p }));
   }
 
+  function onSpeaker(slot: SpeakerSlot, studentId: string): void {
+    setForm((current) =>
+      assignSpeaker(current, slot, studentId, (id) => debatePartnerId(users, id), current.judges),
+    );
+  }
+
   async function save(): Promise<void> {
     if (!form.date || !form.room) {
       setError('Date and room are required.');
@@ -163,6 +170,11 @@ function AdminDebateFormEditor({
           />
         </div>
 
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Choosing a student fills an open seat on that team with their debate partner. Either
+          speaker can still be changed.
+        </p>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <div className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d mb-3">
@@ -174,7 +186,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="aff1"
                   value={form.aff1}
-                  onChange={(value) => patch({ aff1: value })}
+                  onChange={(value) => onSpeaker('aff1', value)}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -184,7 +196,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="aff2"
                   value={form.aff2}
-                  onChange={(value) => patch({ aff2: value })}
+                  onChange={(value) => onSpeaker('aff2', value)}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -202,7 +214,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="neg1"
                   value={form.neg1}
-                  onChange={(value) => patch({ neg1: value })}
+                  onChange={(value) => onSpeaker('neg1', value)}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />
@@ -212,7 +224,7 @@ function AdminDebateFormEditor({
                 <StudentPicker
                   id="neg2"
                   value={form.neg2}
-                  onChange={(value) => patch({ neg2: value })}
+                  onChange={(value) => onSpeaker('neg2', value)}
                   students={studentOptions}
                   avatarURLs={studentAvatarURLs}
                 />

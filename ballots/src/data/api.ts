@@ -9,6 +9,7 @@ import type {
   StudentEvaluations,
   User,
 } from './model.ts';
+import { debatePartnerUpdates } from '../lib/debatePartners.ts';
 import { collections, createRecordId, pb } from './pocketbase.ts';
 
 interface AuthUserRecord extends RecordModel {
@@ -20,6 +21,7 @@ interface ProfileRecord extends RecordModel {
   avatar: string;
   email: string;
   name: string;
+  partner?: string;
   role: Role | '';
   user: string;
   expand?: {
@@ -151,6 +153,7 @@ function mapUser(record: ProfileRecord): User {
     // Prefer the denormalized profile email: other members' auth emails are not readable.
     email: optionalText(record.email || record.expand?.user?.email || ''),
     name: optionalText(record.name),
+    partnerId: optionalText(record.partner ?? ''),
     role: record.role || undefined,
   };
 }
@@ -331,6 +334,22 @@ export async function updateAvatar(file: Blob): Promise<User> {
   activeProfile = mapUser(record);
   window.dispatchEvent(new Event('ballots-profile-changed'));
   return activeProfile;
+}
+
+export async function setDebatePartner(studentId: string, partnerId: string): Promise<void> {
+  const students = (await listUsers(true)).filter((user) => user.role === 'student');
+  const updates = debatePartnerUpdates(
+    students.map((student) => ({ id: student.id, partnerId: student.partnerId ?? '' })),
+    studentId,
+    partnerId,
+  );
+  if (updates.length === 0) return;
+
+  const batch = pb.createBatch();
+  for (const update of updates) {
+    batch.collection(collections.profiles).update(update.id, { partner: update.partnerId });
+  }
+  await batch.send();
 }
 
 export async function setUserArchived(userId: string, archived: boolean): Promise<void> {

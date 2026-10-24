@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
-import { createAccounts, type CreateAccountResult, setUserArchived } from '../data/api.ts';
+import {
+  createAccounts,
+  type CreateAccountResult,
+  setDebatePartner,
+  setUserArchived,
+} from '../data/api.ts';
+import type { User } from '../data/model.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 import { useAppUser } from '../hooks/auth.tsx';
 import { useUsers } from '../hooks/data.ts';
@@ -9,6 +15,7 @@ import { parseAccountCsv } from '../lib/accountCsv.ts';
 import type { Role } from '../types.ts';
 import { PageLayout } from './PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
+import { StudentPicker } from './StudentPicker.tsx';
 import { Input } from './ui/Input.tsx';
 import { Select } from './ui/Select.tsx';
 
@@ -26,11 +33,13 @@ function roleFromSelect(value: string): Role {
 export function AdminUsers(): React.JSX.Element {
   const [showArchived, setShowArchived] = useState(false);
   const me = useAppUser();
-  const users = useUsers(showArchived);
-  const isLoading = users === undefined;
+  const allUsers = useUsers(true);
+  const isLoading = allUsers === undefined;
+  const users = (allUsers ?? []).filter((user) => showArchived || !user.archived);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [partnerStudentId, setPartnerStudentId] = useState<string | null>(null);
 
   async function toggleArchived(userId: string, archived: boolean): Promise<void> {
     setPendingId(userId);
@@ -75,7 +84,7 @@ export function AdminUsers(): React.JSX.Element {
         </p>
       )}
       <div className="flex flex-col gap-3">
-        {(users ?? []).map((u) => {
+        {users.map((u) => {
           const isMe = me?.id === u.id;
           const busy = pendingId === u.id;
           return (
@@ -97,6 +106,11 @@ export function AdminUsers(): React.JSX.Element {
                 <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                   {u.email ?? 'no email'}
                 </span>
+                {u.role === 'student' && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {partnerLabel(u, allUsers ?? [])}
+                  </span>
+                )}
               </div>
               <div className="ml-auto flex items-center gap-2 shrink-0">
                 {u.archived && (
@@ -114,6 +128,9 @@ export function AdminUsers(): React.JSX.Element {
                     archived={u.archived}
                     busy={busy}
                     name={u.name ?? u.email ?? 'user'}
+                    {...(u.role === 'student'
+                      ? { onSetPartner: () => setPartnerStudentId(u.id) }
+                      : {})}
                     onToggleArchived={() => void toggleArchived(u.id, !u.archived)}
                   />
                 )}
@@ -124,8 +141,23 @@ export function AdminUsers(): React.JSX.Element {
       </div>
 
       <CreateAccountsDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <SetPartnerDialog
+        student={(allUsers ?? []).find((user) => user.id === partnerStudentId) ?? null}
+        students={allUsers ?? []}
+        onOpenChange={(open) => {
+          if (!open) setPartnerStudentId(null);
+        }}
+      />
     </PageLayout>
   );
+}
+
+function partnerLabel(student: User, users: User[]): string {
+  if (!student.partnerId) return 'No debate partner';
+  const partner = users.find((user) => user.id === student.partnerId);
+  if (!partner) return 'Debate partner set';
+  const name = partner.name ?? partner.email ?? 'Unnamed';
+  return partner.archived ? `Partner: ${name} (archived)` : `Partner: ${name}`;
 }
 
 function CreateAccountsDialog({
@@ -451,15 +483,131 @@ function CreateAccountsDialog({
   );
 }
 
+function SetPartnerDialog({
+  onOpenChange,
+  student,
+  students,
+}: {
+  onOpenChange: (open: boolean) => void;
+  student: User | null;
+  students: User[];
+}): React.JSX.Element {
+  return (
+    <Dialog.Root open={student !== null} onOpenChange={onOpenChange}>
+      {student && (
+        <SetPartnerForm
+          key={student.id}
+          student={student}
+          students={students}
+          onClose={() => onOpenChange(false)}
+        />
+      )}
+    </Dialog.Root>
+  );
+}
+
+function SetPartnerForm({
+  onClose,
+  student,
+  students,
+}: {
+  onClose: () => void;
+  student: User;
+  students: User[];
+}): React.JSX.Element {
+  const [partnerId, setPartnerId] = useState(student.partnerId ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const name = student.name ?? student.email ?? 'This student';
+  const choices = students.filter(
+    (user) =>
+      user.role === 'student' &&
+      user.id !== student.id &&
+      (!user.archived || user.id === student.partnerId),
+  );
+  const partnerOptions = choices.map((choice) => {
+    const label = choice.name ?? choice.email ?? 'Unnamed';
+    return {
+      id: choice.id,
+      name: choice.archived ? `${label} (archived)` : label,
+    };
+  });
+  const partnerAvatarURLs = Object.fromEntries(
+    choices
+      .filter((choice): choice is typeof choice & { avatarUrl: string } => choice.avatarUrl != null)
+      .map((choice) => [choice.id, choice.avatarUrl]),
+  );
+
+  async function save(): Promise<void> {
+    setBusy(true);
+    setError('');
+    try {
+      await setDebatePartner(student.id, partnerId);
+      onClose();
+    } catch (cause: unknown) {
+      setError(errorMessage(cause, 'Could not save debate partner'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
+      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100vw-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+        <div>
+          <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
+            Debate partner
+          </Dialog.Title>
+          <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {name} and the student you pick become each other's regular partner. A debate can still
+            use a different teammate.
+          </Dialog.Description>
+        </div>
+        <div>
+          <label htmlFor="debate-partner">Partner</label>
+          <StudentPicker
+            id="debate-partner"
+            value={partnerId}
+            onChange={setPartnerId}
+            students={partnerOptions}
+            avatarURLs={partnerAvatarURLs}
+            disabled={busy}
+          />
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Dialog.Close
+            className="px-3 py-2 text-sm font-semibold rounded-lg text-slate-600 dark:text-slate-300 enabled:hover:bg-slate-100 enabled:dark:hover:bg-slate-700"
+            type="button"
+          >
+            Cancel
+          </Dialog.Close>
+          <button
+            className="px-3 py-2 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={busy}
+            onClick={() => void save()}
+            type="button"
+          >
+            {busy ? 'Saving…' : 'Save partner'}
+          </button>
+        </div>
+      </Dialog.Content>
+    </Dialog.Portal>
+  );
+}
+
 function UserRowMenu({
   archived,
   busy,
   name,
+  onSetPartner,
   onToggleArchived,
 }: {
   archived: boolean;
   busy: boolean;
   name: string;
+  onSetPartner?: () => void;
   onToggleArchived: () => void;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
@@ -484,6 +632,20 @@ function UserRowMenu({
           role="menu"
           sideOffset={4}
         >
+          {onSetPartner && (
+            <button
+              className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={busy}
+              onClick={() => {
+                setOpen(false);
+                onSetPartner();
+              }}
+              role="menuitem"
+              type="button"
+            >
+              Set partner
+            </button>
+          )}
           <button
             className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={busy}

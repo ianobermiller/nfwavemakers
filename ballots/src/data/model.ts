@@ -6,6 +6,7 @@ export interface User {
   avatarUrl: string | null;
   email?: string | undefined;
   name?: string | undefined;
+  partnerId?: string | undefined;
   role?: Role | undefined;
 }
 

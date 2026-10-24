@@ -13,18 +13,47 @@ const migrationsDir = join(root, 'pocketbase/pb_migrations');
 // swap those placeholders for the real ids.
 const placeholder = (name) => `__ref_${name}`;
 
+function withFieldApi(fields) {
+  const list = Array.isArray(fields) ? fields : [];
+  if (typeof list.add !== 'function') {
+    Object.defineProperty(list, 'add', {
+      enumerable: false,
+      value(field) {
+        list.push(field);
+      },
+    });
+  }
+  if (typeof list.removeByName !== 'function') {
+    Object.defineProperty(list, 'removeByName', {
+      enumerable: false,
+      value(name) {
+        const index = list.findIndex((field) => field.name === name);
+        if (index >= 0) list.splice(index, 1);
+      },
+    });
+  }
+  return list;
+}
+
 function collectDefinitions() {
   const definitions = [];
   const referenced = new Set();
+  const saved = new Map();
 
   const app = {
     findCollectionByNameOrId(name) {
+      const existing = saved.get(name);
+      if (existing) return existing;
       referenced.add(name);
-      return { id: placeholder(name), name };
+      return { id: placeholder(name), name, fields: withFieldApi([]) };
     },
     save(collection) {
       collection.id = placeholder(collection.name);
-      definitions.push(collection);
+      collection.fields = withFieldApi(collection.fields);
+      saved.set(collection.name, collection);
+      const index = definitions.findIndex((item) => item.name === collection.name);
+      if (index >= 0) definitions[index] = collection;
+      else definitions.push(collection);
     },
     delete() {},
   };
@@ -33,11 +62,16 @@ function collectDefinitions() {
     Collection: function Collection(definition) {
       return { ...definition };
     },
+    RelationField: function RelationField(definition) {
+      return { type: 'relation', maxSelect: 1, ...definition };
+    },
     migrate: (up) => up(app),
     console,
   });
 
-  for (const file of readdirSync(migrationsDir).filter((f) => f.endsWith('.js')).sort()) {
+  for (const file of readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.js'))
+    .sort()) {
     runInContext(readFileSync(join(migrationsDir, file), 'utf8'), context, { filename: file });
   }
 
@@ -146,5 +180,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     throw new Error('Set POCKETBASE_TEST_URL, PB_SUPERUSER_EMAIL and PB_SUPERUSER_PASSWORD.');
   }
   const created = await applyCollections({ url, email, password });
-  console.log(created.length ? `Created: ${created.join(', ')}` : 'Collections already present; rules and fields synced.');
+  console.log(
+    created.length
+      ? `Created: ${created.join(', ')}`
+      : 'Collections already present; rules and fields synced.',
+  );
 }
