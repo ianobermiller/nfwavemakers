@@ -27,6 +27,8 @@ test.describe('Auth flow', () => {
   test('home page is public with the club nav', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /Make Waves/ })).toBeVisible();
+    const menuButton = page.getByRole('button', { name: 'Toggle navigation' });
+    if (await menuButton.isVisible()) await menuButton.click();
     await expect(page.getByRole('navigation').getByRole('link', { name: 'About' })).toBeVisible();
     await expect(page.getByRole('navigation').getByRole('link', { name: 'Schedule' })).toBeVisible();
     await expect(page.getByRole('navigation').getByRole('link', { name: 'Lessons' })).toBeVisible();

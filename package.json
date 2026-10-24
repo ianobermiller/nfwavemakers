@@ -15,7 +15,7 @@
     "check:push": "run-p --print-label types lint knip test:e2e",
     "test:unit": "node --experimental-strip-types --test ballots/lib/**/*.test.ts",
     "test:e2e": "playwright test",
-    "seed:test": "node --env-file=.env --env-file=.env.local ballots/scripts/seed-test-accounts.mjs",
+    "seed:test": "node --env-file-if-exists=.env --env-file-if-exists=.env.local ballots/scripts/seed-test-accounts.mjs",
     "deploy:hooks": "node ballots/scripts/deploy-hooks.mjs",
     "pages:deploy": "npm run build && wrangler pages deploy _site --project-name nfwavemakers",
     "worktree:new": "node scripts/worktree-new.mjs",

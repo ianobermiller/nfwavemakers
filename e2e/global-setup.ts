@@ -52,7 +52,11 @@ export default async function globalSetup(): Promise<void> {
   const password = process.env['TEST_ACCOUNT_PASSWORD'] ?? 'test-password';
   const seed = spawnSync(
     'node',
-    ['--env-file=.env', '--env-file=.env.local', 'ballots/scripts/seed-test-accounts.mjs'],
+    [
+      '--env-file-if-exists=.env',
+      '--env-file-if-exists=.env.local',
+      'ballots/scripts/seed-test-accounts.mjs',
+    ],
     {
       cwd: root,
       encoding: 'utf8',
