@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
+import { cn } from 'cnfast';
 import {
   createAccounts,
   type CreateAccountResult,
@@ -25,21 +26,41 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'admin', label: 'Admin' },
 ];
 
+type UserListView = Role | 'archived';
+
+const USER_LIST_VIEWS: { value: UserListView; label: string }[] = [
+  { value: 'student', label: 'Students' },
+  { value: 'parent', label: 'Parents' },
+  { value: 'admin', label: 'Admins' },
+  { value: 'archived', label: 'Archived' },
+];
+
+const EMPTY_COPY: Record<UserListView, string> = {
+  student: 'No students yet.',
+  parent: 'No parents yet.',
+  admin: 'No admins yet.',
+  archived: 'No archived users.',
+};
+
 function roleFromSelect(value: string): Role {
   if (value === 'admin' || value === 'parent' || value === 'student') return value;
   return 'student';
 }
 
 export function AdminUsers(): React.JSX.Element {
-  const [showArchived, setShowArchived] = useState(false);
+  const [view, setView] = useState<UserListView>('student');
   const me = useAppUser();
+  // Load active and archived together so tab switches can filter without a refetch race.
   const allUsers = useUsers(true);
   const isLoading = allUsers === undefined;
-  const users = (allUsers ?? []).filter((user) => showArchived || !user.archived);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [partnerStudentId, setPartnerStudentId] = useState<string | null>(null);
+
+  const visibleUsers = (allUsers ?? []).filter((u) =>
+    view === 'archived' ? u.archived : !u.archived && u.role === view,
+  );
 
   async function toggleArchived(userId: string, archived: boolean): Promise<void> {
     setPendingId(userId);
@@ -57,34 +78,42 @@ export function AdminUsers(): React.JSX.Element {
     <PageLayout>
       <div className="flex items-start justify-between gap-3 mb-4">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Users</h1>
-        <div className="flex items-center gap-3 shrink-0">
-          <label className="mb-0 inline-flex items-center gap-2 h-9 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
-            <input
-              checked={showArchived}
-              className="size-4 accent-nf-blue"
-              onChange={(e) => setShowArchived(e.target.checked)}
-              type="checkbox"
-            />
-            Show archived
-          </label>
+        <button
+          className="inline-flex items-center h-9 px-3 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 shrink-0"
+          onClick={() => setCreateOpen(true)}
+          type="button"
+        >
+          Create accounts
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="User list">
+        {USER_LIST_VIEWS.map((tab) => (
           <button
-            className="inline-flex items-center h-9 px-3 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50"
-            onClick={() => setCreateOpen(true)}
+            key={tab.value}
+            aria-selected={view === tab.value}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors',
+              view === tab.value
+                ? 'bg-nf-blue dark:bg-nf-blue-d text-white border-nf-blue dark:border-nf-blue-d'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent',
+            )}
+            onClick={() => setView(tab.value)}
+            role="tab"
             type="button"
           >
-            Create accounts
+            {tab.label}
           </button>
-        </div>
+        ))}
       </div>
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
       {isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
-      {!isLoading && users.length === 0 && (
+      {!isLoading && visibleUsers.length === 0 && (
         <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
-          {showArchived ? 'No users yet.' : 'No active users.'}
+          {EMPTY_COPY[view]}
         </p>
       )}
       <div className="flex flex-col gap-3">
-        {users.map((u) => {
+        {visibleUsers.map((u) => {
           const isMe = me?.id === u.id;
           const busy = pendingId === u.id;
           return (
