@@ -16,7 +16,7 @@ export function Dashboard({ userId, role, name }: Props): React.JSX.Element {
     <PageLayout>
       <h1 className="text-2xl font-bold mb-6">Hello, {name}!</h1>
       <div className="flex flex-col gap-6">
-        <UpcomingDebates />
+        <UpcomingDebates role={role} />
         {role === 'parent' && <ParentDashboard userId={userId} />}
         {role === 'student' && <StudentDashboard userId={userId} />}
         {role === 'admin' && (

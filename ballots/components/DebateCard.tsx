@@ -26,7 +26,7 @@ interface DebateCardProps {
   judgeId?: string;
   badge?: React.ReactNode;
   isExpanded?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
   id?: string;
   ariaControls?: string;
   className?: string;
@@ -47,6 +47,8 @@ export function DebateCard({
   const debate = data?.debate;
   const affTeam = debate?.affTeam ?? [];
   const negTeam = debate?.negTeam ?? [];
+  const judges = debate?.judges ?? [];
+  const judgeNames = judges.map((u) => u.name ?? '?');
   const winnerBadge =
     judgeId != null
       ? data?.winner === 'aff'
@@ -57,18 +59,10 @@ export function DebateCard({
       : null;
   const hasTeams = affTeam.length > 0 || negTeam.length > 0;
   const hasChevron = isExpanded !== undefined;
+  const interactive = onClick != null;
 
-  return (
-    <button
-      id={id}
-      className={cn(
-        'w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all',
-        className,
-      )}
-      onClick={onClick}
-      aria-expanded={hasChevron ? isExpanded : undefined}
-      aria-controls={ariaControls}
-    >
+  const content = (
+    <>
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -96,12 +90,47 @@ export function DebateCard({
             <span className="text-neg dark:text-neg-d font-semibold">{formatTeam(negTeam)}</span>
           </span>
         )}
+        {judgeNames.length > 0 && (
+          <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5 flex-wrap">
+            <AvatarStack members={judges} />
+            <span>
+              Judge{judgeNames.length === 1 ? '' : 's'}: {judgeNames.join(', ')}
+            </span>
+          </span>
+        )}
       </div>
       {hasChevron && (
         <span className="text-slate-400 text-xs shrink-0" aria-hidden="true">
           {isExpanded ? '▲' : '▼'}
         </span>
       )}
-    </button>
+    </>
+  );
+
+  const sharedClassName = cn(
+    'w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-left',
+    interactive && 'cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all',
+    className,
+  );
+
+  if (interactive) {
+    return (
+      <button
+        id={id}
+        type="button"
+        className={sharedClassName}
+        onClick={onClick}
+        aria-expanded={hasChevron ? isExpanded : undefined}
+        aria-controls={ariaControls}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div id={id} className={sharedClassName}>
+      {content}
+    </div>
   );
 }
