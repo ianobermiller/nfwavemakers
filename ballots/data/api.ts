@@ -92,7 +92,8 @@ export interface SaveDebateInput {
   date: string;
   judges: string[];
   negTeam: string[];
-  resolution: string;
+  /** Omitted to leave an existing resolution unchanged on update. */
+  resolution?: string;
   room: string;
 }
 
@@ -546,8 +547,8 @@ export async function saveDebate(input: SaveDebateInput): Promise<string> {
     date: input.date,
     judges: input.judges,
     neg_team: input.negTeam,
-    resolution: input.resolution.trim(),
     room: input.room.trim(),
+    ...(input.resolution !== undefined ? { resolution: input.resolution.trim() } : {}),
   };
   const record = input.debateId
     ? await pb.collection(collections.debates).update(input.debateId, body)

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { saveDebate } from '../data/api.ts';
 import type { Debate } from '../data/model.ts';
 import { useDebate, useUsers } from '../hooks/data.ts';
+import { nextTuesdayDate } from '../lib/dates.ts';
 import { assignSpeaker, debatePartnerId, type SpeakerSlot } from '../lib/debatePartners.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
@@ -13,7 +14,6 @@ import { JudgePicker } from './JudgePicker.tsx';
 interface DebateForm {
   date: string;
   room: string;
-  resolution: string;
   aff1: string;
   aff2: string;
   neg1: string;
@@ -23,9 +23,8 @@ interface DebateForm {
 
 function makeEmpty(): DebateForm {
   return {
-    date: '',
+    date: nextTuesdayDate(),
     room: '',
-    resolution: '',
     aff1: '',
     aff2: '',
     neg1: '',
@@ -38,7 +37,6 @@ function debateToForm(debate: Debate): DebateForm {
   return {
     date: debate.date,
     room: debate.room,
-    resolution: debate.resolution ?? '',
     aff1: debate.affTeam[0]?.id ?? '',
     aff2: debate.affTeam[1]?.id ?? '',
     neg1: debate.negTeam[0]?.id ?? '',
@@ -109,7 +107,6 @@ function AdminDebateFormEditor({
         ...(debateId ? { debateId } : {}),
         date: form.date,
         room: form.room,
-        resolution: form.resolution,
         affTeam: [form.aff1, form.aff2].filter(Boolean),
         negTeam: [form.neg1, form.neg2].filter(Boolean),
         judges: form.judges,
@@ -157,17 +154,6 @@ function AdminDebateFormEditor({
               placeholder="Room 101"
             />
           </div>
-        </div>
-
-        <div>
-          <label htmlFor="debate-resolution">Resolution</label>
-          <Input
-            id="debate-resolution"
-            type="text"
-            value={form.resolution}
-            onChange={(e) => patch({ resolution: e.target.value })}
-            placeholder="Resolved: …"
-          />
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400">

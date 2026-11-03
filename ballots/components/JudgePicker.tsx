@@ -2,7 +2,10 @@ import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { cn } from 'cnfast';
 import { Avatar } from './Avatar.tsx';
+import { Input } from './ui/Input.tsx';
 import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
+import { fuzzyRank } from '../lib/fuzzySearch.ts';
+import { compareByLastName } from '../utils/format.ts';
 
 interface Props {
   value: string[];
@@ -12,7 +15,16 @@ interface Props {
 
 export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const avatarURLs = useAvatarURLs(judges.map((j) => j.id));
+
+  const sortedJudges = [...judges].sort(compareByLastName);
+  const listedJudges = fuzzyRank(sortedJudges, query, (judge) => [judge.name ?? '', judge.id]);
+
+  function setPickerOpen(next: boolean): void {
+    setOpen(next);
+    if (!next) setQuery('');
+  }
 
   function toggleJudge(judgeId: string): void {
     onChange(value.includes(judgeId) ? value.filter((id) => id !== judgeId) : [...value, judgeId]);
@@ -23,10 +35,10 @@ export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Eleme
     onChange(value.filter((id) => id !== judgeId));
   }
 
-  const selectedJudges = judges.filter((j) => value.includes(j.id));
+  const selectedJudges = sortedJudges.filter((j) => value.includes(j.id));
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root open={open} onOpenChange={setPickerOpen}>
       <Popover.Trigger asChild>
         <button
           type="button"
@@ -61,17 +73,42 @@ export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Eleme
 
       <Popover.Portal>
         <Popover.Content
-          className="z-50 w-[var(--radix-popover-trigger-width)] bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          className="z-50 w-[var(--radix-popover-trigger-width)] bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-lg overflow-hidden"
           sideOffset={4}
           align="start"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            const target = event.currentTarget;
+            if (!(target instanceof HTMLElement)) return;
+            target.querySelector('input')?.focus();
+          }}
         >
-          <div role="listbox" aria-multiselectable="true" aria-label="Select judges">
+          <div className="p-2 border-b border-slate-200 dark:border-slate-700">
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search judges…"
+              aria-label="Search judges"
+              autoComplete="off"
+            />
+          </div>
+          <div
+            role="listbox"
+            aria-multiselectable="true"
+            aria-label="Select judges"
+            className="max-h-60 overflow-y-auto"
+          >
             {judges.length === 0 ? (
               <p className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
                 No judges available
               </p>
+            ) : listedJudges.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
+                No judges found
+              </p>
             ) : (
-              judges.map((j) => {
+              listedJudges.map((j) => {
                 const selected = value.includes(j.id);
                 return (
                   <button
