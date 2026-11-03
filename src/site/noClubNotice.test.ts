@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { noClubNoticeWhen } from './noClubNotice.ts';
+import {
+  NO_CLUB_NOTICE_STORAGE_KEY,
+  noClubNoticeWhen,
+  readNoClubNoticeDismissed,
+  writeNoClubNoticeDismissed,
+} from './noClubNotice.ts';
 
 void test('before the tournament the note says next week', () => {
   // Tuesday, November 3, 2026, afternoon Eastern (EST, UTC-5)
@@ -18,4 +23,20 @@ void test('on November 10 Eastern the note says today', () => {
 void test('the note is gone at midnight Eastern on Wednesday, November 11', () => {
   assert.equal(noClubNoticeWhen(new Date('2026-11-11T05:00:00Z')), null);
   assert.equal(noClubNoticeWhen(new Date('2026-11-17T15:00:00Z')), null);
+});
+
+void test('closing the note is remembered under the November 10 key', () => {
+  const saved = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => saved.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      saved.set(key, value);
+    },
+  };
+
+  assert.equal(NO_CLUB_NOTICE_STORAGE_KEY, 'nfw-no-club-notice:2026-11-10');
+  assert.equal(readNoClubNoticeDismissed(storage), false);
+  writeNoClubNoticeDismissed(storage);
+  assert.equal(saved.get(NO_CLUB_NOTICE_STORAGE_KEY), 'dismissed');
+  assert.equal(readNoClubNoticeDismissed(storage), true);
 });
