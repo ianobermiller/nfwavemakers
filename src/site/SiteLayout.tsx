@@ -4,6 +4,7 @@ import { signOut } from '../../ballots/data/auth.ts';
 import { useAppUser, useAuthState } from '../../ballots/hooks/auth.tsx';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { Avatar } from '../../ballots/components/Avatar.tsx';
+import { NoClubNotice } from './NoClubNotice.tsx';
 
 type NavPage = 'home' | 'about' | 'schedule' | 'lessons' | 'ballots' | 'join';
 
@@ -96,6 +97,8 @@ export function SiteLayout({ children, current }: Props): React.JSX.Element {
           </div>
         </div>
       </header>
+
+      <NoClubNotice />
 
       <main>{children}</main>
 

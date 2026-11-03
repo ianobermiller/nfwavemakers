@@ -1,6 +1,7 @@
 {
   "entry": [
     "ballots/**/*.test.ts",
+    "src/**/*.test.ts",
     "ballots/scripts/*.mjs",
     "ballots/pocketbase/pb_migrations/*.js"
   ],
