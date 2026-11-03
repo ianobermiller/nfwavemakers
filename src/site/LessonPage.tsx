@@ -7,6 +7,7 @@ import lesson3 from './content/lesson-2026-3.html?raw';
 import lesson4 from './content/lesson-2026-4.html?raw';
 import lesson5 from './content/lesson-2026-5.html?raw';
 import lesson6 from './content/lesson-2026-6.html?raw';
+import lesson7 from './content/lesson-2026-7.html?raw';
 import { SiteLayout } from './SiteLayout.tsx';
 
 const BODIES: Record<string, string> = {
@@ -16,6 +17,7 @@ const BODIES: Record<string, string> = {
   '2026/4': lesson4,
   '2026/5': lesson5,
   '2026/6': lesson6,
+  '2026/7': lesson7,
 };
 
 const article =

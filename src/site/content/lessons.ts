@@ -56,6 +56,14 @@ export const LESSONS: LessonMeta[] = [
     dateIso: '2026-10-20',
     slug: '2026/6',
   },
+  {
+    year: 2026,
+    number: 7,
+    title: 'Bringing Characters to Life',
+    dateLabel: 'Tuesday, October 27, 2026',
+    dateIso: '2026-10-27',
+    slug: '2026/7',
+  },
 ];
 
 export function lessonBySlug(year: string, number: string): LessonMeta | undefined {
