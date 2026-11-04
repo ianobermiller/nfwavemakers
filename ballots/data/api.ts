@@ -9,6 +9,7 @@ import type {
   StudentEvaluations,
   User,
 } from './model.ts';
+import { fetchBallotRelations, orEqualFilter, uniqueIds } from '../lib/ballotHydrate.ts';
 import { debatePartnerUpdates } from '../lib/debatePartners.ts';
 import { collections, createRecordId, pb } from './pocketbase.ts';
 
@@ -269,10 +270,12 @@ function mapEval(record: SpeakerEvalRecord): SpeakerEval {
   };
 }
 
+const debateExpand = 'aff_team,neg_team,judges';
+
 async function getDebateOrNull(id: string): Promise<Debate | null> {
   try {
     const record = await pb.collection<DebateRecord>(collections.debates).getOne(id, {
-      expand: 'aff_team.user,neg_team.user,judges.user',
+      expand: debateExpand,
     });
     return record.deleted_at ? null : mapDebate(record);
   } catch (error: unknown) {
@@ -281,21 +284,17 @@ async function getDebateOrNull(id: string): Promise<Debate | null> {
   }
 }
 
-async function loadBallot(record: BallotRecord): Promise<Ballot> {
-  const [debate, evals] = await Promise.all([
-    record.debate ? getDebateOrNull(record.debate) : Promise.resolve(null),
-    pb.collection<SpeakerEvalRecord>(collections.speakerEvals).getFullList({
-      filter: pb.filter('ballot = {:ballot}', { ballot: record.id }),
-      expand: 'speaker.user',
-      sort: 'position',
-    }),
-  ]);
+function ballotFromParts(
+  record: BallotRecord,
+  debate: Debate | null,
+  speakerEvals: SpeakerEval[],
+): Ballot {
   return {
     id: record.id,
     debate,
     judge: record.expand?.judge ? mapUser(record.expand.judge) : null,
     reasonForDecision: optionalText(record.reason_for_decision),
-    speakerEvals: evals.map(mapEval),
+    speakerEvals,
     submittedAt: record.submitted_at
       ? new Date(record.submitted_at.replace(' ', 'T')).getTime()
       : undefined,
@@ -303,13 +302,68 @@ async function loadBallot(record: BallotRecord): Promise<Ballot> {
   };
 }
 
-async function listBallots(filter: string, sort = '-submitted_at'): Promise<Ballot[]> {
+async function listDebatesByIds(ids: string[]): Promise<Map<string, Debate>> {
+  const filter = orEqualFilter('id', ids, (expr, params) => pb.filter(expr, params));
+  if (!filter) return new Map();
+  const records = await pb.collection<DebateRecord>(collections.debates).getFullList({
+    filter,
+    expand: debateExpand,
+  });
+  const debates = new Map<string, Debate>();
+  for (const record of records) {
+    if (!record.deleted_at) debates.set(record.id, mapDebate(record));
+  }
+  return debates;
+}
+
+async function listEvalsByBallotIds(ids: string[]): Promise<Map<string, SpeakerEval[]>> {
+  const filter = orEqualFilter('ballot', ids, (expr, params) => pb.filter(expr, params));
+  if (!filter) return new Map();
+  const records = await pb.collection<SpeakerEvalRecord>(collections.speakerEvals).getFullList({
+    filter,
+    expand: 'speaker',
+    sort: 'position',
+  });
+  const evalsByBallot = new Map<string, SpeakerEval[]>();
+  for (const record of records) {
+    const list = evalsByBallot.get(record.ballot) ?? [];
+    list.push(mapEval(record));
+    evalsByBallot.set(record.ballot, list);
+  }
+  return evalsByBallot;
+}
+
+/** Attach debates (and optionally speaker scores) with one query each, not one per ballot. */
+async function hydrateBallotRecords(
+  records: BallotRecord[],
+  includeEvals: boolean,
+): Promise<Ballot[]> {
+  const { debates, evalsByBallot } = await fetchBallotRelations(
+    records.map((record) => record.debate),
+    records.map((record) => record.id),
+    includeEvals,
+    { loadDebates: listDebatesByIds, loadEvals: listEvalsByBallotIds },
+  );
+  return records.map((record) =>
+    ballotFromParts(
+      record,
+      record.debate ? (debates.get(record.debate) ?? null) : null,
+      evalsByBallot.get(record.id) ?? [],
+    ),
+  );
+}
+
+async function listBallots(
+  filter: string,
+  sort = '-submitted_at',
+  options: { includeEvals?: boolean } = {},
+): Promise<Ballot[]> {
   const records = await pb.collection<BallotRecord>(collections.ballots).getFullList({
     filter,
-    expand: 'judge.user',
+    expand: 'judge',
     sort,
   });
-  return await Promise.all(records.map(loadBallot));
+  return await hydrateBallotRecords(records, options.includeEvals ?? true);
 }
 
 function activeFilter(extra?: string): string {
@@ -522,7 +576,7 @@ export async function getDebate(debateId: string): Promise<Debate | null> {
 export async function listUpcomingDebates(today: string): Promise<Debate[]> {
   const records = await pb.collection<DebateRecord>(collections.debates).getFullList({
     filter: activeFilter(pb.filter('date >= {:today}', { today })),
-    expand: 'aff_team.user,neg_team.user,judges.user',
+    expand: debateExpand,
     sort: 'date,created',
   });
   return records.map(mapDebate);
@@ -532,7 +586,7 @@ export async function listAssignedDebates(): Promise<Debate[]> {
   const records = await pb.collection<DebateRecord>(collections.debates).getFullList({
     // PocketBase needs the relation field: `judges ?= id` matches nothing.
     filter: activeFilter(pb.filter('judges.id ?= {:judge}', { judge: currentUserId() })),
-    expand: 'aff_team.user,neg_team.user,judges.user',
+    expand: debateExpand,
     sort: 'date',
   });
   return records.map(mapDebate);
@@ -542,7 +596,7 @@ export async function listAdminDebates(): Promise<AdminDebate[]> {
   const [debates, ballots] = await Promise.all([
     pb.collection<DebateRecord>(collections.debates).getFullList({
       filter: activeFilter(),
-      expand: 'aff_team.user,neg_team.user,judges.user',
+      expand: debateExpand,
       sort: '-created',
     }),
     pb.collection<BallotRecord>(collections.ballots).getFullList({
@@ -611,9 +665,11 @@ export async function restoreDebate(debateId: string, ballotIds: string[]): Prom
 export async function getBallot(ballotId: string): Promise<Ballot | null> {
   try {
     const record = await pb.collection<BallotRecord>(collections.ballots).getOne(ballotId, {
-      expand: 'judge.user',
+      expand: 'judge',
     });
-    return record.deleted_at ? null : await loadBallot(record);
+    if (record.deleted_at) return null;
+    const [ballot] = await hydrateBallotRecords([record], true);
+    return ballot ?? null;
   } catch (error: unknown) {
     if (isNotFound(error)) return null;
     throw error;
@@ -626,22 +682,37 @@ export async function getDraftForJudge(debateId?: string): Promise<Ballot | null
     : 'debate = ""';
   const records = await pb.collection<BallotRecord>(collections.ballots).getList(1, 1, {
     filter: activeFilter(`judge = "${currentUserId()}" && submitted_at = "" && ${debateFilter}`),
-    expand: 'judge.user',
+    expand: 'judge',
   });
-  return records.items[0] ? await loadBallot(records.items[0]) : null;
+  if (!records.items[0]) return null;
+  const [ballot] = await hydrateBallotRecords([records.items[0]], true);
+  return ballot ?? null;
 }
 
 export async function listSubmittedByMe(): Promise<Ballot[]> {
-  return await listBallots(activeFilter(`judge = "${currentUserId()}" && submitted_at != ""`));
+  // Dashboard cards only need debate + winner; skip speaker scores.
+  return await listBallots(
+    activeFilter(`judge = "${currentUserId()}" && submitted_at != ""`),
+    '-submitted_at',
+    { includeEvals: false },
+  );
 }
 
 export async function listForSpeaker(): Promise<Ballot[]> {
   const evals = await pb.collection<SpeakerEvalRecord>(collections.speakerEvals).getFullList({
     filter: pb.filter('speaker = {:speaker}', { speaker: currentUserId() }),
   });
-  const ballotIds = [...new Set(evals.map((evaluation) => evaluation.ballot))];
-  const ballots = await Promise.all(ballotIds.map(getBallot));
-  return ballots.filter((ballot): ballot is Ballot => ballot?.submittedAt != null);
+  const ballotIds = uniqueIds(evals.map((evaluation) => evaluation.ballot));
+  if (ballotIds.length === 0) return [];
+  const idFilter = orEqualFilter('id', ballotIds, (expr, params) => pb.filter(expr, params));
+  if (!idFilter) return [];
+  const records = await pb.collection<BallotRecord>(collections.ballots).getFullList({
+    filter: activeFilter(`(${idFilter}) && submitted_at != ""`),
+    expand: 'judge',
+    sort: '-submitted_at',
+  });
+  // Feedback list only shows debate + judge names.
+  return await hydrateBallotRecords(records, false);
 }
 
 export async function getDebateDetail(debateId: string): Promise<DebateWithBallots | null> {
@@ -666,31 +737,28 @@ export async function listAdminBallotsByDebate(): Promise<DebateWithBallots[]> {
 }
 
 export async function listAdminBallotsByStudent(): Promise<StudentEvaluations[]> {
-  const [users, evalRecords, ballots] = await Promise.all([
+  // One batched ballot load already includes speaker scores; reuse them here.
+  const [users, ballots] = await Promise.all([
     listUsers(true),
-    pb.collection<SpeakerEvalRecord>(collections.speakerEvals).getFullList({
-      filter: 'speaker != ""',
-      expand: 'speaker.user',
-    }),
     listBallots(activeFilter('submitted_at != ""')),
   ]);
-  const ballotById = new Map(ballots.map((ballot) => [ballot.id, ballot]));
   return users
     .filter((user) => user.role === 'student')
     .map((student) => ({
       student,
-      evals: evalRecords
-        .filter((evaluation) => evaluation.speaker === student.id)
-        .flatMap((evaluation) => {
-          const ballot = ballotById.get(evaluation.ballot);
-          return ballot ? [{ eval: mapEval(evaluation), ballot }] : [];
-        }),
+      evals: ballots.flatMap((ballot) =>
+        ballot.speakerEvals
+          .filter((evaluation) => evaluation.speaker?.id === student.id)
+          .map((evaluation) => ({ eval: evaluation, ballot })),
+      ),
     }))
     .filter((row) => row.evals.length > 0);
 }
 
 export async function listStrandedBallots(): Promise<Ballot[]> {
-  return await listBallots(activeFilter('submitted_at != "" && debate = ""'));
+  return await listBallots(activeFilter('submitted_at != "" && debate = ""'), '-submitted_at', {
+    includeEvals: false,
+  });
 }
 
 export async function saveBallot(input: SaveBallotInput): Promise<SavedBallotIds> {
