@@ -26,10 +26,24 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   );
 }
 
+function syncStatusMessage(status: ReturnType<typeof useBallotDraft>['syncStatus']): string {
+  switch (status) {
+    case 'saved':
+      return 'Saved';
+    case 'saving':
+    case 'pending':
+      return 'Saving…';
+    case 'error':
+      return "Couldn't sync — your notes are safe on this device";
+    default:
+      return 'Saved';
+  }
+}
+
 function BallotFormEditor({
   debateId,
   initial,
-  judgeId: _judgeId,
+  judgeId,
 }: {
   debateId?: string | undefined;
   judgeId: string;
@@ -38,7 +52,7 @@ function BallotFormEditor({
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideCategory, setGuideCategory] = useState<string | undefined>(undefined);
 
-  const draft = useBallotDraft({ initial, debateId });
+  const draft = useBallotDraft({ initial, debateId, judgeId });
   const avatarURLs = Object.fromEntries(
     draft.students
       .filter((s): s is typeof s & { avatarUrl: string } => s.avatarUrl != null)
@@ -71,6 +85,30 @@ function BallotFormEditor({
             )}
           </div>
         )}
+        <div
+          className={cn(
+            'mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-xs',
+            draft.syncStatus === 'error'
+              ? 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100'
+              : 'text-slate-500 dark:text-slate-400',
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{syncStatusMessage(draft.syncStatus)}</span>
+          {draft.syncStatus === 'error' && draft.syncError ? (
+            <span className="opacity-80">({draft.syncError})</span>
+          ) : null}
+          {draft.syncStatus === 'error' && (
+            <button
+              type="button"
+              className="font-semibold underline cursor-pointer bg-transparent border-none p-0 text-inherit"
+              onClick={draft.retrySync}
+            >
+              Try again
+            </button>
+          )}
+        </div>
 
         {/* Decision */}
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4">
