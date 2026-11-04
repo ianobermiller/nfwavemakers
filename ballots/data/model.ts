@@ -66,3 +66,13 @@ export interface StudentEvaluations {
   student: User;
   evals: StudentEvaluation[];
 }
+
+export interface Lesson {
+  id: string;
+  year: number;
+  number: number;
+  title: string;
+  date: string;
+  body: string;
+  slug: string;
+}

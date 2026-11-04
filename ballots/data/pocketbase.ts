@@ -11,6 +11,7 @@ export const collections = {
   debates: 'ballots_debates',
   ballots: 'ballots_ballots',
   speakerEvals: 'ballots_speaker_evals',
+  lessons: 'ballots_lessons',
 } as const;
 
 function fieldErrorMessage(value: unknown): string | undefined {

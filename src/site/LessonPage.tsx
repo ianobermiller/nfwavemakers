@@ -1,24 +1,9 @@
 import { useEffect } from 'react';
+import { adjacentLessons } from '../../ballots/data/lessons.ts';
+import { useLessonBySlug, useLessons } from '../../ballots/hooks/data.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
-import { adjacentLessons, lessonBySlug } from './content/lessons.ts';
-import lesson1 from './content/lesson-2026-1.html?raw';
-import lesson2 from './content/lesson-2026-2.html?raw';
-import lesson3 from './content/lesson-2026-3.html?raw';
-import lesson4 from './content/lesson-2026-4.html?raw';
-import lesson5 from './content/lesson-2026-5.html?raw';
-import lesson6 from './content/lesson-2026-6.html?raw';
-import lesson7 from './content/lesson-2026-7.html?raw';
+import { renderLessonMarkdown } from './renderLessonMarkdown.ts';
 import { SiteLayout } from './SiteLayout.tsx';
-
-const BODIES: Record<string, string> = {
-  '2026/1': lesson1,
-  '2026/2': lesson2,
-  '2026/3': lesson3,
-  '2026/4': lesson4,
-  '2026/5': lesson5,
-  '2026/6': lesson6,
-  '2026/7': lesson7,
-};
 
 const article =
   'max-w-3xl text-base leading-relaxed text-slate-800 dark:text-slate-100 ' +
@@ -33,18 +18,28 @@ interface Props {
 }
 
 export function LessonPage({ year, number }: Props): React.JSX.Element {
-  const lesson = lessonBySlug(year, number);
-  const body = lesson ? BODIES[lesson.slug] : undefined;
+  const lesson = useLessonBySlug(year, number);
+  const lessons = useLessons();
 
   useEffect(() => {
     if (lesson) {
       document.title = `Lesson ${lesson.number}: ${lesson.title} — North Florida Wavemakers`;
-    } else {
+    } else if (lesson === null) {
       document.title = 'Lesson not found — North Florida Wavemakers';
     }
   }, [lesson]);
 
-  if (!lesson || !body) {
+  if (lesson === undefined) {
+    return (
+      <SiteLayout current="lessons">
+        <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
+          <h1 className="text-4xl font-extrabold">Loading…</h1>
+        </div>
+      </SiteLayout>
+    );
+  }
+
+  if (lesson === null) {
     return (
       <SiteLayout current="lessons">
         <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
@@ -66,7 +61,15 @@ export function LessonPage({ year, number }: Props): React.JSX.Element {
     );
   }
 
-  const { prev, next } = adjacentLessons(lesson);
+  const body = renderLessonMarkdown(lesson.body);
+  const { prev, next } = adjacentLessons(lessons ?? [], lesson);
+  const seasonLabel = `${lesson.year}–${String(lesson.year + 1).slice(2)}`;
+  const dateLabel = new Date(lesson.date + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   return (
     <SiteLayout current="lessons">
@@ -82,11 +85,11 @@ export function LessonPage({ year, number }: Props): React.JSX.Element {
           >
             Lessons
           </a>{' '}
-          · 2026–27
+          · {seasonLabel}
         </p>
         <h1 className="text-4xl font-extrabold tracking-tight">{lesson.title}</h1>
         <p className="mt-3 text-sky-100">
-          Lesson {lesson.number} · {lesson.dateLabel}
+          Lesson {lesson.number} · {dateLabel}
         </p>
       </div>
 

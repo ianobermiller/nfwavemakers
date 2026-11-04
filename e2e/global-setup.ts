@@ -50,6 +50,7 @@ export default async function globalSetup(): Promise<void> {
   });
 
   const password = process.env['TEST_ACCOUNT_PASSWORD'] ?? 'test-password';
+  const seedEnv = { ...process.env, TEST_ACCOUNT_PASSWORD: password };
   const seed = spawnSync(
     'node',
     [
@@ -60,13 +61,32 @@ export default async function globalSetup(): Promise<void> {
     {
       cwd: root,
       encoding: 'utf8',
-      env: { ...process.env, TEST_ACCOUNT_PASSWORD: password },
+      env: seedEnv,
     },
   );
   if (seed.status !== 0) {
     console.error(seed.stdout);
     console.error(seed.stderr);
     throw new Error('e2e seed failed');
+  }
+
+  const lessons = spawnSync(
+    'node',
+    [
+      '--env-file-if-exists=.env',
+      '--env-file-if-exists=.env.local',
+      'ballots/scripts/seed-lessons.mjs',
+    ],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: seedEnv,
+    },
+  );
+  if (lessons.status !== 0) {
+    console.error(lessons.stdout);
+    console.error(lessons.stderr);
+    throw new Error('e2e lesson seed failed');
   }
 
   const jsonStart = seed.stdout.lastIndexOf('{');

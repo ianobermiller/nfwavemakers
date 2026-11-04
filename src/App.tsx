@@ -11,6 +11,8 @@ import { DebateView } from '../ballots/components/DebateView.tsx';
 import { AdminDebates } from '../ballots/components/AdminDebates.tsx';
 import { AdminDebateForm } from '../ballots/components/AdminDebateForm.tsx';
 import { AdminBallots } from '../ballots/components/AdminBallots.tsx';
+import { AdminLessons } from '../ballots/components/AdminLessons.tsx';
+import { AdminLessonForm } from '../ballots/components/AdminLessonForm.tsx';
 import { AdminUsers } from '../ballots/components/AdminUsers.tsx';
 import { ProfileEdit } from '../ballots/components/ProfileEdit.tsx';
 import { isFullMember } from '../ballots/data/api.ts';
@@ -60,6 +62,12 @@ const BALLOT_ROUTES: {
     render: () => <AdminUsers />,
   },
   {
+    segment: 'admin-lessons',
+    requiredRole: 'admin',
+    render: ({ param }) =>
+      param ? <AdminLessonForm lessonId={param === 'new' ? undefined : param} /> : <AdminLessons />,
+  },
+  {
     segment: 'judge',
     render: ({ param, userId, name }) => (
       <BallotForm {...(param ? { debateId: param } : {})} judgeId={userId} judgeName={name} />
@@ -100,34 +108,43 @@ function AppShell(): React.JSX.Element {
   if (segment === 'about') return <AboutPage />;
   if (segment === 'schedule') return <SchedulePage />;
   if (segment === 'join') return <JoinPage />;
-  if (segment === 'lessons' && !param) return <LessonsIndex />;
-  if (segment === 'lessons') {
-    const [year = '', number = ''] = param.split('/');
-    return <LessonPage year={year} number={number} />;
-  }
 
+  const isLessonsRoute = segment === 'lessons';
   const isMemberEntry = segment === 'ballots' || segment === 'sign-in';
   const isBallotRoute = isMemberEntry || BALLOT_ROUTES.some((route) => route.segment === segment);
-  if (!isBallotRoute) return <HomePage />;
+  if (!isLessonsRoute && !isBallotRoute) return <HomePage />;
 
   if (isLoading) {
     return (
-      <BallotsFrame>
+      <SiteLayout current={isLessonsRoute ? 'lessons' : 'ballots'}>
         <StatusCard>Loading…</StatusCard>
-      </BallotsFrame>
+      </SiteLayout>
     );
   }
 
   if (queryError) {
     return (
-      <BallotsFrame>
+      <SiteLayout current={isLessonsRoute ? 'lessons' : 'ballots'}>
         <div className="flex items-start justify-center px-6 py-16">
           <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg dark:bg-slate-800">
             <p className="text-sm text-red-600">Auth error: {queryError}</p>
           </div>
         </div>
-      </BallotsFrame>
+      </SiteLayout>
     );
+  }
+
+  if (isLessonsRoute) {
+    if (!user) {
+      return (
+        <SiteLayout current="lessons">
+          <Auth purpose="lessons" />
+        </SiteLayout>
+      );
+    }
+    if (!param) return <LessonsIndex />;
+    const [year = '', number = ''] = param.split('/');
+    return <LessonPage year={year} number={number} />;
   }
 
   if (isMemberEntry) {

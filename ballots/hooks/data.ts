@@ -15,6 +15,7 @@ import {
   listUpcomingDebates,
   listUsers,
 } from '../data/api.ts';
+import { getLesson, getLessonBySlug, listLessons } from '../data/lessons.ts';
 import { collections, pb } from '../data/pocketbase.ts';
 
 const ballotCollections = [
@@ -134,4 +135,21 @@ export function useAdminBallotsByStudent() {
 export function useStrandedBallots() {
   const load = useCallback(async () => await listStrandedBallots(), []);
   return useLiveData(load, ballotCollections);
+}
+
+const lessonCollections = [collections.lessons];
+
+export function useLessons() {
+  const load = useCallback(async () => await listLessons(), []);
+  return useLiveData(load, lessonCollections);
+}
+
+export function useLessonBySlug(year: string, number: string) {
+  const load = useCallback(async () => await getLessonBySlug(year, number), [year, number]);
+  return useLiveData(load, lessonCollections);
+}
+
+export function useLesson(id?: string) {
+  const load = useCallback(async () => (id ? await getLesson(id) : null), [id]);
+  return useLiveData(load, lessonCollections);
 }

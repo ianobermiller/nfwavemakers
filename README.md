@@ -22,15 +22,20 @@ the PocketBase executable and restart PocketBase (or run `pocketbase migrate up`
 It:
 
 - leaves the shared `users` auth collection unchanged;
-- creates `ballots_profiles`, `ballots_debates`, `ballots_ballots`, and
-  `ballots_speaker_evals`;
+- creates `ballots_profiles`, `ballots_debates`, `ballots_ballots`,
+  `ballots_speaker_evals`, and `ballots_lessons`;
 - adds indexes, relation limits, and record-level access rules.
 
 Every app-owned collection is prefixed with `ballots_`. Debate teams and judges
 relate to `ballots_profiles`, which isolates ballot-specific names, roles,
 avatars, and archive state from other apps sharing the auth collection. Ballot
 and speaker-evaluation changes use PocketBase's batch API so autosaves remain
-transactional. The PocketBase batch API must be enabled.
+transactional. The PocketBase batch API must be enabled. Club lesson notes live
+in `ballots_lessons` (markdown bodies); only signed-in members can list or view
+them, and only admins can write. Seed or refresh from the markdown under
+`ballots/content/lessons` with `ALLOW_REMOTE_LESSON_SEED=1 npm run seed:lessons`
+against production — existing year/number pairs are left alone so later edits
+stick.
 
 Make the first administrator by setting their `ballots_profiles.role` to `admin`
 in the PocketBase dashboard. Admins can create student, parent, and admin
@@ -66,6 +71,7 @@ explicitly set.
 - `npm run check` — types, lint, and unused-code checks
 - `npm run build` — production build
 - `npm run test:e2e` — Playwright against the configured test PocketBase
+- `npm run seed:lessons` — create missing lesson records from `ballots/content/lessons`
 - `npm run pages:deploy` — deploy `_site` to Cloudflare Pages
 
 ## Deploy

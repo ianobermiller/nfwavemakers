@@ -24,10 +24,17 @@ type SignUpMethod = 'code' | 'password';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-export function Auth(): React.JSX.Element {
+interface Props {
+  purpose?: 'ballots' | 'lessons';
+}
+
+export function Auth({ purpose = 'ballots' }: Props): React.JSX.Element {
   useEffect(() => {
-    document.title = 'Ballots — North Florida Wavemakers';
-  }, []);
+    document.title =
+      purpose === 'lessons'
+        ? 'Sign in for lessons — North Florida Wavemakers'
+        : 'Ballots — North Florida Wavemakers';
+  }, [purpose]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -229,7 +236,9 @@ export function Auth(): React.JSX.Element {
             North Florida Wavemakers
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Sign in to judge rounds and review feedback.
+            {purpose === 'lessons'
+              ? 'Sign in with your club account to read lesson notes.'
+              : 'Sign in to judge rounds and review feedback.'}
           </p>
         </div>
 
