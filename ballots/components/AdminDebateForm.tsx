@@ -6,7 +6,7 @@ import { useDebate, useUsers } from '../hooks/data.ts';
 import { nextTuesdayDate } from '../lib/dates.ts';
 import { assignSpeaker, debatePartnerId, type SpeakerSlot } from '../lib/debatePartners.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
-import { DEBATE_EVENT_LABELS, type DebateEvent } from '../types.ts';
+import { DEBATE_EVENT_LABELS, studentMatchesDebateEvent, type DebateEvent } from '../types.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
@@ -81,7 +81,13 @@ function AdminDebateFormEditor({
   const isLd = form.event === 'ld';
 
   const selectedIds = [form.aff1, form.aff2, form.neg1, form.neg2, ...form.judges];
-  const students = users.filter((u) => u.role === 'student' && isPickerEligible(u, selectedIds));
+  const students = users.filter(
+    (u) =>
+      u.role === 'student' &&
+      isPickerEligible(u, selectedIds) &&
+      // Keep an already-assigned speaker visible even if their category changed.
+      (selectedIds.includes(u.id) || studentMatchesDebateEvent(u.category, form.event)),
+  );
   const judges = users.filter(
     (u) => (u.role === 'parent' || u.role === 'admin') && isPickerEligible(u, selectedIds),
   );
@@ -215,12 +221,13 @@ function AdminDebateFormEditor({
 
         {isLd ? (
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Lincoln-Douglas is one debater on each side. Partners are not filled in.
+            Lincoln-Douglas is one debater on each side. Partners are not filled in. Searches list
+            Lincoln-Douglas students only.
           </p>
         ) : (
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Choosing a student fills an open seat on that team with their debate partner. Either
-            speaker can still be changed.
+            speaker can still be changed. Searches list Team Policy students only.
           </p>
         )}
 

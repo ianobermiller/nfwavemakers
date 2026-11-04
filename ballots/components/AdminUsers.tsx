@@ -7,6 +7,7 @@ import {
   createAccounts,
   type CreateAccountResult,
   setDebatePartner,
+  setStudentCategory,
   setUserArchived,
 } from '../data/api.ts';
 import type { User } from '../data/model.ts';
@@ -15,7 +16,13 @@ import { useAppUser } from '../hooks/auth.tsx';
 import { useUsers } from '../hooks/data.ts';
 import { parseAccountCsv } from '../lib/accountCsv.ts';
 import { fuzzyRank } from '../lib/fuzzySearch.ts';
-import type { Role } from '../types.ts';
+import {
+  STUDENT_CATEGORIES,
+  STUDENT_CATEGORY_LABELS,
+  parseStudentCategory,
+  type Role,
+  type StudentCategory,
+} from '../types.ts';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
@@ -140,6 +147,8 @@ export function AdminUsers(): React.JSX.Element {
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [partnerStudentId, setPartnerStudentId] = useState<string | null>(null);
+  const [approvalUserId, setApprovalUserId] = useState<string | null>(null);
+  const [categoryUserId, setCategoryUserId] = useState<string | null>(null);
   // Active and archived load together so tab switches filter without a refetch.
   const allUsers = allUsersLive.read();
 
@@ -158,18 +167,6 @@ export function AdminUsers(): React.JSX.Element {
       await setUserArchived(userId, archived);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update user');
-    } finally {
-      setPendingId(null);
-    }
-  }
-
-  async function runApproval(userId: string): Promise<void> {
-    setPendingId(userId);
-    setError('');
-    try {
-      await approveUser(userId);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to approve user');
     } finally {
       setPendingId(null);
     }
@@ -258,13 +255,21 @@ export function AdminUsers(): React.JSX.Element {
                       {u.role}
                     </span>
                   )}
+                  {u.role === 'student' && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      {u.category ? STUDENT_CATEGORY_LABELS[u.category] : 'No category'}
+                    </span>
+                  )}
                   {!isMe && (
                     <UserRowMenu
                       archived={u.archived}
                       busy={busy}
                       name={u.name ?? u.email ?? 'user'}
                       {...(!u.approved && !u.archived
-                        ? { onApproval: () => void runApproval(u.id) }
+                        ? { onApproval: () => setApprovalUserId(u.id) }
+                        : {})}
+                      {...(u.role === 'student'
+                        ? { onSetCategory: () => setCategoryUserId(u.id) }
                         : {})}
                       {...(u.role === 'student' && u.approved
                         ? { onSetPartner: () => setPartnerStudentId(u.id) }
@@ -285,6 +290,18 @@ export function AdminUsers(): React.JSX.Element {
         students={allUsers}
         onOpenChange={(open) => {
           if (!open) setPartnerStudentId(null);
+        }}
+      />
+      <ApproveUserDialog
+        user={allUsers.find((user) => user.id === approvalUserId) ?? null}
+        onOpenChange={(open) => {
+          if (!open) setApprovalUserId(null);
+        }}
+      />
+      <SetCategoryDialog
+        user={allUsers.find((user) => user.id === categoryUserId) ?? null}
+        onOpenChange={(open) => {
+          if (!open) setCategoryUserId(null);
         }}
       />
     </PageLayout>
@@ -625,6 +642,221 @@ function CreateAccountsDialog({
   );
 }
 
+function ApproveUserDialog({
+  onOpenChange,
+  user,
+}: {
+  onOpenChange: (open: boolean) => void;
+  user: User | null;
+}): React.JSX.Element {
+  return (
+    <Dialog.Root open={user !== null} onOpenChange={onOpenChange}>
+      {user && <ApproveUserForm key={user.id} user={user} onClose={() => onOpenChange(false)} />}
+    </Dialog.Root>
+  );
+}
+
+const APPROVAL_ROLES: { value: 'student' | 'parent'; label: string }[] = [
+  { value: 'student', label: 'Student' },
+  { value: 'parent', label: 'Parent / Judge' },
+];
+
+function approvalRole(role: Role | undefined): 'student' | 'parent' {
+  return role === 'parent' ? 'parent' : 'student';
+}
+
+function ApproveUserForm({
+  onClose,
+  user,
+}: {
+  onClose: () => void;
+  user: User;
+}): React.JSX.Element {
+  const [role, setRole] = useState<'student' | 'parent'>(approvalRole(user.role));
+  const [category, setCategory] = useState<StudentCategory | ''>(user.category ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const name = user.name ?? user.email ?? 'This user';
+  const isStudent = role === 'student';
+  const canSave = !isStudent || Boolean(category);
+
+  async function save(): Promise<void> {
+    if (isStudent && !category) return;
+    setBusy(true);
+    setError('');
+    try {
+      await approveUser(user.id, {
+        role,
+        ...(isStudent && category ? { category } : {}),
+      });
+      onClose();
+    } catch (cause: unknown) {
+      setError(errorMessage(cause, 'Could not approve user'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
+      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+        <div>
+          <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
+            Approve {name}
+          </Dialog.Title>
+          <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Confirm whether they are a student or a parent. Students also need a category.
+          </Dialog.Description>
+        </div>
+        <div>
+          <label htmlFor="approve-role">Role</label>
+          <Select
+            id="approve-role"
+            value={role}
+            onChange={(e) => setRole(e.target.value === 'parent' ? 'parent' : 'student')}
+            disabled={busy}
+          >
+            {APPROVAL_ROLES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        {isStudent && (
+          <div>
+            <label htmlFor="approve-category">Category</label>
+            <Select
+              id="approve-category"
+              value={category}
+              onChange={(e) => setCategory(parseStudentCategory(e.target.value) ?? '')}
+              disabled={busy}
+              required
+            >
+              <option value="">Select category…</option>
+              {STUDENT_CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {STUDENT_CATEGORY_LABELS[value]}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Dialog.Close
+            className="px-3 py-2 text-sm font-semibold rounded-lg text-slate-600 dark:text-slate-300 enabled:hover:bg-slate-100 enabled:dark:hover:bg-slate-700"
+            type="button"
+          >
+            Cancel
+          </Dialog.Close>
+          <button
+            className="px-3 py-2 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={busy || !canSave}
+            onClick={() => void save()}
+            type="button"
+          >
+            {busy ? 'Saving…' : 'Approve'}
+          </button>
+        </div>
+      </Dialog.Content>
+    </Dialog.Portal>
+  );
+}
+
+function SetCategoryDialog({
+  onOpenChange,
+  user,
+}: {
+  onOpenChange: (open: boolean) => void;
+  user: User | null;
+}): React.JSX.Element {
+  return (
+    <Dialog.Root open={user !== null} onOpenChange={onOpenChange}>
+      {user && <SetCategoryForm key={user.id} user={user} onClose={() => onOpenChange(false)} />}
+    </Dialog.Root>
+  );
+}
+
+function SetCategoryForm({
+  onClose,
+  user,
+}: {
+  onClose: () => void;
+  user: User;
+}): React.JSX.Element {
+  const [category, setCategory] = useState<StudentCategory | ''>(user.category ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const name = user.name ?? user.email ?? 'This student';
+
+  async function save(): Promise<void> {
+    if (!category) return;
+    setBusy(true);
+    setError('');
+    try {
+      await setStudentCategory(user.id, category);
+      onClose();
+    } catch (cause: unknown) {
+      setError(errorMessage(cause, 'Could not save category'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog.Portal>
+      <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
+      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+        <div>
+          <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
+            Student category
+          </Dialog.Title>
+          <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {name} will appear in debate searches that match this category. Speech-only students
+            stay out of those searches.
+          </Dialog.Description>
+        </div>
+        <div>
+          <label htmlFor="student-category">Category</label>
+          <Select
+            id="student-category"
+            value={category}
+            onChange={(e) => setCategory(parseStudentCategory(e.target.value) ?? '')}
+            disabled={busy}
+            required
+          >
+            <option value="">Select category…</option>
+            {STUDENT_CATEGORIES.map((value) => (
+              <option key={value} value={value}>
+                {STUDENT_CATEGORY_LABELS[value]}
+              </option>
+            ))}
+          </Select>
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Dialog.Close
+            className="px-3 py-2 text-sm font-semibold rounded-lg text-slate-600 dark:text-slate-300 enabled:hover:bg-slate-100 enabled:dark:hover:bg-slate-700"
+            type="button"
+          >
+            Cancel
+          </Dialog.Close>
+          <button
+            className="px-3 py-2 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={busy || !category}
+            onClick={() => void save()}
+            type="button"
+          >
+            {busy ? 'Saving…' : 'Save category'}
+          </button>
+        </div>
+      </Dialog.Content>
+    </Dialog.Portal>
+  );
+}
+
 function SetPartnerDialog({
   onOpenChange,
   student,
@@ -744,6 +976,7 @@ function UserRowMenu({
   busy,
   name,
   onApproval,
+  onSetCategory,
   onSetPartner,
   onToggleArchived,
 }: {
@@ -751,6 +984,7 @@ function UserRowMenu({
   busy: boolean;
   name: string;
   onApproval?: () => void;
+  onSetCategory?: () => void;
   onSetPartner?: () => void;
   onToggleArchived: () => void;
 }): React.JSX.Element {
@@ -787,7 +1021,21 @@ function UserRowMenu({
               role="menuitem"
               type="button"
             >
-              {busy ? 'Saving…' : 'Approval'}
+              Approval
+            </button>
+          )}
+          {onSetCategory && (
+            <button
+              className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={busy}
+              onClick={() => {
+                setOpen(false);
+                onSetCategory();
+              }}
+              role="menuitem"
+              type="button"
+            >
+              Set category
             </button>
           )}
           {onSetPartner && (

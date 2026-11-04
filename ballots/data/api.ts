@@ -1,6 +1,6 @@
 import type { RecordModel } from 'pocketbase';
-import type { DebateEvent, Position, Role, Winner } from '../types.ts';
-import { parseDebateEvent } from '../types.ts';
+import type { DebateEvent, Position, Role, StudentCategory, Winner } from '../types.ts';
+import { parseDebateEvent, parseStudentCategory } from '../types.ts';
 import type {
   AdminDebate,
   Ballot,
@@ -22,6 +22,8 @@ interface ProfileRecord extends RecordModel {
   approved?: boolean;
   archived: boolean;
   avatar: string;
+  /** Absent on records written before the category field existed. */
+  category?: StudentCategory | '';
   email: string;
   email_verified?: boolean;
   name: string;
@@ -160,6 +162,7 @@ function mapUser(record: ProfileRecord): User {
     approved: record.approved ?? false,
     archived: record.archived,
     avatarUrl: record.avatar ? pb.files.getURL(record, record.avatar, { thumb: '100x100' }) : null,
+    category: parseStudentCategory(record.category),
     // Prefer the denormalized profile email: other members' auth emails are not readable.
     email: optionalText(record.email || record.expand?.user?.email || ''),
     emailVerified: record.email_verified ?? false,
@@ -393,12 +396,18 @@ export async function listUsers(includeArchived = false): Promise<User[]> {
   return records.map(mapUser);
 }
 
-export async function updateProfile(name: string, role: Role): Promise<User> {
+export async function updateProfile(
+  name: string,
+  role: Role,
+  category?: StudentCategory,
+): Promise<User> {
   const record = await pb.collection<ProfileRecord>(collections.profiles).update(
     currentUserId(),
     {
       name: name.trim(),
       role,
+      // Parents/admins clear category; students store Speech / TP / LD.
+      category: role === 'student' ? (category ?? '') : '',
     },
     { expand: 'user' },
   );
@@ -440,9 +449,24 @@ export async function setUserArchived(userId: string, archived: boolean): Promis
 }
 
 /** Club admin Approval — admits a pending signup into the club. */
-export async function approveUser(userId: string): Promise<void> {
+export async function approveUser(
+  userId: string,
+  options: { role: 'student' | 'parent'; category?: StudentCategory },
+): Promise<void> {
   if (userId === currentUserId()) throw new Error('You cannot approve your own account');
-  await pb.collection(collections.profiles).update(userId, { approved: true });
+  await pb.collection(collections.profiles).update(userId, {
+    approved: true,
+    role: options.role,
+    category: options.role === 'student' ? (options.category ?? '') : '',
+  });
+}
+
+/** Admin sets (or clears) a student's Speech / TP / LD category. */
+export async function setStudentCategory(
+  userId: string,
+  category: StudentCategory | '',
+): Promise<void> {
+  await pb.collection(collections.profiles).update(userId, { category });
 }
 
 async function profileExistsForEmail(email: string): Promise<boolean> {

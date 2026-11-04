@@ -165,6 +165,23 @@ async function backfillDebateEvent(pb) {
   return updated;
 }
 
+/** Students created before categories existed are Team Policy. */
+async function backfillStudentCategory(pb) {
+  const profiles = await pb
+    .collection('ballots_profiles')
+    .getFullList({ fields: 'id,role,category' });
+  let updated = 0;
+  for (const profile of profiles) {
+    if (profile.role !== 'student') continue;
+    if (profile.category === 'speech' || profile.category === 'tp' || profile.category === 'ld') {
+      continue;
+    }
+    await pb.collection('ballots_profiles').update(profile.id, { category: 'tp' });
+    updated += 1;
+  }
+  return updated;
+}
+
 export async function applyCollections({ url, email, password }) {
   const pb = new PocketBase(url);
   await pb.collection('_superusers').authWithPassword(email, password);
@@ -200,6 +217,7 @@ export async function applyCollections({ url, email, password }) {
   // Existing collections keep their field ids; merge missing fields and refresh rules.
   let approvalFieldsAdded = false;
   let debateEventAdded = false;
+  let studentCategoryAdded = false;
   for (const desired of resolved) {
     const existing = existingByName.get(desired.name);
     if (!existing) continue;
@@ -213,6 +231,9 @@ export async function applyCollections({ url, email, password }) {
     ) {
       approvalFieldsAdded = true;
     }
+    if (desired.name === 'ballots_profiles' && added.includes('category')) {
+      studentCategoryAdded = true;
+    }
     if (desired.name === 'ballots_debates' && added.includes('event')) {
       debateEventAdded = true;
     }
@@ -225,6 +246,10 @@ export async function applyCollections({ url, email, password }) {
   if (debateEventAdded) {
     const count = await backfillDebateEvent(pb);
     console.log(`Marked ${count} existing debate(s) as Team Policy.`);
+  }
+  if (studentCategoryAdded) {
+    const count = await backfillStudentCategory(pb);
+    console.log(`Marked ${count} existing student profile(s) as Team Policy.`);
   }
 
   return created;

@@ -3,6 +3,8 @@ export type Position = 'aff1' | 'aff2' | 'neg1' | 'neg2';
 export type Winner = 'aff' | 'neg';
 /** NCFCA debate event. Stored on each debate; do not infer from team size. */
 export type DebateEvent = 'tp' | 'ld';
+/** What a student competes in. Speech-only students are excluded from debate searches. */
+export type StudentCategory = 'speech' | DebateEvent;
 
 export interface SpeakerScores {
   delivery: number | undefined;
@@ -40,6 +42,29 @@ export const DEBATE_EVENT_LABELS: Record<DebateEvent, string> = {
   tp: 'Team Policy',
   ld: 'Lincoln-Douglas',
 };
+
+export const STUDENT_CATEGORY_LABELS: Record<StudentCategory, string> = {
+  speech: 'Speech-only',
+  tp: 'Team Policy',
+  ld: 'Lincoln-Douglas',
+};
+
+export const STUDENT_CATEGORIES: StudentCategory[] = ['speech', 'tp', 'ld'];
+
+export function parseStudentCategory(
+  value: string | undefined | null,
+): StudentCategory | undefined {
+  if (value === 'speech' || value === 'tp' || value === 'ld') return value;
+  return undefined;
+}
+
+/** Debate setup lists students whose category matches the round's event. */
+export function studentMatchesDebateEvent(
+  category: StudentCategory | undefined,
+  event: DebateEvent,
+): boolean {
+  return category === event;
+}
 
 /** Speaker seats on the ballot for this event. LD is one debater per side. */
 export function positionsForEvent(event: DebateEvent): Position[] {

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { cn } from 'cnfast';
-import type { Role } from '../types.ts';
+import { STUDENT_CATEGORY_LABELS, type Role, type StudentCategory } from '../types.ts';
 import { updateAvatar, updateProfile } from '../data/api.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 import { useAppUser } from '../hooks/auth.tsx';
@@ -24,15 +24,23 @@ const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = 
   { value: 'parent', label: 'Parent / Judge', description: 'I judge debate rounds' },
 ];
 
+const CATEGORY_OPTIONS: { value: StudentCategory; description: string }[] = [
+  { value: 'speech', description: 'I compete in speech events only' },
+  { value: 'tp', description: 'I debate Team Policy' },
+  { value: 'ld', description: 'I debate Lincoln-Douglas' },
+];
+
 export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Element {
+  const me = useAppUser();
+  const currentCategory = me?.category;
   const [name, setName] = useState(currentName);
   const [role, setRole] = useState<Role>(currentRole);
+  const [category, setCategory] = useState<StudentCategory | ''>(currentCategory ?? '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const me = useAppUser();
   const avatarURL = me?.avatarUrl ?? undefined;
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>): void {
@@ -58,10 +66,11 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
 
   async function save(): Promise<void> {
     if (!name.trim()) return;
+    if (role === 'student' && !category) return;
     setLoading(true);
     setError('');
     try {
-      await updateProfile(name, role);
+      await updateProfile(name, role, role === 'student' ? category || undefined : undefined);
       navigate('dashboard');
     } catch (cause: unknown) {
       setError(errorMessage(cause, 'Failed to save profile'));
@@ -69,7 +78,16 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
     }
   }
 
-  const changed = name.trim() !== currentName || role !== currentRole;
+  function chooseRole(next: Role): void {
+    setRole(next);
+    if (next !== 'student') setCategory('');
+  }
+
+  const changed =
+    name.trim() !== currentName ||
+    role !== currentRole ||
+    (role === 'student' ? category !== (currentCategory ?? '') : Boolean(currentCategory));
+  const canSave = Boolean(name.trim() && changed && (role !== 'student' || category));
 
   return (
     <PageLayout>
@@ -145,7 +163,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
               <button
                 key={r.value}
                 type="button"
-                onClick={() => setRole(r.value)}
+                onClick={() => chooseRole(r.value)}
                 aria-pressed={role === r.value}
                 className={cn(
                   'text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer',
@@ -163,12 +181,50 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
           </div>
         </div>
 
+        {role === 'student' && (
+          <div>
+            <p
+              id="category-group-label"
+              className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2"
+            >
+              I compete in…
+            </p>
+            <div
+              role="group"
+              aria-labelledby="category-group-label"
+              className="flex flex-col gap-2"
+            >
+              {CATEGORY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setCategory(option.value)}
+                  aria-pressed={category === option.value}
+                  className={cn(
+                    'text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer',
+                    category === option.value
+                      ? 'border-nf-blue dark:border-nf-blue-d bg-nf-blue-light dark:bg-slate-700'
+                      : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500',
+                  )}
+                >
+                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">
+                    {STUDENT_CATEGORY_LABELS[option.value]}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {option.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {error && <p className="text-red-600 text-sm">{error}</p>}
 
         <button
           className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           onClick={() => void save()}
-          disabled={loading || !name.trim() || !changed}
+          disabled={loading || !canSave}
         >
           {loading ? 'Saving…' : 'Save'}
         </button>

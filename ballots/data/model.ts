@@ -1,10 +1,12 @@
-import type { DebateEvent, Position, Role, Winner } from '../types.ts';
+import type { DebateEvent, Position, Role, StudentCategory, Winner } from '../types.ts';
 
 export interface User {
   id: string;
   approved: boolean;
   archived: boolean;
   avatarUrl: string | null;
+  /** Set for students: Speech-only, Team Policy, or Lincoln-Douglas. */
+  category?: StudentCategory | undefined;
   email?: string | undefined;
   emailVerified: boolean;
   name?: string | undefined;

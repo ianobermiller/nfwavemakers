@@ -190,6 +190,8 @@ function AppShell({ path }: { path: string }): React.JSX.Element {
 /** Profile setup first, then email verification + Approval, then full ballots. */
 function memberGate(user: User): React.JSX.Element | null {
   if (!user.name || !user.role) return <ProfileSetup />;
+  // Students must pick Speech / TP / LD before leaving setup.
+  if (user.role === 'student' && !user.category) return <ProfileSetup />;
   if (!isFullMember(user)) return <PendingAccess user={user} />;
   return null;
 }

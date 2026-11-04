@@ -59,6 +59,7 @@ async function upsertUser(email, name, role) {
     archived: false,
     approved: true,
     email_verified: true,
+    ...(role === 'student' ? { category: 'tp' } : {}),
   };
   return profile
     ? await pb.collection('ballots_profiles').update(profile.id, profileBody)
