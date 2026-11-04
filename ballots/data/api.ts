@@ -398,18 +398,25 @@ export async function listUsers(includeArchived = false): Promise<User[]> {
   return records.map(mapUser);
 }
 
+/** Name, and category for students. Role is only sent on first signup setup. */
 export async function updateProfile(
   name: string,
-  role: Role,
+  role?: Role,
   category?: StudentCategory,
 ): Promise<User> {
   const record = await pb.collection<ProfileRecord>(collections.profiles).update(
     currentUserId(),
     {
       name: name.trim(),
-      role,
-      // Parents/admins clear category; students store Speech / TP / LD.
-      category: role === 'student' ? (category ?? '') : '',
+      ...(role !== undefined
+        ? {
+            role,
+            // Parents/admins clear category; students store Speech / TP / LD.
+            category: role === 'student' ? (category ?? '') : '',
+          }
+        : category !== undefined
+          ? { category }
+          : {}),
     },
     { expand: 'user' },
   );
@@ -469,6 +476,16 @@ export async function setStudentCategory(
   category: StudentCategory | '',
 ): Promise<void> {
   await pb.collection(collections.profiles).update(userId, { category });
+}
+
+/** Club admins set another member's role. Self-service cannot change role after signup. */
+export async function setUserRole(userId: string, role: Role): Promise<void> {
+  if (userId === currentUserId()) throw new Error('You cannot change your own role');
+  await pb.collection(collections.profiles).update(userId, {
+    role,
+    // Leaving student drops Speech / TP / LD. Staying a student keeps the category.
+    ...(role === 'student' ? {} : { category: '' }),
+  });
 }
 
 async function profileExistsForEmail(email: string): Promise<boolean> {

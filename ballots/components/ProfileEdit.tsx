@@ -19,10 +19,11 @@ interface Props {
   currentRole: Role;
 }
 
-const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = [
-  { value: 'student', label: 'Student', description: 'I compete as a debater' },
-  { value: 'parent', label: 'Parent / Judge', description: 'I judge debate rounds' },
-];
+const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Admin',
+  student: 'Student',
+  parent: 'Parent / Judge',
+};
 
 const CATEGORY_OPTIONS: { value: StudentCategory; description: string }[] = [
   { value: 'speech', description: 'I compete in speech events only' },
@@ -34,7 +35,6 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
   const me = useAppUser();
   const currentCategory = me?.category;
   const [name, setName] = useState(currentName);
-  const [role, setRole] = useState<Role>(currentRole);
   const [category, setCategory] = useState<StudentCategory | ''>(currentCategory ?? '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -66,11 +66,15 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
 
   async function save(): Promise<void> {
     if (!name.trim()) return;
-    if (role === 'student' && !category) return;
+    if (currentRole === 'student' && !category) return;
     setLoading(true);
     setError('');
     try {
-      await updateProfile(name, role, role === 'student' ? category || undefined : undefined);
+      await updateProfile(
+        name,
+        undefined,
+        currentRole === 'student' ? category || undefined : undefined,
+      );
       navigate('dashboard');
     } catch (cause: unknown) {
       setError(errorMessage(cause, 'Failed to save profile'));
@@ -78,16 +82,10 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
     }
   }
 
-  function chooseRole(next: Role): void {
-    setRole(next);
-    if (next !== 'student') setCategory('');
-  }
-
   const changed =
     name.trim() !== currentName ||
-    role !== currentRole ||
-    (role === 'student' ? category !== (currentCategory ?? '') : Boolean(currentCategory));
-  const canSave = Boolean(name.trim() && changed && (role !== 'student' || category));
+    (currentRole === 'student' && category !== (currentCategory ?? ''));
+  const canSave = Boolean(name.trim() && changed && (currentRole !== 'student' || category));
 
   return (
     <PageLayout>
@@ -152,36 +150,16 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
         </div>
 
         <div>
-          <p
-            id="role-group-label"
-            className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2"
-          >
-            I am a…
+          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1">Role</p>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            {ROLE_LABELS[currentRole]}
           </p>
-          <div role="group" aria-labelledby="role-group-label" className="flex flex-col gap-2">
-            {SELECTABLE_ROLES.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => chooseRole(r.value)}
-                aria-pressed={role === r.value}
-                className={cn(
-                  'text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer',
-                  role === r.value
-                    ? 'border-nf-blue dark:border-nf-blue-d bg-nf-blue-light dark:bg-slate-700'
-                    : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500',
-                )}
-              >
-                <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">
-                  {r.label}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{r.description}</p>
-              </button>
-            ))}
-          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            A club admin can change your role if it is wrong.
+          </p>
         </div>
 
-        {role === 'student' && (
+        {currentRole === 'student' && (
           <div>
             <p
               id="category-group-label"

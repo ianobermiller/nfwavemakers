@@ -9,6 +9,7 @@ import {
   setDebatePartner,
   setStudentCategory,
   setUserArchived,
+  setUserRole,
 } from '../data/api.ts';
 import type { User } from '../data/model.ts';
 import { errorMessage } from '../data/pocketbase.ts';
@@ -172,6 +173,18 @@ export function AdminUsers(): React.JSX.Element {
     }
   }
 
+  async function changeRole(userId: string, role: Role): Promise<void> {
+    setPendingId(userId);
+    setError('');
+    try {
+      await setUserRole(userId, role);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update role');
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   return (
     <PageLayout>
       <BackLink to="dashboard" label="Dashboard" />
@@ -250,10 +263,62 @@ export function AdminUsers(): React.JSX.Element {
                       email unverified
                     </span>
                   )}
-                  {u.role && (
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                      {u.role}
-                    </span>
+                  {isMe ? (
+                    u.role && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        {ROLE_OPTIONS.find((option) => option.value === u.role)?.label ?? u.role}
+                      </span>
+                    )
+                  ) : (
+                    <label
+                      className={`flex min-w-0 items-center gap-2 ${
+                        !u.approved && !u.archived ? 'w-full sm:w-auto' : ''
+                      }`}
+                    >
+                      <span
+                        className={`text-xs font-semibold text-slate-500 dark:text-slate-400 ${
+                          !u.approved && !u.archived ? '' : 'sr-only'
+                        }`}
+                      >
+                        Role
+                      </span>
+                      <Select
+                        aria-label={`Role for ${u.name ?? u.email ?? 'user'}`}
+                        className={
+                          !u.approved && !u.archived
+                            ? 'h-11 min-w-[10.5rem] py-2 text-sm font-semibold'
+                            : 'h-9 w-auto min-w-[8.5rem] py-1.5 text-sm'
+                        }
+                        disabled={busy}
+                        onChange={(event) => {
+                          const next = event.target.value;
+                          if (!next) return;
+                          void changeRole(u.id, roleFromSelect(next));
+                        }}
+                        value={u.role ?? ''}
+                      >
+                        {!u.role && (
+                          <option disabled value="">
+                            Choose role
+                          </option>
+                        )}
+                        {ROLE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </label>
+                  )}
+                  {!isMe && !u.approved && !u.archived && (
+                    <button
+                      className="inline-flex h-11 items-center justify-center px-3 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 disabled:cursor-not-allowed sm:h-9"
+                      disabled={busy || !u.role}
+                      onClick={() => setApprovalUserId(u.id)}
+                      type="button"
+                    >
+                      {busy ? 'Saving…' : 'Approval'}
+                    </button>
                   )}
                   {u.role === 'student' && (
                     <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
