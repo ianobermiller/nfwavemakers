@@ -3,10 +3,11 @@ name: dispatch
 description: >-
   Fan out ready beans to parallel background subagents, each working in its
   own git workspace under the repo's workspace workflow, then collect reports
-  and surface questions and verification-ready changes. Before spawning,
-  show the numbered pick and wait for a swap-or-continue answer. Use when
-  the user says /dispatch, "dispatch agents", or asks to work multiple beans
-  at once.
+  and surface questions and verification-ready changes. Every change must
+  be proven with screenshots before the user checks it by running the app
+  locally. Before spawning, show the numbered pick and wait for a
+  swap-or-continue answer. Use when the user says /dispatch, "dispatch
+  agents", or asks to work multiple beans at once.
 disable-model-invocation: true
 ---
 
@@ -73,10 +74,20 @@ Work:
 - `npm run build` must pass before you finish.
 - If you changed anything under `ballots/`, `npm run check` in `ballots/`
   must pass too.
-- User-visible change? Serve it from this workspace on a free port
-  (`npx vite --port 0` at the root, or the same inside `ballots/` for that
-  app) and verify the affected pages in the browser. Stop the server when
-  you are done.
+- Every change requires screenshots before you finish. Serve this
+  workspace on a free port (`npx vite --port 0` at the root, or the same
+  inside `ballots/` when the change is there). Capture each affected
+  state the way a member would open it (the page itself, plus opened,
+  empty, error, and mobile when those states exist). A change with no
+  screen of its own still needs a screenshot of the changed text or the
+  check that proves it, and of any page a member would open to confirm
+  nothing visible broke.
+- Embed those screenshot files as data-URL images in one inline
+  visualization, and put its content-reference tag in the report. A
+  description, a file path, or browser-tool output is not proof. Stop
+  the server when you are done, or leave it running and include the URL.
+- The user will manually check by running the app locally after they see
+  the screenshots. Do not claim the change is verified.
 - Commit with the bean id in every commit message; include the bean file.
 - Done? Mark the bean completed with a `## Summary of Changes` section and
   commit that. Stopping with questions? Leave it in-progress.
@@ -84,8 +95,9 @@ Work:
 Final report (all the orchestrator sees — make it complete):
 STATUS: ready-for-verification | needs-answers | failed
 SUMMARY: 2-4 bullets of what changed
-VERIFY: routes/states the user should exercise, and the dev-server URL if
-        you left one running, or "nothing user-visible"
+VERIFY: the content-reference tag for the screenshot visualization, the
+        routes to exercise locally, and the dev-server URL if you left
+        one running. No screenshots means this report is incomplete.
 QUESTIONS: numbered; only when STATUS is needs-answers
 ```
 
@@ -96,7 +108,10 @@ the fix (commit the bean file, then re-dispatch) and skip that bean.
 
 As each subagent completes, post a compact per-bean update:
 
-- **ready-for-verification** → summary and what to look at.
+- **ready-for-verification** → show the screenshots in the chat, then the
+  routes to run locally. A report with no screenshots is not ready.
+  Resume that subagent and require the images before you tell the user
+  to check. The user verifies by running the app locally.
 - **needs-answers** → its questions, numbered, so the user can reply
   "bean x: 1) … 2) …". Then resume that subagent (Task `resume` with its
   agent id) carrying the answers.
@@ -119,5 +134,7 @@ the bean back to in-progress, fix, re-verify, re-commit).
 ## Guardrails
 
 - One bean per subagent; never two subagents on one bean.
+- Never present a bean as ready for the user to check without the
+  screenshots visible in the chat.
 - Don't poll background subagents — you're notified when each completes.
 - Keep main clean: merges happen only after the user verifies.
