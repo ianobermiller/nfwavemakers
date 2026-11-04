@@ -10,8 +10,8 @@ updated_at: 2026-11-04T03:47:39Z
 
 Upcoming Debates needs a three-dot menu with Edit and Delete. Manage Debates should use that same menu instead of a separate Delete button.
 
-- [ ] Add one debate actions menu with Edit and Delete
-- [ ] Use it for admins on Upcoming Debates and on Manage Debates
+- [x] Add one debate actions menu with Edit and Delete
+- [x] Use it for admins on Upcoming Debates and on Manage Debates
 - [x] Keep the undo row after delete
 - [x] Verify both lists in the browser
 
