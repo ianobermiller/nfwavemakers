@@ -3,15 +3,15 @@ import { navigate } from '@/hooks/useHashRoute.ts';
 import { DebateCard } from '../DebateCard.tsx';
 
 export function ParentDashboard({ userId }: { userId: string }): React.JSX.Element {
-  const debates = useAssignedDebates();
-  const submittedBallots = useSubmittedBallots();
-  const debatesReady = debates !== undefined;
-  const hasAssigned = debatesReady && debates.length > 0;
-  const ballotsReady = submittedBallots !== undefined;
+  const debatesLive = useAssignedDebates();
+  const submittedLive = useSubmittedBallots();
+  const debates = debatesLive.read();
+  const submittedBallots = submittedLive.read();
+  const hasAssigned = debates.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
-      {debatesReady && !hasAssigned && (
+      {!hasAssigned && (
         <button
           className="w-full py-4 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-bold text-lg rounded-xl cursor-pointer transition-colors"
           onClick={() => navigate('judge')}
@@ -47,7 +47,7 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
         </button>
       )}
 
-      {ballotsReady && submittedBallots.length > 0 && (
+      {submittedBallots.length > 0 && (
         <section>
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
             Submitted Ballots

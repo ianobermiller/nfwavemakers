@@ -13,7 +13,7 @@ interface DebateDeletePayload {
 }
 
 export function AdminDebates(): React.JSX.Element {
-  const debates = useAdminDebates();
+  const debatesLive = useAdminDebates();
 
   const { pendingDeletes, softDelete, undo } = useUndoDelete<DebateDeletePayload>(
     (payload) => softDeleteDebate(payload.id),
@@ -22,7 +22,9 @@ export function AdminDebates(): React.JSX.Element {
     },
   );
 
-  function handleDelete(d: NonNullable<typeof debates>[number]): void {
+  const debates = debatesLive.read();
+
+  function handleDelete(d: (typeof debates)[number]): void {
     void softDelete(d.id, {
       id: d.id,
       ballotIds: d.ballotIds,
@@ -31,7 +33,6 @@ export function AdminDebates(): React.JSX.Element {
   }
 
   const pendingList = [...pendingDeletes.values()];
-  const isLoading = debates === undefined;
 
   return (
     <PageLayout>
@@ -45,8 +46,7 @@ export function AdminDebates(): React.JSX.Element {
           + New
         </button>
       </div>
-      {isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
-      {!isLoading && debates.length === 0 && pendingList.length === 0 && (
+      {debates.length === 0 && pendingList.length === 0 && (
         <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
           No debates yet.
         </p>
@@ -55,21 +55,20 @@ export function AdminDebates(): React.JSX.Element {
         {pendingList.map((pd) => (
           <UndoDebateRow key={pd.id} payload={pd} onUndo={() => undo(pd.id)} />
         ))}
-        {!isLoading &&
-          debates.map((d) => (
-            <div key={d.id} className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <DebateCard debateId={d.id} debate={d} onClick={() => navigate(`admin/${d.id}`)} />
-              </div>
-              <button
-                className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
-                onClick={() => handleDelete(d)}
-                aria-label="Delete debate"
-              >
-                Delete
-              </button>
+        {debates.map((d) => (
+          <div key={d.id} className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <DebateCard debateId={d.id} debate={d} onClick={() => navigate(`admin/${d.id}`)} />
             </div>
-          ))}
+            <button
+              className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
+              onClick={() => handleDelete(d)}
+              aria-label="Delete debate"
+            >
+              Delete
+            </button>
+          </div>
+        ))}
       </div>
     </PageLayout>
   );

@@ -14,16 +14,7 @@ interface Props {
 }
 
 export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props): React.JSX.Element {
-  const { initial, isLoading } = useBallotDraftLoader(debateId);
-
-  if (isLoading || initial === undefined) {
-    return (
-      <PageLayout>
-        <BackLink to="dashboard" label="Dashboard" />
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
-      </PageLayout>
-    );
-  }
+  const { initial } = useBallotDraftLoader(debateId);
 
   return (
     <BallotFormEditor

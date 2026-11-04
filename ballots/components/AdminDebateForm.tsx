@@ -51,16 +51,10 @@ interface Props {
 }
 
 export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
-  const debate = useDebate(debateId);
-
-  if (debateId && debate === undefined) {
-    return (
-      <PageLayout>
-        <BackLink to="admin" label="Manage Debates" />
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-      </PageLayout>
-    );
-  }
+  const debateLive = useDebate(debateId);
+  const usersLive = useUsers(true);
+  const debate = debateLive.read();
+  usersLive.read();
 
   const initial = debateId && debate ? debateToForm(debate) : makeEmpty();
 
@@ -78,7 +72,7 @@ function AdminDebateFormEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const users = useUsers(true) ?? [];
+  const users = useUsers(true).read();
 
   const selectedIds = [form.aff1, form.aff2, form.neg1, form.neg2, ...form.judges];
   const students = users.filter((u) => u.role === 'student' && isPickerEligible(u, selectedIds));

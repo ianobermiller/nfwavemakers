@@ -2,11 +2,10 @@ import { useSpeakerBallots } from '../../hooks/data.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
 
 export function StudentDashboard({ userId: _userId }: { userId: string }): React.JSX.Element {
-  const ballots = useSpeakerBallots();
-  const isLoading = ballots === undefined;
+  const ballots = useSpeakerBallots().read();
 
-  const byGroup = new Map<string, NonNullable<typeof ballots>>();
-  for (const b of ballots ?? []) {
+  const byGroup = new Map<string, typeof ballots>();
+  for (const b of ballots) {
     const key = b.debate?.id ?? b.id;
     const arr = byGroup.get(key) ?? [];
     arr.push(b);
@@ -16,8 +15,7 @@ export function StudentDashboard({ userId: _userId }: { userId: string }): React
   return (
     <div>
       <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">My Feedback</h2>
-      {isLoading && <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>}
-      {!isLoading && byGroup.size === 0 && (
+      {byGroup.size === 0 && (
         <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
           No submitted ballots yet.
         </p>

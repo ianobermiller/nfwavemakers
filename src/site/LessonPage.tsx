@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { adjacentLessons } from '../../ballots/data/lessons.ts';
 import { useAppUser } from '../../ballots/hooks/auth.tsx';
 import { useLessonBySlug, useLessons } from '../../ballots/hooks/data.ts';
+import type { Lesson } from '../../ballots/data/model.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { renderLessonMarkdown } from './renderLessonMarkdown.ts';
 import { SiteLayout } from './SiteLayout.tsx';
@@ -19,53 +20,52 @@ interface Props {
 }
 
 export function LessonPage({ year, number }: Props): React.JSX.Element {
-  const lesson = useLessonBySlug(year, number);
-  const lessons = useLessons();
+  const lessonLive = useLessonBySlug(year, number);
+  const lessonsLive = useLessons();
+  const lesson = lessonLive.read();
+  const lessons = lessonsLive.read();
+  if (lesson === null) return <MissingLesson />;
+  return <LoadedLesson lesson={lesson} lessons={lessons} />;
+}
+
+function MissingLesson(): React.JSX.Element {
+  return (
+    <SiteLayout current="lessons">
+      <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
+        <h1 className="text-4xl font-extrabold">Lesson not found</h1>
+        <p className="mt-3">
+          <a
+            href="/lessons"
+            className="font-semibold text-white underline"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate('lessons');
+            }}
+          >
+            Back to all lessons
+          </a>
+        </p>
+      </div>
+    </SiteLayout>
+  );
+}
+
+function LoadedLesson({
+  lesson,
+  lessons,
+}: {
+  lesson: Lesson;
+  lessons: Lesson[];
+}): React.JSX.Element {
   const user = useAppUser();
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    if (lesson) {
-      document.title = `Lesson ${lesson.number}: ${lesson.title} — North Florida Wavemakers`;
-    } else if (lesson === null) {
-      document.title = 'Lesson not found — North Florida Wavemakers';
-    }
+    document.title = `Lesson ${lesson.number}: ${lesson.title} — North Florida Wavemakers`;
   }, [lesson]);
 
-  if (lesson === undefined) {
-    return (
-      <SiteLayout current="lessons">
-        <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-          <h1 className="text-4xl font-extrabold">Loading…</h1>
-        </div>
-      </SiteLayout>
-    );
-  }
-
-  if (lesson === null) {
-    return (
-      <SiteLayout current="lessons">
-        <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-          <h1 className="text-4xl font-extrabold">Lesson not found</h1>
-          <p className="mt-3">
-            <a
-              href="/lessons"
-              className="font-semibold text-white underline"
-              onClick={(event) => {
-                event.preventDefault();
-                navigate('lessons');
-              }}
-            >
-              Back to all lessons
-            </a>
-          </p>
-        </div>
-      </SiteLayout>
-    );
-  }
-
   const body = renderLessonMarkdown(lesson.body);
-  const { prev, next } = adjacentLessons(lessons ?? [], lesson);
+  const { prev, next } = adjacentLessons(lessons, lesson);
   const seasonLabel = `${lesson.year}–${String(lesson.year + 1).slice(2)}`;
   const dateLabel = new Date(lesson.date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',

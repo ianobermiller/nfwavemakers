@@ -15,18 +15,9 @@ interface Props {
 }
 
 export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Element {
-  const ballot = useBallot(ballotId);
+  const ballotLive = useBallot(ballotId);
   const can = usePermissions(currentUserId);
-  const isLoading = ballot === undefined;
-
-  if (isLoading) {
-    return (
-      <PageLayout>
-        <BackLink to="dashboard" label="Dashboard" />
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
-      </PageLayout>
-    );
-  }
+  const ballot = ballotLive.read();
 
   if (!ballot) {
     return (

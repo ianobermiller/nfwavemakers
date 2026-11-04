@@ -6,13 +6,14 @@ import { navigate } from '../hooks/useHashRoute.ts';
 import { SiteLayout } from './SiteLayout.tsx';
 
 export function LessonsIndex(): React.JSX.Element {
-  const lessons = useLessons();
+  const lessonsLive = useLessons();
   const user = useAppUser();
 
   useEffect(() => {
     document.title = 'Lessons — North Florida Wavemakers';
   }, []);
 
+  const lessons = lessonsLive.read();
   const isAdmin = user?.role === 'admin';
 
   async function handleDelete(id: string, title: string): Promise<void> {
@@ -45,13 +46,10 @@ export function LessonsIndex(): React.JSX.Element {
 
       <section className="px-5 py-16">
         <div className="mx-auto max-w-5xl">
-          {lessons === undefined && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Loading lessons…</p>
-          )}
-          {lessons !== undefined && lessons.length === 0 && (
+          {lessons.length === 0 && (
             <p className="text-sm text-slate-500 dark:text-slate-400">No lessons published yet.</p>
           )}
-          {lessons !== undefined && lessons.length > 0 && (
+          {lessons.length > 0 && (
             <>
               {[...new Set(lessons.map((lesson) => lesson.year))].map((year) => {
                 const forYear = lessons.filter((lesson) => lesson.year === year);

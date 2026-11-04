@@ -44,16 +44,7 @@ interface Props {
 }
 
 export function AdminLessonForm({ lessonId }: Props): React.JSX.Element {
-  const lesson = useLesson(lessonId);
-
-  if (lessonId && lesson === undefined) {
-    return (
-      <LessonFormShell>
-        <BackLink to="lessons" label="Lessons" />
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-      </LessonFormShell>
-    );
-  }
+  const lesson = useLesson(lessonId).read();
 
   if (lessonId && lesson === null) {
     return (

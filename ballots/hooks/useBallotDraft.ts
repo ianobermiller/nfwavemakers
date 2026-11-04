@@ -24,6 +24,9 @@ interface Props {
 }
 
 export function useBallotDraft({ initial, debateId }: Props) {
+  // The form loader suspends until these queries resolve, so reading here does not suspend.
+  const users = useUsers(true).read();
+  const debate = useDebate(debateId).read();
   const [winner, setWinner] = useState(initial.winner);
   const [rfd, setRfd] = useState(initial.rfd);
   const [speakers, setSpeakers] = useState(initial.speakers);
@@ -36,14 +39,10 @@ export function useBallotDraft({ initial, debateId }: Props) {
   const rankOrderRef = useRef(rankOrder);
   const debateRef = useRef<DebateTeams | null | undefined>(undefined);
 
-  const users = useUsers(true);
   const selectedStudentIds = POSITIONS.map((pos) => speakers[pos].userId).filter(Boolean);
-  const students = (users ?? []).filter(
+  const students = users.filter(
     (u) => u.role === 'student' && isPickerEligible(u, selectedStudentIds),
   );
-
-  const debate = useDebate(debateId);
-
   const speakersLocked = debate != null;
 
   const { schedule: scheduleSave, cancel: cancelSave } = useDebouncedSave(
@@ -178,14 +177,15 @@ export function useBallotDraft({ initial, debateId }: Props) {
 }
 
 export function useBallotDraftLoader(debateId?: string) {
-  const debate = useDebate(debateId);
-  const existing = useBallotDraftRecord(debateId);
+  const debateLive = useDebate(debateId);
+  const existingLive = useBallotDraftRecord(debateId);
+  const usersLive = useUsers(true);
+  const debate = debateLive.read();
+  const existing = existingLive.read();
+  // The editor also reads users. Wait here so it can mount without suspending again.
+  usersLive.read();
 
-  const isLoading = existing === undefined || (debateId !== undefined && debate === undefined);
-  const initial =
-    existing === undefined || (debateId !== undefined && debate === undefined)
-      ? undefined
-      : initBallotFormState(existing, debate);
+  const initial = initBallotFormState(existing, debate);
 
-  return { debate, existing, initial, isLoading };
+  return { debate, existing, initial };
 }

@@ -127,7 +127,7 @@ function DebateCardLoaded({
   ariaControls,
   className,
 }: DebateCardProps): React.JSX.Element {
-  const data = useDebateCard(debateId, judgeId);
+  const data = useDebateCard(debateId, judgeId).read();
   const debate = debateProp ?? data?.debate;
   const winner = winnerProp ?? data?.winner;
   const winnerBadge = judgeId != null ? winnerLabel(winner) : null;

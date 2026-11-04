@@ -19,9 +19,9 @@ export function useAvatarURLs(
     ),
   ];
 
-  const listed = useUsers(true);
+  const listed = useUsers(true).read();
   const map: Record<string, string> = {};
-  for (const user of listed ?? []) {
+  for (const user of listed) {
     if (user.avatarUrl && ids.includes(user.id)) {
       map[user.id] = user.avatarUrl;
     }

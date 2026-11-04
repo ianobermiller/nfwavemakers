@@ -5,9 +5,9 @@ import { formatTeam } from '../../utils/format.ts';
 export function UpcomingDebates(): React.JSX.Element {
   // Local calendar day so debates dated today stay visible after UTC midnight.
   const today = formatLocalYmd(new Date());
-  const upcoming = useUpcomingDebates(today);
+  const upcoming = useUpcomingDebates(today).read();
 
-  if (upcoming === undefined || upcoming.length === 0) return <></>;
+  if (upcoming.length === 0) return <></>;
 
   return (
     <section>

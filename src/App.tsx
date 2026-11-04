@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { usePathRoute, navigate } from './hooks/useHashRoute.ts';
+import { RouteReady } from './RouteReady.tsx';
+import { RouteSkeleton } from './RouteSkeleton.tsx';
 import { AuthProvider, useAppUser, useAuthState } from '../ballots/hooks/auth.tsx';
 import { Auth } from '../ballots/components/Auth.tsx';
 import { PendingAccess } from '../ballots/components/PendingAccess.tsx';
@@ -90,13 +92,21 @@ const BALLOT_ROUTES: {
 export function App(): React.JSX.Element {
   return (
     <AuthProvider>
-      <AppShell />
+      <RoutedApp />
     </AuthProvider>
   );
 }
 
-function AppShell(): React.JSX.Element {
-  const path = usePathRoute();
+function RoutedApp(): React.JSX.Element {
+  const { path, isPending } = usePathRoute();
+  return (
+    <RouteReady path={path} pending={isPending}>
+      <AppShell path={path} />
+    </RouteReady>
+  );
+}
+
+function AppShell({ path }: { path: string }): React.JSX.Element {
   const { isLoading, queryError } = useAuthState();
   const user = useAppUser();
   const [segment, ...rest] = path.split('/');
@@ -115,7 +125,7 @@ function AppShell(): React.JSX.Element {
   if (isLoading) {
     return (
       <SiteLayout current={isLessonsRoute ? 'lessons' : 'ballots'}>
-        <StatusCard>Loading…</StatusCard>
+        <RouteSkeleton path={path} />
       </SiteLayout>
     );
   }
@@ -215,7 +225,7 @@ function AuthenticatedApp({ userId, path }: { userId: string; path: string }): R
   if (!user) {
     return (
       <BallotsFrame>
-        <StatusCard>Loading profile…</StatusCard>
+        <RouteSkeleton path={path} />
       </BallotsFrame>
     );
   }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { startTransition, useState } from 'react';
 import { cn } from 'cnfast';
 import { restoreBallot, softDeleteBallot } from '../data/api.ts';
 import type { Ballot, SpeakerEval } from '../data/model.ts';
@@ -36,7 +36,9 @@ export function AdminBallots(): React.JSX.Element {
                 ? 'bg-nf-blue dark:bg-nf-blue-d text-white border-nf-blue dark:border-nf-blue-d'
                 : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent',
             )}
-            onClick={() => setView(t)}
+            onClick={() => {
+              startTransition(() => setView(t));
+            }}
           >
             {t === 'debate' ? 'By Debate' : t === 'student' ? 'By Student' : 'Stranded'}
           </button>
@@ -51,12 +53,7 @@ export function AdminBallots(): React.JSX.Element {
 function ByDebate(): React.JSX.Element {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const rows = useAdminBallotsByDebate();
-  const isLoading = rows === undefined;
-
-  if (isLoading) {
-    return <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>;
-  }
+  const rows = useAdminBallotsByDebate().read();
 
   const debates = rows;
 
@@ -127,12 +124,7 @@ function ByDebate(): React.JSX.Element {
 
 function ByStudent(): React.JSX.Element {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const rows = useAdminBallotsByStudent();
-  const isLoading = rows === undefined;
-
-  if (isLoading) {
-    return <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>;
-  }
+  const rows = useAdminBallotsByStudent().read();
 
   const students = rows;
 
@@ -264,8 +256,7 @@ interface StrandedBallotPayload {
 }
 
 function Stranded(): React.JSX.Element {
-  const strandedBallots = useStrandedBallots();
-  const isLoading = strandedBallots === undefined;
+  const strandedLive = useStrandedBallots();
 
   const { pendingDeletes, softDelete, undo } = useUndoDelete<StrandedBallotPayload>(
     (payload) => softDeleteBallot(payload.id),
@@ -274,10 +265,7 @@ function Stranded(): React.JSX.Element {
     },
   );
 
-  if (isLoading) {
-    return <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>;
-  }
-
+  const strandedBallots = strandedLive.read();
   const pendingList = [...pendingDeletes.values()];
 
   if (strandedBallots.length === 0 && pendingList.length === 0) {

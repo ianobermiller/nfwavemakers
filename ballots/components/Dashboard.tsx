@@ -1,4 +1,5 @@
 import type { Role } from '../types.ts';
+import { preloadDashboard } from '../hooks/data.ts';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { AdminDashboard } from './dashboard/AdminDashboard.tsx';
 import { ParentDashboard } from './dashboard/ParentDashboard.tsx';
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function Dashboard({ userId, role }: Props): React.JSX.Element {
+  preloadDashboard(role);
   return (
     <PageLayout>
       <div className="flex flex-col gap-6">

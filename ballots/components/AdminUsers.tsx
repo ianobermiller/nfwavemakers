@@ -132,18 +132,18 @@ function UserListToggle({
 }
 
 export function AdminUsers(): React.JSX.Element {
+  const allUsersLive = useUsers(true);
   const [view, setView] = useState<UserListView>('pending');
   const [query, setQuery] = useState('');
   const me = useAppUser();
-  // Load active and archived together so tab switches can filter without a refetch race.
-  const allUsers = useUsers(true);
-  const isLoading = allUsers === undefined;
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [partnerStudentId, setPartnerStudentId] = useState<string | null>(null);
+  // Active and archived load together so tab switches filter without a refetch.
+  const allUsers = allUsersLive.read();
 
-  const visibleUsers = (allUsers ?? []).filter((u) => {
+  const visibleUsers = allUsers.filter((u) => {
     if (view === 'archived') return u.archived;
     if (view === 'pending') return isPendingUser(u);
     return !u.archived && u.approved && u.role === view;
@@ -202,8 +202,7 @@ export function AdminUsers(): React.JSX.Element {
         </div>
       </div>
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-      {isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>}
-      {!isLoading && listedUsers.length === 0 && (
+      {listedUsers.length === 0 && (
         <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
           {searching ? `No matches for "${query.trim()}".` : EMPTY_COPY[view]}
         </p>
@@ -234,7 +233,7 @@ export function AdminUsers(): React.JSX.Element {
                   </span>
                   {u.role === 'student' && u.approved && (
                     <span className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {partnerLabel(u, allUsers ?? [])}
+                      {partnerLabel(u, allUsers)}
                     </span>
                   )}
                 </div>
@@ -282,8 +281,8 @@ export function AdminUsers(): React.JSX.Element {
 
       <CreateAccountsDialog open={createOpen} onOpenChange={setCreateOpen} />
       <SetPartnerDialog
-        student={(allUsers ?? []).find((user) => user.id === partnerStudentId) ?? null}
-        students={allUsers ?? []}
+        student={allUsers.find((user) => user.id === partnerStudentId) ?? null}
+        students={allUsers}
         onOpenChange={(open) => {
           if (!open) setPartnerStudentId(null);
         }}

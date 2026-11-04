@@ -13,17 +13,8 @@ interface Props {
 }
 
 export function DebateView({ debateId, currentUserId }: Props): React.JSX.Element {
-  const data = useDebateDetail(debateId);
-  const isLoading = data === undefined;
-
-  if (isLoading) {
-    return (
-      <PageLayout>
-        <BackLink to="dashboard" label="Dashboard" />
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
-      </PageLayout>
-    );
-  }
+  const dataLive = useDebateDetail(debateId);
+  const data = dataLive.read();
 
   const debate = data?.debate;
   if (!debate) {
