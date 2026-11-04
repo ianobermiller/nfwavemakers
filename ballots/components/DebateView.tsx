@@ -128,6 +128,11 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                               {formatSpeakerName(ev.speaker.name)}
                             </span>
                           )}
+                          {ev?.rank != null && (
+                            <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
+                              · Ranked #{ev.rank}
+                            </span>
+                          )}
                         </p>
                         <ScoringRows scores={ev ?? {}} />
                         {ev?.notes && <SpeakerNotes notes={ev.notes} />}
