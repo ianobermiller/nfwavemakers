@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { clearCurrentUser, loadCurrentUser } from '../data/api.ts';
+import { refreshSession } from '../data/auth.ts';
 import type { User } from '../data/model.ts';
-import { collections, errorMessage, pb } from '../data/pocketbase.ts';
+import { errorMessage, pb } from '../data/pocketbase.ts';
 
 interface AuthContextValue {
   isLoading: boolean;
@@ -45,17 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     const handleProfileChanged = (): void => void loadProfile();
     window.addEventListener('ballots-profile-changed', handleProfileChanged);
     if (pb.authStore.isValid) {
-      void pb
-        .collection(collections.authUsers)
-        .authRefresh()
-        .catch((error: unknown) => {
-          pb.authStore.clear();
-          setState({
-            isLoading: false,
-            queryError: errorMessage(error, 'Could not restore your session'),
-            user: undefined,
-          });
-        });
+      void refreshSession();
     }
 
     return () => {

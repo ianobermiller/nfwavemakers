@@ -1,5 +1,37 @@
 import { ClientResponseError } from 'pocketbase';
+import { shouldEndSession } from '../lib/sessionRefresh.ts';
 import { collections, pb } from './pocketbase.ts';
+
+export type SessionRefreshResult = 'refreshed' | 'skipped' | 'invalid';
+
+let refreshInFlight: Promise<SessionRefreshResult> | undefined;
+
+/**
+ * Extend the saved login. Callers share one request so a second refresh
+ * cannot delete the token the first one just stored. Only a 401 for the
+ * token this request sent signs the user out.
+ */
+export function refreshSession(): Promise<SessionRefreshResult> {
+  if (refreshInFlight) return refreshInFlight;
+  const run = refreshSessionOnce().finally(() => {
+    if (refreshInFlight === run) refreshInFlight = undefined;
+  });
+  refreshInFlight = run;
+  return run;
+}
+
+async function refreshSessionOnce(): Promise<SessionRefreshResult> {
+  const tokenAtStart = pb.authStore.token;
+  if (!tokenAtStart || !pb.authStore.isValid) return 'skipped';
+  try {
+    await pb.collection(collections.authUsers).authRefresh();
+    return 'refreshed';
+  } catch (error: unknown) {
+    if (!shouldEndSession(error, tokenAtStart, pb.authStore.token)) return 'skipped';
+    pb.authStore.clear();
+    return 'invalid';
+  }
+}
 
 export async function requestSignInCode(email: string): Promise<string> {
   const result = await pb.collection(collections.authUsers).requestOTP(email);

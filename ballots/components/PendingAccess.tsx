@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { resendVerificationEmail, signOut } from '../data/auth.ts';
+import { refreshSession, resendVerificationEmail, signOut } from '../data/auth.ts';
 import type { User } from '../data/model.ts';
-import { collections, errorMessage, pb } from '../data/pocketbase.ts';
+import { errorMessage } from '../data/pocketbase.ts';
 
 interface Props {
   user: User;
@@ -17,12 +17,9 @@ export function PendingAccess({ user }: Props): React.JSX.Element {
     if (user.emailVerified) return undefined;
 
     async function refreshVerified(): Promise<void> {
-      if (!pb.authStore.isValid) return;
-      try {
-        await pb.collection(collections.authUsers).authRefresh();
+      const result = await refreshSession();
+      if (result === 'refreshed') {
         window.dispatchEvent(new Event('ballots-profile-changed'));
-      } catch {
-        // Stay on the pending screen; the user can try again later.
       }
     }
 
