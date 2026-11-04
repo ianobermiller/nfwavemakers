@@ -17,9 +17,11 @@ interface AuthUserRecord extends RecordModel {
 }
 
 interface ProfileRecord extends RecordModel {
+  approved?: boolean;
   archived: boolean;
   avatar: string;
   email: string;
+  email_verified?: boolean;
   name: string;
   partner?: string;
   role: Role | '';
@@ -149,14 +151,21 @@ function optionalText(value: string): string | undefined {
 function mapUser(record: ProfileRecord): User {
   return {
     id: record.id,
+    approved: record.approved ?? false,
     archived: record.archived,
     avatarUrl: record.avatar ? pb.files.getURL(record, record.avatar, { thumb: '100x100' }) : null,
     // Prefer the denormalized profile email: other members' auth emails are not readable.
     email: optionalText(record.email || record.expand?.user?.email || ''),
+    emailVerified: record.email_verified ?? false,
     name: optionalText(record.name),
     partnerId: optionalText(record.partner ?? ''),
     role: record.role || undefined,
   };
+}
+
+/** Full club access requires email verification and admin Approval. */
+export function isFullMember(user: User): boolean {
+  return user.approved && user.emailVerified;
 }
 
 function randomPassword(): string {
@@ -188,19 +197,26 @@ export async function loadCurrentUser(): Promise<User | undefined> {
   const authEmail = optionalText(
     typeof pb.authStore.record?.['email'] === 'string' ? pb.authStore.record['email'] : '',
   );
+  const authVerified = pb.authStore.record?.['verified'] === true;
   let record: ProfileRecord;
   try {
     record = await pb.collection<ProfileRecord>(collections.profiles).getFirstListItem(filter, {
       expand: 'user',
     });
-    if (authEmail && !record.email) {
+    const patch: { email?: string; email_verified?: boolean } = {};
+    if (authEmail && !record.email) patch.email = authEmail;
+    // PocketBase may have verified the auth email before the profile hook ran.
+    if (authVerified && !record.email_verified) patch.email_verified = true;
+    if (Object.keys(patch).length > 0) {
       record = await pb
         .collection<ProfileRecord>(collections.profiles)
-        .update(record.id, { email: authEmail }, { expand: 'user' });
+        .update(record.id, patch, { expand: 'user' });
     }
   } catch (error: unknown) {
     if (!isNotFound(error)) throw error;
     try {
+      // Self-create must omit approved/email_verified (defaults false). Sync
+      // email_verified in a follow-up update once PocketBase has verified auth.
       record = await pb.collection<ProfileRecord>(collections.profiles).create(
         {
           user: authUserId(),
@@ -208,6 +224,11 @@ export async function loadCurrentUser(): Promise<User | undefined> {
         },
         { expand: 'user' },
       );
+      if (authVerified) {
+        record = await pb
+          .collection<ProfileRecord>(collections.profiles)
+          .update(record.id, { email_verified: true }, { expand: 'user' });
+      }
     } catch (createError: unknown) {
       if (!isConflict(createError)) throw createError;
       record = await pb.collection<ProfileRecord>(collections.profiles).getFirstListItem(filter, {
@@ -358,6 +379,12 @@ export async function setUserArchived(userId: string, archived: boolean): Promis
   await pb.collection(collections.profiles).update(userId, { archived });
 }
 
+/** Club admin Approval — admits a pending signup into the club. */
+export async function approveUser(userId: string): Promise<void> {
+  if (userId === currentUserId()) throw new Error('You cannot approve your own account');
+  await pb.collection(collections.profiles).update(userId, { approved: true });
+}
+
 async function profileExistsForEmail(email: string): Promise<boolean> {
   try {
     await pb
@@ -464,6 +491,8 @@ async function createOneAccount(input: CreateAccountInput): Promise<CreateAccoun
       email,
       role,
       archived: false,
+      approved: true,
+      email_verified: true,
     });
     return { status: 'created', email, name, role, userId: profile.id };
   } catch (error: unknown) {

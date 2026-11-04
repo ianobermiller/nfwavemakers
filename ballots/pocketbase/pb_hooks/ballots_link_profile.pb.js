@@ -70,6 +70,9 @@ routerAdd(
     profile.set('email', email);
     profile.set('role', role);
     profile.set('archived', false);
+    // Admin is admitting this person by creating the profile.
+    profile.set('approved', true);
+    profile.set('email_verified', true);
     e.app.save(profile);
 
     return e.json(200, {

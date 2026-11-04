@@ -2,9 +2,11 @@ import type { Position, Role, Winner } from '../types.ts';
 
 export interface User {
   id: string;
+  approved: boolean;
   archived: boolean;
   avatarUrl: string | null;
   email?: string | undefined;
+  emailVerified: boolean;
   name?: string | undefined;
   partnerId?: string | undefined;
   role?: Role | undefined;

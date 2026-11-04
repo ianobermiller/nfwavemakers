@@ -52,7 +52,14 @@ async function upsertUser(email, name, role) {
   } catch (error) {
     if (error?.status !== 404) throw error;
   }
-  const profileBody = { user: authUser.id, name, role, archived: false };
+  const profileBody = {
+    user: authUser.id,
+    name,
+    role,
+    archived: false,
+    approved: true,
+    email_verified: true,
+  };
   return profile
     ? await pb.collection('ballots_profiles').update(profile.id, profileBody)
     : await pb.collection('ballots_profiles').create(profileBody);

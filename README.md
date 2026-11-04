@@ -41,8 +41,10 @@ record (and no ballots profile yet), Manage Users attaches a profile through
 the admin-only `/api/ballots/link-profile` hook instead of failing. The
 PocketBase process must load `pb_hooks` (JSVM). Deploy hook changes with
 `npm run deploy:hooks`. Users can also register themselves with email/password
-or sign in with an email OTP. Password resets use PocketBase's configured
-email flow.
+or sign in with an email OTP. Self-signups stay pending until the person
+verifies their email and a club admin takes the Approval action on Manage
+Users. Accounts an admin creates are already approved. Password resets use
+PocketBase's configured email flow.
 
 ## Test data
 

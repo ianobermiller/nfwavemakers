@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import { cn } from 'cnfast';
 import {
+  approveUser,
   createAccounts,
   type CreateAccountResult,
   setDebatePartner,
@@ -27,9 +28,10 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'admin', label: 'Admin' },
 ];
 
-type UserListView = Role | 'archived';
+type UserListView = Role | 'pending' | 'archived';
 
 const USER_LIST_VIEWS: { value: UserListView; label: string }[] = [
+  { value: 'pending', label: 'Pending' },
   { value: 'student', label: 'Students' },
   { value: 'parent', label: 'Parents' },
   { value: 'admin', label: 'Admins' },
@@ -37,11 +39,16 @@ const USER_LIST_VIEWS: { value: UserListView; label: string }[] = [
 ];
 
 const EMPTY_COPY: Record<UserListView, string> = {
+  pending: 'No pending sign-ups.',
   student: 'No students yet.',
   parent: 'No parents yet.',
   admin: 'No admins yet.',
   archived: 'No archived users.',
 };
+
+function isPendingUser(user: User): boolean {
+  return !user.archived && !user.approved;
+}
 
 function roleFromSelect(value: string): Role {
   if (value === 'admin' || value === 'parent' || value === 'student') return value;
@@ -124,7 +131,7 @@ function UserListToggle({
 }
 
 export function AdminUsers(): React.JSX.Element {
-  const [view, setView] = useState<UserListView>('student');
+  const [view, setView] = useState<UserListView>('pending');
   const [query, setQuery] = useState('');
   const me = useAppUser();
   // Load active and archived together so tab switches can filter without a refetch race.
@@ -135,9 +142,11 @@ export function AdminUsers(): React.JSX.Element {
   const [createOpen, setCreateOpen] = useState(false);
   const [partnerStudentId, setPartnerStudentId] = useState<string | null>(null);
 
-  const visibleUsers = (allUsers ?? []).filter((u) =>
-    view === 'archived' ? u.archived : !u.archived && u.role === view,
-  );
+  const visibleUsers = (allUsers ?? []).filter((u) => {
+    if (view === 'archived') return u.archived;
+    if (view === 'pending') return isPendingUser(u);
+    return !u.archived && u.approved && u.role === view;
+  });
   const listedUsers = fuzzyRank(visibleUsers, query, (user) => [user.name ?? '', user.email ?? '']);
   const searching = query.trim().length > 0;
 
@@ -148,6 +157,18 @@ export function AdminUsers(): React.JSX.Element {
       await setUserArchived(userId, archived);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update user');
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function runApproval(userId: string): Promise<void> {
+    setPendingId(userId);
+    setError('');
+    try {
+      await approveUser(userId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to approve user');
     } finally {
       setPendingId(null);
     }
@@ -208,7 +229,7 @@ export function AdminUsers(): React.JSX.Element {
                 <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                   {u.email ?? 'no email'}
                 </span>
-                {u.role === 'student' && (
+                {u.role === 'student' && u.approved && (
                   <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                     {partnerLabel(u, allUsers ?? [])}
                   </span>
@@ -218,6 +239,16 @@ export function AdminUsers(): React.JSX.Element {
                 {u.archived && (
                   <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
                     archived
+                  </span>
+                )}
+                {!u.approved && !u.archived && (
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                    awaiting Approval
+                  </span>
+                )}
+                {!u.emailVerified && !u.archived && (
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                    email unverified
                   </span>
                 )}
                 {u.role && (
@@ -230,7 +261,10 @@ export function AdminUsers(): React.JSX.Element {
                     archived={u.archived}
                     busy={busy}
                     name={u.name ?? u.email ?? 'user'}
-                    {...(u.role === 'student'
+                    {...(!u.approved && !u.archived
+                      ? { onApproval: () => void runApproval(u.id) }
+                      : {})}
+                    {...(u.role === 'student' && u.approved
                       ? { onSetPartner: () => setPartnerStudentId(u.id) }
                       : {})}
                     onToggleArchived={() => void toggleArchived(u.id, !u.archived)}
@@ -703,12 +737,14 @@ function UserRowMenu({
   archived,
   busy,
   name,
+  onApproval,
   onSetPartner,
   onToggleArchived,
 }: {
   archived: boolean;
   busy: boolean;
   name: string;
+  onApproval?: () => void;
   onSetPartner?: () => void;
   onToggleArchived: () => void;
 }): React.JSX.Element {
@@ -734,6 +770,20 @@ function UserRowMenu({
           role="menu"
           sideOffset={4}
         >
+          {onApproval && (
+            <button
+              className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={busy}
+              onClick={() => {
+                setOpen(false);
+                onApproval();
+              }}
+              role="menuitem"
+              type="button"
+            >
+              {busy ? 'Saving…' : 'Approval'}
+            </button>
+          )}
           {onSetPartner && (
             <button
               className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"

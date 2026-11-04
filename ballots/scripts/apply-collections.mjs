@@ -47,6 +47,10 @@ function collectDefinitions() {
       referenced.add(name);
       return { id: placeholder(name), name, fields: withFieldApi([]) };
     },
+    // Schema replay only — record backfills run against the live API below.
+    findAllRecords() {
+      return [];
+    },
     save(collection) {
       collection.id = placeholder(collection.name);
       collection.fields = withFieldApi(collection.fields);
@@ -64,6 +68,9 @@ function collectDefinitions() {
     },
     RelationField: function RelationField(definition) {
       return { type: 'relation', maxSelect: 1, ...definition };
+    },
+    BoolField: function BoolField(definition) {
+      return { type: 'bool', ...definition };
     },
     migrate: (up) => up(app),
     console,
@@ -106,14 +113,17 @@ function generatedId(name) {
 function mergeFields(existingFields, desiredFields) {
   const byName = new Map(existingFields.map((field) => [field.name, field]));
   const merged = [...existingFields];
+  const added = [];
   for (const desired of desiredFields) {
     if (byName.has(desired.name)) continue;
     merged.push(desired);
+    added.push(desired.name);
   }
-  return merged;
+  return { fields: merged, added };
 }
 
 async function syncExistingCollection(pb, existing, desired) {
+  const { fields, added } = mergeFields(existing.fields ?? [], desired.fields ?? []);
   const next = {
     ...existing,
     listRule: desired.listRule ?? existing.listRule,
@@ -122,9 +132,22 @@ async function syncExistingCollection(pb, existing, desired) {
     updateRule: desired.updateRule ?? existing.updateRule,
     deleteRule: desired.deleteRule ?? existing.deleteRule,
     indexes: desired.indexes ?? existing.indexes,
-    fields: mergeFields(existing.fields ?? [], desired.fields ?? []),
+    fields,
   };
   await pb.collections.update(existing.id, next);
+  return added;
+}
+
+/** New bool columns default to false; mark every existing profile as already admitted. */
+async function backfillProfileApproval(pb) {
+  const profiles = await pb.collection('ballots_profiles').getFullList({ fields: 'id' });
+  for (const profile of profiles) {
+    await pb.collection('ballots_profiles').update(profile.id, {
+      approved: true,
+      email_verified: true,
+    });
+  }
+  return profiles.length;
 }
 
 export async function applyCollections({ url, email, password }) {
@@ -160,13 +183,25 @@ export async function applyCollections({ url, email, password }) {
   }
 
   // Existing collections keep their field ids; merge missing fields and refresh rules.
+  let approvalFieldsAdded = false;
   for (const desired of resolved) {
     const existing = existingByName.get(desired.name);
     if (!existing) continue;
-    await syncExistingCollection(pb, existing, desired).catch((error) => {
+    const added = await syncExistingCollection(pb, existing, desired).catch((error) => {
       const details = JSON.stringify(error.response?.data ?? error.response ?? {});
       throw new Error(`Could not update ${desired.name}: ${details}`);
     });
+    if (
+      desired.name === 'ballots_profiles' &&
+      (added.includes('approved') || added.includes('email_verified'))
+    ) {
+      approvalFieldsAdded = true;
+    }
+  }
+
+  if (approvalFieldsAdded) {
+    const count = await backfillProfileApproval(pb);
+    console.log(`Marked ${count} existing ballots profile(s) approved and email-verified.`);
   }
 
   return created;

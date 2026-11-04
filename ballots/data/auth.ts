@@ -37,11 +37,21 @@ export async function createPasswordlessAccount(email: string): Promise<string |
       password,
       passwordConfirm: password,
     });
+    // Passkey / later password sign-in still needs the verification email.
+    // OTP sign-up proves the inbox and marks verified in a PocketBase hook.
+    await pb
+      .collection(collections.authUsers)
+      .requestVerification(email)
+      .catch(() => undefined);
     return password;
   } catch (error: unknown) {
     if (isEmailTaken(error)) return undefined;
     throw error;
   }
+}
+
+export async function resendVerificationEmail(email: string): Promise<void> {
+  await pb.collection(collections.authUsers).requestVerification(email);
 }
 
 function randomPassword(): string {

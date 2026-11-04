@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { usePathRoute, navigate } from './hooks/useHashRoute.ts';
 import { AuthProvider, useAppUser, useAuthState } from '../ballots/hooks/auth.tsx';
 import { Auth } from '../ballots/components/Auth.tsx';
+import { PendingAccess } from '../ballots/components/PendingAccess.tsx';
 import { ProfileSetup } from '../ballots/components/ProfileSetup.tsx';
 import { Dashboard } from '../ballots/components/Dashboard.tsx';
 import { BallotForm } from '../ballots/components/BallotForm.tsx';
@@ -12,6 +13,8 @@ import { AdminDebateForm } from '../ballots/components/AdminDebateForm.tsx';
 import { AdminBallots } from '../ballots/components/AdminBallots.tsx';
 import { AdminUsers } from '../ballots/components/AdminUsers.tsx';
 import { ProfileEdit } from '../ballots/components/ProfileEdit.tsx';
+import { isFullMember } from '../ballots/data/api.ts';
+import type { User } from '../ballots/data/model.ts';
 import { SiteLayout } from './site/SiteLayout.tsx';
 import { HomePage } from './site/HomePage.tsx';
 import { AboutPage } from './site/AboutPage.tsx';
@@ -128,16 +131,11 @@ function AppShell(): React.JSX.Element {
   }
 
   if (isMemberEntry) {
-    if (user?.name && user.role) {
-      if (segment === 'sign-in') return <Redirect to="ballots" />;
-      return <Dashboard userId={user.id} role={user.role} name={user.name} />;
-    }
     if (user) {
-      return (
-        <BallotsFrame>
-          <ProfileSetup />
-        </BallotsFrame>
-      );
+      const gate = memberGate(user);
+      if (gate) return <BallotsFrame>{gate}</BallotsFrame>;
+      if (segment === 'sign-in') return <Redirect to="ballots" />;
+      return <Dashboard userId={user.id} role={user.role!} name={user.name!} />;
     }
     return (
       <BallotsFrame>
@@ -149,6 +147,13 @@ function AppShell(): React.JSX.Element {
   if (!user) return <Redirect to="ballots" />;
 
   return <AuthenticatedApp userId={user.id} path={path} />;
+}
+
+/** Profile setup first, then email verification + Approval, then full ballots. */
+function memberGate(user: User): React.JSX.Element | null {
+  if (!user.name || !user.role) return <ProfileSetup />;
+  if (!isFullMember(user)) return <PendingAccess user={user} />;
+  return null;
 }
 
 function BallotsFrame({ children }: { children: React.ReactNode }): React.JSX.Element {
@@ -187,16 +192,13 @@ function AuthenticatedApp({ userId, path }: { userId: string; path: string }): R
     );
   }
 
-  const name = user.name;
-  const role = user.role;
-
-  if (!name || !role) {
-    return (
-      <BallotsFrame>
-        <ProfileSetup />
-      </BallotsFrame>
-    );
+  const gate = memberGate(user);
+  if (gate) {
+    return <BallotsFrame>{gate}</BallotsFrame>;
   }
+
+  const name = user.name!;
+  const role = user.role!;
 
   const [segment, param = ''] = path.split('/');
 
