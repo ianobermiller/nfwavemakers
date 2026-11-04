@@ -692,15 +692,20 @@ export async function saveDebate(input: SaveDebateInput): Promise<string> {
   return record.id;
 }
 
-export async function softDeleteDebate(debateId: string): Promise<void> {
+export async function listActiveBallotIdsForDebate(debateId: string): Promise<string[]> {
   const ballots = await pb.collection<BallotRecord>(collections.ballots).getFullList({
     filter: activeFilter(pb.filter('debate = {:debate}', { debate: debateId })),
   });
+  return ballots.map((ballot) => ballot.id);
+}
+
+export async function softDeleteDebate(debateId: string): Promise<void> {
+  const ballotIds = await listActiveBallotIdsForDebate(debateId);
   const deletedAt = new Date().toISOString();
   const batch = pb.createBatch();
   batch.collection(collections.debates).update(debateId, { deleted_at: deletedAt });
-  for (const ballot of ballots) {
-    batch.collection(collections.ballots).update(ballot.id, { deleted_at: deletedAt });
+  for (const ballotId of ballotIds) {
+    batch.collection(collections.ballots).update(ballotId, { deleted_at: deletedAt });
   }
   await batch.send();
 }

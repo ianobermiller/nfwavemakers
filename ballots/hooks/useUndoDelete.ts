@@ -14,8 +14,21 @@ export function useUndoDelete<T>(
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   async function softDelete(id: string, payload: T): Promise<void> {
-    await onDelete(payload);
+    // Show the undo row immediately so a slow or live-updating list does not
+    // leave a gap where the item is gone and nothing explains why.
     setPendingDeletes((prev) => new Map(prev).set(id, payload));
+    try {
+      await onDelete(payload);
+    } catch (error) {
+      setPendingDeletes((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+      throw error;
+    }
+    const existing = timers.current.get(id);
+    if (existing) clearTimeout(existing);
     const timer = setTimeout(() => {
       setPendingDeletes((prev) => {
         const next = new Map(prev);
