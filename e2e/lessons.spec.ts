@@ -1,14 +1,21 @@
 import { test, expect, type Page } from '@playwright/test';
 
+async function dismissPasskeyPrompt(page: Page): Promise<void> {
+  const notNow = page.getByRole('button', { name: 'Not now' });
+  if (await notNow.isVisible().catch(() => false)) await notNow.click();
+}
+
 async function signIn(page: Page, email: string): Promise<void> {
   const password = process.env['E2E_PASSWORD'];
   if (!password) throw new Error('Missing E2E_PASSWORD — run full test suite with globalSetup');
 
   await page.goto('/ballots');
+  await page.getByRole('button', { name: 'Use a password' }).click();
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
   await page.locator('#email').waitFor({ state: 'hidden', timeout: 15_000 });
+  await dismissPasskeyPrompt(page);
 }
 
 /** Click through the route load-error screen before the caller's assertion. */
@@ -27,7 +34,8 @@ async function waitForLoaded(
 test.describe('Lessons', () => {
   test('asks visitors to sign in before showing lesson notes', async ({ page }) => {
     await page.goto('/lessons');
-    await expect(page.getByText('Sign in with your club account to read lesson notes.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sign in or create account' })).toBeVisible();
+    await expect(page.getByText('Enter your email to read lesson notes.')).toBeVisible();
     await expect(page.locator('#email')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Finding Your Voice' })).toHaveCount(0);
   });

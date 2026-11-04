@@ -14,18 +14,8 @@ export async function signInWithPassword(email: string, password: string): Promi
   await pb.collection(collections.authUsers).authWithPassword(email, password);
 }
 
-export async function createAccount(email: string, password: string): Promise<void> {
-  await pb.collection(collections.authUsers).create({
-    email,
-    password,
-    passwordConfirm: password,
-  });
-  await pb.collection(collections.authUsers).requestVerification(email);
-  await signInWithPassword(email, password);
-}
-
 /**
- * Create an account that can receive a sign-up code. Returns the generated
+ * Create an account that can receive a sign-in code. Returns the generated
  * password when the account is new, or undefined when the email is already
  * registered so the caller can send a code to the existing account.
  */
