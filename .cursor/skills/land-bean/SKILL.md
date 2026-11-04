@@ -8,7 +8,7 @@ description: >-
 
 # Land a bean
 
-From the main checkout on `main`, one command squash-merges the bean, verifies the build, commits, and removes the workspace and branch:
+From the main checkout on `main`, one command rebases the workspace onto current main, squash-merges the bean, verifies the build, commits, and removes the workspace and branch:
 
 ```bash
 npm run worktree:merge -- <bean-id>
@@ -16,13 +16,15 @@ npm run worktree:merge -- <bean-id>
 
 Do that when the user asks to merge or land a bean. Cleanup is part of the command. Do not run `worktree:done` afterward, and do not ask them to say "cleanup".
 
-Never `git merge` or `git commit` the land yourself. If they name several beans, run the command once per bean.
+Never `git merge` or `git commit` the land yourself. If they name several beans, run the command once per bean and wait for each to finish. Each run rebases that workspace onto main, so a later bean sees what already landed.
 
 ## When it stops
 
-Conflicts, or a failed `npm run build` or `npm run check`, leave the merge staged and the workspace in place.
+A rebase conflict leaves main untouched and the workspace mid-rebase. Resolve it in `.agents/worktrees/<bean-id>`, run `git rebase --continue` there, then run `npm run worktree:merge -- <bean-id>` again. Abort that rebase with `git rebase --abort` in the workspace.
 
-- Fix the staged tree, then `npm run worktree:merge -- <bean-id> --commit-only`. That commits and then removes the workspace.
+A failed `npm run build` or `npm run check`, or a squash that still conflicts, leaves the merge staged and the workspace in place.
+
+- Fix the staged tree, then `npm run worktree:merge -- <bean-id> --commit-only`. That commits and then removes the workspace. It does not rebase.
 - Abandon the staged merge with `git reset --hard HEAD` in the main checkout. The workspace stays until it is torn down.
 
 ## Abandoning without landing
