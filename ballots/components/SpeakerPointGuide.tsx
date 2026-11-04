@@ -1,7 +1,10 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from 'cnfast';
 import { SPEAKER_GUIDE_ROWS } from '../types.ts';
+
+/** Matches Tailwind's `md` breakpoint, where the guide is a side panel. */
+const DESKTOP_GUIDE_QUERY = '(min-width: 48rem)';
 
 interface Props {
   isOpen: boolean;
@@ -9,7 +12,22 @@ interface Props {
   focusCategory?: string | undefined;
 }
 
+function useDesktopGuide(): boolean {
+  const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP_GUIDE_QUERY).matches);
+
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_GUIDE_QUERY);
+    const update = () => setDesktop(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  return desktop;
+}
+
 export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): React.JSX.Element {
+  const desktop = useDesktopGuide();
   const initialOpenIndex =
     focusCategory !== undefined
       ? SPEAKER_GUIDE_ROWS.findIndex((r) => r.category === focusCategory)
@@ -25,20 +43,25 @@ export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): Re
 
   return (
     <Dialog.Root
+      modal={!desktop}
       open={isOpen}
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
     >
       <Dialog.Portal>
-        {/* Overlay: semi-transparent on mobile, hidden on desktop */}
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40 md:bg-transparent" />
+        {/* Phone sheet scrim. Desktop is non-modal, so Radix does not mount this. */}
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40" />
 
         <Dialog.Content
           className="fixed z-50 inset-x-0 bottom-0 md:inset-y-0 md:inset-x-auto md:right-0 md:w-96
                      bg-white dark:bg-slate-800 shadow-2xl flex flex-col
                      rounded-t-2xl md:rounded-none max-h-[85dvh] md:max-h-none
                      focus:outline-none"
+          onInteractOutside={(event) => {
+            // Desktop is a side panel: scrolling or using the ballot should not close it.
+            if (desktop) event.preventDefault();
+          }}
         >
           {/* Drag handle (mobile only) */}
           <div className="flex justify-center py-2.5 md:hidden shrink-0">
