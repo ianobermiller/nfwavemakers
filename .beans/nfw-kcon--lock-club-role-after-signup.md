@@ -19,4 +19,4 @@ People may choose Student or Parent / Judge when they sign up. After that, only 
 
 ## Summary of Changes
 
-Edit Profile shows the club role as read-only text and only saves the name. Signup still chooses Student or Parent / Judge. PocketBase now allows a self-service role only while the profile has none, and an admin cannot change their own role. Manage Users shows a Role select on every other account, with a labeled control and Approval button on the Pending tab. Applied the rule on pb.obermillers.com; Ian's admin role is intact.
+Edit Profile shows the club role as read-only text. Students can still change Speech / TP / LD; the role is not sent. Signup still chooses Student or Parent / Judge. PocketBase allows a self-service role only while the profile has none, and an admin cannot change their own role. A later migration keeps that lock after the category rule. Manage Users shows a Role select on every other account, with a labeled control and Approval button on the Pending tab. Approval still sets role and category together.
