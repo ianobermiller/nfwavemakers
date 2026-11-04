@@ -58,6 +58,7 @@ interface DebateRecord extends RecordModel {
   event?: DebateEvent | '';
   judges: string[];
   neg_team: string[];
+  /** Stored under resolution; the app treats it as the round's affirmative case. */
   resolution: string;
   room: string;
   expand?: {
@@ -103,8 +104,8 @@ export interface SaveDebateInput {
   event: DebateEvent;
   judges: string[];
   negTeam: string[];
-  /** Omitted to leave an existing resolution unchanged on update. */
-  resolution?: string;
+  /** Affirmative case for this round. Omitted leaves an existing value unchanged. */
+  caseTitle?: string;
   room: string;
 }
 
@@ -257,7 +258,7 @@ function mapDebate(record: DebateRecord): Debate {
     created: record.created ?? '',
     date: record.date,
     event: parseDebateEvent(record.event),
-    resolution: optionalText(record.resolution),
+    caseTitle: optionalText(record.resolution),
     room: record.room,
     affTeam: (record.expand?.aff_team ?? []).map(mapUser),
     negTeam: (record.expand?.neg_team ?? []).map(mapUser),
@@ -683,7 +684,7 @@ export async function saveDebate(input: SaveDebateInput): Promise<string> {
     judges: input.judges,
     neg_team: input.negTeam,
     room: input.room.trim(),
-    ...(input.resolution !== undefined ? { resolution: input.resolution.trim() } : {}),
+    ...(input.caseTitle !== undefined ? { resolution: input.caseTitle.trim() } : {}),
   };
   const record = input.debateId
     ? await pb.collection(collections.debates).update(input.debateId, body)

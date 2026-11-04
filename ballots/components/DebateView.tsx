@@ -64,9 +64,9 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
         <div>
           <strong>Room:</strong> {debate.room}
         </div>
-        {debate.resolution && (
+        {debate.caseTitle && (
           <div>
-            <strong>Resolution:</strong> {debate.resolution}
+            <strong>Case:</strong> {debate.caseTitle}
           </div>
         )}
       </div>

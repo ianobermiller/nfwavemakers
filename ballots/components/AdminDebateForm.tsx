@@ -18,6 +18,7 @@ interface DebateForm {
   date: string;
   event: DebateEvent;
   room: string;
+  caseTitle: string;
   aff1: string;
   aff2: string;
   neg1: string;
@@ -30,6 +31,7 @@ function makeEmpty(): DebateForm {
     date: nextTuesdayDate(),
     event: 'tp',
     room: '',
+    caseTitle: '',
     aff1: '',
     aff2: '',
     neg1: '',
@@ -43,6 +45,7 @@ function debateToForm(debate: Debate): DebateForm {
     date: debate.date,
     event: debate.event,
     room: debate.room,
+    caseTitle: debate.caseTitle ?? '',
     aff1: debate.affTeam[0]?.id ?? '',
     aff2: debate.affTeam[1]?.id ?? '',
     neg1: debate.negTeam[0]?.id ?? '',
@@ -140,6 +143,7 @@ function AdminDebateFormEditor({
         date: form.date,
         event: form.event,
         room: form.room,
+        caseTitle: form.caseTitle,
         affTeam,
         negTeam,
         judges: form.judges,
@@ -188,6 +192,17 @@ function AdminDebateFormEditor({
               placeholder="Room 101"
             />
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="debate-case">Case</label>
+          <Input
+            id="debate-case"
+            type="text"
+            value={form.caseTitle}
+            onChange={(e) => patch({ caseTitle: e.target.value })}
+            placeholder="e.g. Block arms sales to Turkey"
+          />
         </div>
 
         <fieldset className="border-none p-0 m-0">

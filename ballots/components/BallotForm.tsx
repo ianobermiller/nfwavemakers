@@ -92,10 +92,10 @@ function BallotFormEditor({
             <span>{draft.debate.date}</span>
             <span>·</span>
             <span>{draft.debate.room}</span>
-            {draft.debate.resolution && (
+            {draft.debate.caseTitle && (
               <>
                 <span>·</span>
-                <span className="truncate">{draft.debate.resolution}</span>
+                <span className="truncate">{draft.debate.caseTitle}</span>
               </>
             )}
           </div>

@@ -77,9 +77,9 @@ function DebateCardShell({
             <span className="text-xs text-slate-400 dark:text-slate-500">{winnerBadge}</span>
           )}
         </div>
-        {debate?.resolution && (
+        {debate?.caseTitle && (
           <span className="text-xs text-slate-400 dark:text-slate-500 truncate">
-            {debate.resolution}
+            {debate.caseTitle}
           </span>
         )}
         {hasTeams && (

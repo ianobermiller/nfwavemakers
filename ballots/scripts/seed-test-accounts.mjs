@@ -91,7 +91,7 @@ try {
     date: '2024-01-15',
     room: '101',
     event: 'tp',
-    resolution: 'Resolved: test data should be deterministic.',
+    resolution: 'Block arms sales to Turkey',
     aff_team: [student.id, partner.id],
     neg_team: [],
     judges: [judge.id],

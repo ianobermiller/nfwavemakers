@@ -114,10 +114,10 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
             <span>{debate.room}</span>
           </>
         )}
-        {debate?.resolution && (
+        {debate?.caseTitle && (
           <>
             <span>·</span>
-            <span className="truncate">{debate.resolution}</span>
+            <span className="truncate">{debate.caseTitle}</span>
           </>
         )}
       </div>

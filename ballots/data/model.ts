@@ -21,7 +21,8 @@ export interface Debate {
   created: string;
   date: string;
   event: DebateEvent;
-  resolution?: string | undefined;
+  /** Affirmative case for this round (stored as resolution in PocketBase). */
+  caseTitle?: string | undefined;
   room: string;
   affTeam: User[];
   negTeam: User[];
