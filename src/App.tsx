@@ -11,7 +11,6 @@ import { DebateView } from '../ballots/components/DebateView.tsx';
 import { AdminDebates } from '../ballots/components/AdminDebates.tsx';
 import { AdminDebateForm } from '../ballots/components/AdminDebateForm.tsx';
 import { AdminBallots } from '../ballots/components/AdminBallots.tsx';
-import { AdminLessons } from '../ballots/components/AdminLessons.tsx';
 import { AdminLessonForm } from '../ballots/components/AdminLessonForm.tsx';
 import { AdminUsers } from '../ballots/components/AdminUsers.tsx';
 import { ProfileEdit } from '../ballots/components/ProfileEdit.tsx';
@@ -64,8 +63,7 @@ const BALLOT_ROUTES: {
   {
     segment: 'admin-lessons',
     requiredRole: 'admin',
-    render: ({ param }) =>
-      param ? <AdminLessonForm lessonId={param === 'new' ? undefined : param} /> : <AdminLessons />,
+    render: () => <Redirect to="lessons" />,
   },
   {
     segment: 'judge',
@@ -143,6 +141,19 @@ function AppShell(): React.JSX.Element {
       );
     }
     if (!param) return <LessonsIndex />;
+
+    const isAdmin = user.role === 'admin';
+    if (param === 'new') {
+      if (!isAdmin) return <Redirect to="lessons" />;
+      return <AdminLessonForm />;
+    }
+    if (param.startsWith('edit/')) {
+      if (!isAdmin) return <Redirect to="lessons" />;
+      const lessonId = param.slice('edit/'.length);
+      if (!lessonId) return <Redirect to="lessons" />;
+      return <AdminLessonForm lessonId={lessonId} />;
+    }
+
     const [year = '', number = ''] = param.split('/');
     return <LessonPage year={year} number={number} />;
   }

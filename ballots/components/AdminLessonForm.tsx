@@ -4,7 +4,7 @@ import { saveLesson } from '../data/lessons.ts';
 import type { Lesson } from '../data/model.ts';
 import { useLesson } from '../hooks/data.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
-import { PageLayout } from '@/site/PageLayout.tsx';
+import { SiteLayout } from '@/site/SiteLayout.tsx';
 import { Input } from './ui/Input.tsx';
 import { Textarea } from './ui/Textarea.tsx';
 
@@ -47,22 +47,32 @@ export function AdminLessonForm({ lessonId }: Props): React.JSX.Element {
 
   if (lessonId && lesson === undefined) {
     return (
-      <PageLayout>
+      <LessonFormShell>
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
-      </PageLayout>
+      </LessonFormShell>
     );
   }
 
   if (lessonId && lesson === null) {
     return (
-      <PageLayout>
+      <LessonFormShell>
         <p className="text-sm text-red-600">Lesson not found.</p>
-      </PageLayout>
+      </LessonFormShell>
     );
   }
 
   const initial = lessonId && lesson ? lessonToForm(lesson) : makeEmpty();
   return <AdminLessonFormEditor key={lessonId ?? 'new'} lessonId={lessonId} initial={initial} />;
+}
+
+function LessonFormShell({ children }: { children: React.ReactNode }): React.JSX.Element {
+  return (
+    <SiteLayout current="lessons">
+      <div className="mx-auto w-full max-w-4xl flex-1 px-3 py-5 pb-12 sm:px-4 sm:py-6">
+        {children}
+      </div>
+    </SiteLayout>
+  );
 }
 
 function AdminLessonFormEditor({
@@ -107,7 +117,7 @@ function AdminLessonFormEditor({
         date: form.date,
         body: form.body,
       });
-      navigate('admin-lessons');
+      navigate('lessons');
     } catch (err: unknown) {
       setError(errorMessage(err, 'Could not save the lesson'));
       setSaving(false);
@@ -115,14 +125,14 @@ function AdminLessonFormEditor({
   }
 
   return (
-    <PageLayout>
+    <LessonFormShell>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
           {lessonId ? 'Edit lesson' : 'New lesson'}
         </h1>
         <button
           className="cursor-pointer border-none bg-transparent text-sm font-medium text-nf-blue-mid"
-          onClick={() => navigate('admin-lessons')}
+          onClick={() => navigate('lessons')}
           type="button"
         >
           Cancel
@@ -210,6 +220,6 @@ function AdminLessonFormEditor({
           {saving ? 'Saving…' : 'Save lesson'}
         </button>
       </form>
-    </PageLayout>
+    </LessonFormShell>
   );
 }

@@ -11,6 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const seedResultSchema = z.object({
   ballotId: z.string(),
   debateId: z.string(),
+  adminEmail: z.string(),
   judgeEmail: z.string(),
   studentEmail: z.string(),
 });
@@ -98,6 +99,7 @@ export default async function globalSetup(): Promise<void> {
   const seeded = parsed.data;
 
   process.env['VITE_POCKETBASE_URL'] = pocketbaseUrl;
+  process.env['E2E_ADMIN_EMAIL'] = seeded.adminEmail;
   process.env['E2E_JUDGE_EMAIL'] = seeded.judgeEmail;
   process.env['E2E_STUDENT_EMAIL'] = seeded.studentEmail;
   process.env['E2E_STUDENT_NAME'] = 'Alice Student';

@@ -26,10 +26,37 @@ test.describe('Lessons', () => {
     await signIn(page, email);
     await page.goto('/lessons');
     await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'New lesson' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /Finding Your Voice/ })).toBeVisible();
     await page.getByRole('link', { name: /Finding Your Voice/ }).click();
     await expect(page.getByRole('heading', { name: 'Finding Your Voice', exact: true })).toBeVisible();
     await expect(page.getByText(/Your voice isn’t just how you sound/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Edit lesson' })).toHaveCount(0);
+  });
+
+  test('admins manage lessons from the lessons page', async ({ page }) => {
+    const email = process.env['E2E_ADMIN_EMAIL'];
+    if (!email) throw new Error('Missing E2E_ADMIN_EMAIL');
+
+    await signIn(page, email);
+    await page.goto('/lessons');
+    await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'New lesson' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit' }).first()).toBeVisible();
+
+    await page.getByRole('link', { name: 'New lesson' }).click();
+    await expect(page.getByRole('heading', { name: 'New lesson' })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Edit' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Edit lesson' })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
+
+    await page.getByRole('link', { name: /Finding Your Voice/ }).click();
+    await expect(page.getByRole('link', { name: 'Edit lesson' })).toBeVisible();
   });
 
   test('lesson bodies are not shipped in the public client bundle', async ({ request }) => {

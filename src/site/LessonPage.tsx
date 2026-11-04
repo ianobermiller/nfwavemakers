@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { adjacentLessons } from '../../ballots/data/lessons.ts';
+import { useAppUser } from '../../ballots/hooks/auth.tsx';
 import { useLessonBySlug, useLessons } from '../../ballots/hooks/data.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { renderLessonMarkdown } from './renderLessonMarkdown.ts';
@@ -20,6 +21,8 @@ interface Props {
 export function LessonPage({ year, number }: Props): React.JSX.Element {
   const lesson = useLessonBySlug(year, number);
   const lessons = useLessons();
+  const user = useAppUser();
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (lesson) {
@@ -91,6 +94,20 @@ export function LessonPage({ year, number }: Props): React.JSX.Element {
         <p className="mt-3 text-sky-100">
           Lesson {lesson.number} · {dateLabel}
         </p>
+        {isAdmin && (
+          <p className="mt-4">
+            <a
+              href={`/lessons/edit/${lesson.id}`}
+              className="inline-flex cursor-pointer rounded-lg border border-white/40 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-white/20 hover:no-underline"
+              onClick={(event) => {
+                event.preventDefault();
+                navigate(`lessons/edit/${lesson.id}`);
+              }}
+            >
+              Edit lesson
+            </a>
+          </p>
+        )}
       </div>
 
       <section className="px-5 py-16">

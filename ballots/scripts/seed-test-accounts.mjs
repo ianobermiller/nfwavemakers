@@ -152,6 +152,7 @@ console.log(
   JSON.stringify({
     ballotId: ballot.id,
     debateId: debate.id,
+    adminEmail: 'admin@example.com',
     judgeEmail: 'judge@example.com',
     studentEmail: 'student@example.com',
   }),
