@@ -195,6 +195,13 @@ test.describe('Student ballot view', () => {
       await expect(page.getByText('Affirmative had stronger evidence.')).toBeVisible({
         timeout: 2_000,
       });
+      // Debaters need every seat on the submitted ballot, not only their own.
+      await expect(page.getByText('Student, A')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByText('Partner, D')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByText('Clear and persuasive.')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByText('Partner kept the structure tight.')).toBeVisible({
+        timeout: 2_000,
+      });
     });
     await expect(page.locator('text=No submitted ballots yet')).not.toBeVisible();
   });

@@ -66,6 +66,7 @@ async function upsertUser(email, name, role) {
 }
 
 const student = await upsertUser('student@example.com', 'Alice Student', 'student');
+const partner = await upsertUser('partner@example.com', 'Dana Partner', 'student');
 const judge = await upsertUser('judge@example.com', 'Bob Judge', 'parent');
 await upsertUser('admin@example.com', 'Carol Admin', 'admin');
 
@@ -76,7 +77,7 @@ try {
     .getFirstListItem('date = "2024-01-15" && room = "101"');
   debate = await pb.collection('ballots_debates').update(debate.id, {
     event: 'tp',
-    aff_team: [student.id],
+    aff_team: [student.id, partner.id],
     neg_team: [],
     judges: [judge.id],
     deleted_at: '',
@@ -88,7 +89,7 @@ try {
     room: '101',
     event: 'tp',
     resolution: 'Resolved: test data should be deterministic.',
-    aff_team: [student.id],
+    aff_team: [student.id, partner.id],
     neg_team: [],
     judges: [judge.id],
   });
@@ -119,17 +120,26 @@ try {
   });
 }
 
-let evaluation;
-try {
-  evaluation = await pb.collection('ballots_speaker_evals').getFirstListItem(
-    pb.filter('ballot = {:ballot} && position = "aff1"', {
-      ballot: ballot.id,
-    }),
-  );
-} catch (error) {
-  if (error?.status !== 404) throw error;
+async function upsertEval(body) {
+  let evaluation;
+  try {
+    evaluation = await pb.collection('ballots_speaker_evals').getFirstListItem(
+      pb.filter('ballot = {:ballot} && position = {:position}', {
+        ballot: body.ballot,
+        position: body.position,
+      }),
+    );
+  } catch (error) {
+    if (error?.status !== 404) throw error;
+  }
+  if (evaluation) {
+    await pb.collection('ballots_speaker_evals').update(evaluation.id, body);
+  } else {
+    await pb.collection('ballots_speaker_evals').create(body);
+  }
 }
-const evaluationBody = {
+
+await upsertEval({
   ballot: ballot.id,
   speaker: student.id,
   position: 'aff1',
@@ -141,12 +151,20 @@ const evaluationBody = {
   cross_examination: 4,
   conduct: 5,
   notes: 'Clear and persuasive.',
-};
-if (evaluation) {
-  await pb.collection('ballots_speaker_evals').update(evaluation.id, evaluationBody);
-} else {
-  await pb.collection('ballots_speaker_evals').create(evaluationBody);
-}
+});
+await upsertEval({
+  ballot: ballot.id,
+  speaker: partner.id,
+  position: 'aff2',
+  rank: 2,
+  delivery: 3,
+  organization: 3,
+  evidence_and_support: 3,
+  refutation: 3,
+  cross_examination: 3,
+  conduct: 4,
+  notes: 'Partner kept the structure tight.',
+});
 
 console.log(`Seeded student@example.com, judge@example.com, admin@example.com`);
 console.log(`Password: ${password}`);
