@@ -15,15 +15,6 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
 
   return (
     <div className="flex flex-col gap-6">
-      {!hasOpenAssigned && (
-        <button
-          className="w-full py-4 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-bold text-lg rounded-xl cursor-pointer transition-colors"
-          onClick={() => navigate('judge')}
-        >
-          Judge a Round
-        </button>
-      )}
-
       {hasOpenAssigned && (
         <section>
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
@@ -42,13 +33,10 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
         </section>
       )}
 
-      {hasOpenAssigned && (
-        <button
-          className="w-full py-2 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-sm font-semibold rounded-xl cursor-pointer transition-colors"
-          onClick={() => navigate('judge')}
-        >
-          New Round
-        </button>
+      {debates.length === 0 && (
+        <p className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
+          No debates assigned yet. A club admin sets up each round before you can judge it.
+        </p>
       )}
 
       {submittedBallots.length > 0 && (

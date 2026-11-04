@@ -33,7 +33,7 @@ export type BallotSyncStatus = 'saved' | 'saving' | 'pending' | 'error';
 interface Props {
   initial: BallotFormInit;
   judgeId: string;
-  debateId?: string | undefined;
+  debateId: string;
   storage?: DraftStorage;
 }
 
@@ -135,7 +135,7 @@ export function useBallotDraft({
     try {
       const result = await saveBallot({
         ...(idsToSave.ballotId ? { ballotId: idsToSave.ballotId } : {}),
-        ...(debateId ? { debateId } : {}),
+        debateId,
         evals: buildEvalPayload(speakersToSave, idsToSave, rankOrderToSave),
         reasonForDecision: rfdToSave,
         ...(winnerToSave ? { winner: winnerToSave } : {}),
@@ -361,7 +361,7 @@ export function useBallotDraft({
     try {
       await saveBallot({
         ...(ids.ballotId ? { ballotId: ids.ballotId } : {}),
-        ...(debateId ? { debateId } : {}),
+        debateId,
         evals: buildEvalPayload(speakers, ids, rankOrder),
         reasonForDecision: rfd,
         submittedAt: Date.now(),
@@ -405,7 +405,7 @@ export function useBallotDraft({
   };
 }
 
-export function useBallotDraftLoader(debateId?: string) {
+export function useBallotDraftLoader(debateId: string) {
   const debateLive = useDebate(debateId);
   const existingLive = useBallotDraftRecord(debateId);
   const usersLive = useUsers(true);

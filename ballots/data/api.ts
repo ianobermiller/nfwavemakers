@@ -125,7 +125,7 @@ interface SaveEvalInput {
 
 export interface SaveBallotInput {
   ballotId?: string;
-  debateId?: string;
+  debateId: string;
   evals: SaveEvalInput[];
   reasonForDecision: string;
   submittedAt?: number;
@@ -728,12 +728,11 @@ export async function getBallot(ballotId: string): Promise<Ballot | null> {
   }
 }
 
-export async function getDraftForJudge(debateId?: string): Promise<Ballot | null> {
-  const debateFilter = debateId
-    ? pb.filter('debate = {:debate}', { debate: debateId })
-    : 'debate = ""';
+export async function getDraftForJudge(debateId: string): Promise<Ballot | null> {
   const records = await pb.collection<BallotRecord>(collections.ballots).getList(1, 1, {
-    filter: activeFilter(`judge = "${currentUserId()}" && submitted_at = "" && ${debateFilter}`),
+    filter: activeFilter(
+      `judge = "${currentUserId()}" && submitted_at = "" && ${pb.filter('debate = {:debate}', { debate: debateId })}`,
+    ),
     expand: 'judge',
   });
   if (!records.items[0]) return null;
@@ -814,10 +813,13 @@ export async function listStrandedBallots(): Promise<Ballot[]> {
 }
 
 export async function saveBallot(input: SaveBallotInput): Promise<SavedBallotIds> {
+  if (!input.debateId) {
+    throw new Error('A ballot must belong to a debate an admin already created');
+  }
   const ballotId = input.ballotId ?? createRecordId();
   const evalIds: Partial<Record<Position, string>> = {};
   const ballot = {
-    debate: input.debateId ?? '',
+    debate: input.debateId,
     judge: currentUserId(),
     reason_for_decision: input.reasonForDecision.trim(),
     submitted_at: input.submittedAt ? new Date(input.submittedAt).toISOString() : '',

@@ -135,9 +135,9 @@ export function useBallot(ballotId: string) {
   return useLiveData(`ballot:${ballotId}`, load, ballotCollections);
 }
 
-export function useBallotDraft(debateId?: string) {
+export function useBallotDraft(debateId: string) {
   const load = useCallback(async () => await getDraftForJudge(debateId), [debateId]);
-  return useLiveData(`ballot-draft:${debateId ?? ''}`, load, ballotCollections);
+  return useLiveData(`ballot-draft:${debateId}`, load, ballotCollections);
 }
 
 export function useSubmittedBallots() {

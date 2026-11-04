@@ -111,15 +111,15 @@ test.describe('Auth flow', () => {
 });
 
 test.describe('Student picker', () => {
-  test('judge can search for and find a student', async ({ page }) => {
-    const judgeEmail = process.env['E2E_JUDGE_EMAIL'];
+  test('admin can search for and find a student on the debate form', async ({ page }) => {
+    const adminEmail = process.env['E2E_ADMIN_EMAIL'];
     const studentName = process.env['E2E_STUDENT_NAME'];
-    if (!judgeEmail || !studentName)
+    if (!adminEmail || !studentName)
       throw new Error('Missing e2e env vars — run full test suite with globalSetup');
 
-    await signIn(page, judgeEmail);
+    await signIn(page, adminEmail);
 
-    await page.goto(`/judge`);
+    await page.goto(`/admin/new`);
     await page.waitForSelector('input[placeholder="Search students…"]', { timeout: 10_000 });
 
     const picker = page.locator('input[placeholder="Search students…"]').first();
@@ -209,7 +209,8 @@ test.describe('Student ballot view', () => {
 
 test.describe('Routing', () => {
   test('hash routing renders app without crash', async ({ page }) => {
-    const routes = ['', 'dashboard', 'judge', 'admin'];
+    const debateId = process.env['E2E_DEBATE_ID'];
+    const routes = ['', 'dashboard', 'admin', ...(debateId ? [`judge/${debateId}`] : [])];
     for (const route of routes) {
       await page.goto(`/${route}`);
       await expect(page.locator('body')).toBeVisible();

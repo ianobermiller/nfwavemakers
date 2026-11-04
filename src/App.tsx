@@ -69,8 +69,9 @@ const BALLOT_ROUTES: {
   },
   {
     segment: 'judge',
+    requiresParam: true,
     render: ({ param, userId, name }) => (
-      <BallotForm {...(param ? { debateId: param } : {})} judgeId={userId} judgeName={name} />
+      <BallotForm debateId={param} judgeId={userId} judgeName={name} />
     ),
   },
   {

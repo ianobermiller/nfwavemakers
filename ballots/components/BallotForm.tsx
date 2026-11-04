@@ -15,7 +15,7 @@ import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
 
 interface Props {
-  debateId?: string | undefined;
+  debateId: string;
   judgeId: string;
   judgeName: string;
 }
@@ -25,7 +25,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
 
   return (
     <BallotFormEditor
-      key={`${debateId ?? 'new'}-${initial.ids.ballotId ?? 'draft'}`}
+      key={`${debateId}-${initial.ids.ballotId ?? 'draft'}`}
       debateId={debateId}
       judgeId={judgeId}
       initial={initial}
@@ -52,7 +52,7 @@ function BallotFormEditor({
   initial,
   judgeId,
 }: {
-  debateId?: string | undefined;
+  debateId: string;
   judgeId: string;
   initial: NonNullable<ReturnType<typeof useBallotDraftLoader>['initial']>;
 }): React.JSX.Element {
