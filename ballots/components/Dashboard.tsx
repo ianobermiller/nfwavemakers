@@ -8,13 +8,11 @@ import { UpcomingDebates } from './dashboard/UpcomingDebates.tsx';
 interface Props {
   userId: string;
   role: Role;
-  name: string;
 }
 
-export function Dashboard({ userId, role, name }: Props): React.JSX.Element {
+export function Dashboard({ userId, role }: Props): React.JSX.Element {
   return (
     <PageLayout>
-      <h1 className="text-2xl font-bold mb-6">Hello, {name}!</h1>
       <div className="flex flex-col gap-6">
         {role !== 'parent' && <UpcomingDebates />}
         {role === 'parent' && <ParentDashboard userId={userId} />}

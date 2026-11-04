@@ -2,6 +2,7 @@ import { cn } from 'cnfast';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { useDebateDetail } from '../hooks/data.ts';
 import { formatSpeakerName } from '../utils/format.ts';
+import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
@@ -18,6 +19,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   if (isLoading) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
       </PageLayout>
     );
@@ -27,6 +29,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   if (!debate) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Debate not found.</p>
       </PageLayout>
     );
@@ -38,6 +41,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   if (!isMember) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">
           You don't have access to this debate.
         </p>
@@ -49,6 +53,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
 
   return (
     <PageLayout>
+      <BackLink to="dashboard" label="Dashboard" />
       <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
         {debate.date ? `Debate — ${debate.date}, Room ${debate.room}` : 'Debate'}
       </h1>

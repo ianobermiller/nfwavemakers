@@ -4,6 +4,7 @@ import { cn } from 'cnfast';
 import { POSITIONS, POSITION_LABELS } from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
+import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
@@ -21,6 +22,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   if (isLoading) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
       </PageLayout>
     );
@@ -29,6 +31,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   if (!ballot) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Ballot not found.</p>
       </PageLayout>
     );
@@ -36,6 +39,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   if (!ballot.submittedAt) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Ballot not yet submitted.</p>
       </PageLayout>
     );
@@ -65,6 +69,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   ) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">
           You don't have access to this ballot.
         </p>
@@ -78,6 +83,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
   return (
     <PageLayout>
+      <BackLink to="dashboard" label="Dashboard" />
       <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
         {debate?.date
           ? `Ballot — ${debate.date}${debate.room ? `, ${debate.room}` : ''}`

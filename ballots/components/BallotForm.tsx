@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { cn } from 'cnfast';
-import { navigate } from '@/hooks/useHashRoute.ts';
 import { useBallotDraft, useBallotDraftLoader } from '../hooks/useBallotDraft.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
+import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
@@ -19,6 +19,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   if (isLoading || initial === undefined) {
     return (
       <PageLayout>
+        <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Loading…</p>
       </PageLayout>
     );
@@ -56,16 +57,11 @@ function BallotFormEditor({
   return (
     <>
       <PageLayout>
-        <div className="flex items-center justify-between mb-3">
-          <button
-            className="text-sm text-nf-blue dark:text-nf-blue-d font-medium cursor-pointer bg-transparent border-none p-0 hover:underline"
-            onClick={() => navigate('dashboard')}
-          >
-            ← Dashboard
-          </button>
+        <div className="mb-0 flex items-center justify-between gap-3">
+          <BackLink to="dashboard" label="Dashboard" />
           <button
             type="button"
-            className="text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1 cursor-pointer bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            className="mb-3 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1 cursor-pointer bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             onClick={() => setGuideOpen((o) => !o)}
           >
             Speaker Guide

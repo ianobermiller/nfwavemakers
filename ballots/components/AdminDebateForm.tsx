@@ -6,6 +6,7 @@ import { nextTuesdayDate } from '../lib/dates.ts';
 import { assignSpeaker, debatePartnerId, type SpeakerSlot } from '../lib/debatePartners.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
+import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { Input } from './ui/Input.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
@@ -55,6 +56,7 @@ export function AdminDebateForm({ debateId }: Props): React.JSX.Element {
   if (debateId && debate === undefined) {
     return (
       <PageLayout>
+        <BackLink to="admin" label="Manage Debates" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
       </PageLayout>
     );
@@ -133,6 +135,7 @@ function AdminDebateFormEditor({
 
   return (
     <PageLayout>
+      <BackLink to="admin" label="Manage Debates" />
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>

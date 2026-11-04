@@ -2,6 +2,7 @@ import { restoreDebate, softDeleteDebate } from '../data/api.ts';
 import { useAdminDebates } from '../hooks/data.ts';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
+import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { DebateCard } from './DebateCard.tsx';
 
@@ -34,6 +35,7 @@ export function AdminDebates(): React.JSX.Element {
 
   return (
     <PageLayout>
+      <BackLink to="dashboard" label="Dashboard" />
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Debates</h1>
         <button

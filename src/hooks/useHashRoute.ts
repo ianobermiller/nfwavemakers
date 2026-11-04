@@ -22,6 +22,7 @@ export function usePathRoute(): string {
 
 export function navigate(path: string): void {
   const next = path.replace(/^\/+|\/+$/g, '');
-  history.pushState(null, '', next ? `/${next}` : '/');
+  // Mark in-app navigations so BackLink can history.back() instead of leaving the site.
+  history.pushState({ appNav: true }, '', next ? `/${next}` : '/');
   window.dispatchEvent(new PopStateEvent('popstate'));
 }

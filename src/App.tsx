@@ -83,7 +83,7 @@ const BALLOT_ROUTES: {
   },
   {
     segment: 'dashboard',
-    render: ({ userId, role, name }) => <Dashboard userId={userId} role={role} name={name} />,
+    render: ({ userId, role }) => <Dashboard userId={userId} role={role} />,
   },
 ];
 
@@ -163,7 +163,7 @@ function AppShell(): React.JSX.Element {
       const gate = memberGate(user);
       if (gate) return <BallotsFrame>{gate}</BallotsFrame>;
       if (segment === 'sign-in') return <Redirect to="ballots" />;
-      return <Dashboard userId={user.id} role={user.role!} name={user.name!} />;
+      return <Dashboard userId={user.id} role={user.role!} />;
     }
     return (
       <BallotsFrame>
@@ -237,5 +237,5 @@ function AuthenticatedApp({ userId, path }: { userId: string; path: string }): R
     return route.render({ param, userId, role, name });
   }
 
-  return <Dashboard userId={userId} role={role} name={name} />;
+  return <Dashboard userId={userId} role={role} />;
 }

@@ -5,6 +5,7 @@ import { updateAvatar, updateProfile } from '../data/api.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 import { useAppUser } from '../hooks/auth.tsx';
 import { navigate } from '@/hooks/useHashRoute.ts';
+import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
 import { AvatarCropDialog } from './AvatarCropDialog.tsx';
@@ -72,6 +73,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
 
   return (
     <PageLayout>
+      <BackLink to="dashboard" label="Dashboard" />
       <div className="max-w-sm mx-auto flex flex-col gap-4">
         <div className="flex flex-col items-center gap-2">
           <div className="relative">

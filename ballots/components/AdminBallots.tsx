@@ -8,6 +8,7 @@ import {
   useStrandedBallots,
 } from '../hooks/data.ts';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
+import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { POSITIONS, POSITION_LABELS, type Position } from '../types.ts';
@@ -23,6 +24,8 @@ export function AdminBallots(): React.JSX.Element {
 
   return (
     <PageLayout>
+      <BackLink to="dashboard" label="Dashboard" />
+      <h1 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">All Ballots</h1>
       <div className="flex gap-2 mb-5">
         {(['debate', 'student', 'stranded'] as const).map((t) => (
           <button

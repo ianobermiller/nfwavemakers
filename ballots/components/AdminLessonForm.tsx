@@ -5,6 +5,7 @@ import type { Lesson } from '../data/model.ts';
 import { useLesson } from '../hooks/data.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
 import { SiteLayout } from '@/site/SiteLayout.tsx';
+import { BackLink } from './BackLink.tsx';
 import { Input } from './ui/Input.tsx';
 import { Textarea } from './ui/Textarea.tsx';
 
@@ -48,6 +49,7 @@ export function AdminLessonForm({ lessonId }: Props): React.JSX.Element {
   if (lessonId && lesson === undefined) {
     return (
       <LessonFormShell>
+        <BackLink to="lessons" label="Lessons" />
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
       </LessonFormShell>
     );
@@ -56,6 +58,7 @@ export function AdminLessonForm({ lessonId }: Props): React.JSX.Element {
   if (lessonId && lesson === null) {
     return (
       <LessonFormShell>
+        <BackLink to="lessons" label="Lessons" />
         <p className="text-sm text-red-600">Lesson not found.</p>
       </LessonFormShell>
     );
@@ -126,17 +129,11 @@ function AdminLessonFormEditor({
 
   return (
     <LessonFormShell>
+      <BackLink to="lessons" label="Lessons" />
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
           {lessonId ? 'Edit lesson' : 'New lesson'}
         </h1>
-        <button
-          className="cursor-pointer border-none bg-transparent text-sm font-medium text-nf-blue-mid"
-          onClick={() => navigate('lessons')}
-          type="button"
-        >
-          Cancel
-        </button>
       </div>
 
       <form
