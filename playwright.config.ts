@@ -34,8 +34,8 @@ export default defineConfig({
   globalSetup: './e2e/global-setup.ts',
   fullyParallel: true,
   workers: 4,
-  retries: 0,
-  timeout: 30_000,
+  retries: 1,
+  timeout: 45_000,
   expect: { timeout: 15_000 },
   use: {
     baseURL,

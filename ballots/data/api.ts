@@ -46,7 +46,8 @@ export type CreateAccountResult =
 
 interface DebateRecord extends RecordModel {
   aff_team: string[];
-  created: string;
+  /** Absent until autodate fields are added to ballots_debates. */
+  created?: string;
   date: string;
   deleted_at: string;
   judges: string[];
@@ -244,7 +245,7 @@ export async function loadCurrentUser(): Promise<User | undefined> {
 function mapDebate(record: DebateRecord): Debate {
   return {
     id: record.id,
-    created: record.created,
+    created: record.created ?? '',
     date: record.date,
     resolution: optionalText(record.resolution),
     room: record.room,
@@ -577,7 +578,8 @@ export async function listUpcomingDebates(today: string): Promise<Debate[]> {
   const records = await pb.collection<DebateRecord>(collections.debates).getFullList({
     filter: activeFilter(pb.filter('date >= {:today}', { today })),
     expand: debateExpand,
-    sort: 'date,created',
+    // Debates have no autodate `created` field; sort only on columns that exist.
+    sort: 'date,id',
   });
   return records.map(mapDebate);
 }
@@ -597,7 +599,7 @@ export async function listAdminDebates(): Promise<AdminDebate[]> {
     pb.collection<DebateRecord>(collections.debates).getFullList({
       filter: activeFilter(),
       expand: debateExpand,
-      sort: '-created',
+      sort: '-date,-id',
     }),
     pb.collection<BallotRecord>(collections.ballots).getFullList({
       filter: activeFilter(),

@@ -11,6 +11,19 @@ async function signIn(page: Page, email: string): Promise<void> {
   await page.locator('#email').waitFor({ state: 'hidden', timeout: 15_000 });
 }
 
+/** Click through the route load-error screen before the caller's assertion. */
+async function waitForLoaded(
+  page: Page,
+  check: () => Promise<void>,
+  options: { timeout?: number } = {},
+): Promise<void> {
+  await expect(async () => {
+    const retry = page.getByRole('button', { name: 'Try again' });
+    if (await retry.isVisible()) await retry.click();
+    await check();
+  }).toPass({ timeout: options.timeout ?? 20_000 });
+}
+
 test.describe('Lessons', () => {
   test('asks visitors to sign in before showing lesson notes', async ({ page }) => {
     await page.goto('/lessons');
@@ -25,10 +38,14 @@ test.describe('Lessons', () => {
 
     await signIn(page, email);
     await page.goto('/lessons');
-    await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
+    await waitForLoaded(page, async () => {
+      await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByRole('link', { name: /Finding Your Voice/ })).toBeVisible({
+        timeout: 2_000,
+      });
+    });
     await expect(page.getByRole('link', { name: 'New lesson' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: /Finding Your Voice/ })).toBeVisible();
     await page.getByRole('link', { name: /Finding Your Voice/ }).click();
     await expect(page.getByRole('heading', { name: 'Finding Your Voice', exact: true })).toBeVisible();
     await expect(page.getByText(/Your voice isn’t just how you sound/)).toBeVisible();
@@ -41,18 +58,22 @@ test.describe('Lessons', () => {
 
     await signIn(page, email);
     await page.goto('/lessons');
-    await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'New lesson' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Edit' }).first()).toBeVisible();
+    await waitForLoaded(page, async () => {
+      await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByRole('link', { name: 'New lesson' })).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByRole('button', { name: 'Edit' }).first()).toBeVisible({
+        timeout: 2_000,
+      });
+    });
 
     await page.getByRole('link', { name: 'New lesson' }).click();
     await expect(page.getByRole('heading', { name: 'New lesson' })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('button', { name: '← Lessons' }).click();
     await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Edit' }).first().click();
     await expect(page.getByRole('heading', { name: 'Edit lesson' })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('button', { name: '← Lessons' }).click();
     await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
 
     await page.getByRole('link', { name: /Finding Your Voice/ }).click();

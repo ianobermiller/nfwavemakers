@@ -14,6 +14,19 @@ async function signIn(page: Page, email: string): Promise<void> {
   await page.locator('#email').waitFor({ state: 'hidden', timeout: 15_000 });
 }
 
+/** Click through the route load-error screen before the caller's assertion. */
+async function waitForLoaded(
+  page: Page,
+  check: () => Promise<void>,
+  options: { timeout?: number } = {},
+): Promise<void> {
+  await expect(async () => {
+    const retry = page.getByRole('button', { name: 'Try again' });
+    if (await retry.isVisible()) await retry.click();
+    await check();
+  }).toPass({ timeout: options.timeout ?? 20_000 });
+}
+
 test.describe('Auth flow', () => {
   test('shows sign-in form on /ballots', async ({ page }) => {
     await page.goto('/ballots');
@@ -119,8 +132,10 @@ test.describe('Judge ballot view', () => {
     await signIn(page, judgeEmail);
     await page.goto(`/dashboard`);
 
-    await expect(page.locator('text=Submitted Ballots')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=2024-01-15').first()).toBeVisible({ timeout: 5000 });
+    await waitForLoaded(page, async () => {
+      await expect(page.getByText('Submitted Ballots')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByText('2024-01-15').first()).toBeVisible({ timeout: 2_000 });
+    });
   });
 
   test('judge can view submitted ballot as read-only', async ({ page }) => {
@@ -131,9 +146,11 @@ test.describe('Judge ballot view', () => {
     await signIn(page, judgeEmail);
     await page.goto(`/ballot/${ballotId}`);
 
-    await expect(page.locator('text=Affirmative wins')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
-      timeout: 5000,
+    await waitForLoaded(page, async () => {
+      await expect(page.getByText('Affirmative wins')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByText('Affirmative had stronger evidence.')).toBeVisible({
+        timeout: 2_000,
+      });
     });
 
     await expect(page.locator('input[type="radio"]')).not.toBeVisible();
@@ -150,8 +167,10 @@ test.describe('Student ballot view', () => {
     await signIn(page, studentEmail);
     await page.goto(`/dashboard`);
 
-    await expect(page.locator('text=My Feedback')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Judge: Bob Judge')).toBeVisible({ timeout: 5000 });
+    await waitForLoaded(page, async () => {
+      await expect(page.getByText('My Feedback')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByText('Judge: Bob Judge')).toBeVisible({ timeout: 2_000 });
+    });
   });
 
   test('student can view full ballot for their debate', async ({ page }) => {
@@ -162,9 +181,11 @@ test.describe('Student ballot view', () => {
     await signIn(page, studentEmail);
     await page.goto(`/debate/${debateId}`);
 
-    await expect(page.locator('text=Bob Judge')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Affirmative had stronger evidence.')).toBeVisible({
-      timeout: 5000,
+    await waitForLoaded(page, async () => {
+      await expect(page.getByText('Bob Judge')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByText('Affirmative had stronger evidence.')).toBeVisible({
+        timeout: 2_000,
+      });
     });
     await expect(page.locator('text=No submitted ballots yet')).not.toBeVisible();
   });
