@@ -57,7 +57,7 @@ export function AdminDebates(): React.JSX.Element {
           debates.map((d) => (
             <div key={d.id} className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
-                <DebateCard debateId={d.id} onClick={() => navigate(`admin/${d.id}`)} />
+                <DebateCard debateId={d.id} debate={d} onClick={() => navigate(`admin/${d.id}`)} />
               </div>
               <button
                 className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"

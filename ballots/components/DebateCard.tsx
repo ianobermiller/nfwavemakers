@@ -1,6 +1,7 @@
 import { cn } from 'cnfast';
-import type { User } from '../data/model.ts';
+import type { Debate, User } from '../data/model.ts';
 import { useDebateCard } from '../hooks/data.ts';
+import type { Winner } from '../types.ts';
 import { formatTeam } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
 
@@ -21,40 +22,29 @@ function AvatarStack({ members }: { members: User[] }): React.JSX.Element | null
   );
 }
 
-interface DebateCardProps {
-  debateId: string;
-  judgeId?: string;
-  badge?: React.ReactNode;
-  isExpanded?: boolean;
+interface DebateCardShellProps {
+  debate: Debate | undefined;
+  winnerBadge: string | null;
+  badge?: React.ReactNode | undefined;
+  isExpanded?: boolean | undefined;
   onClick: () => void;
-  id?: string;
-  ariaControls?: string;
-  className?: string;
+  id?: string | undefined;
+  ariaControls?: string | undefined;
+  className?: string | undefined;
 }
 
-export function DebateCard({
-  debateId,
-  judgeId,
+function DebateCardShell({
+  debate,
+  winnerBadge,
   badge,
   isExpanded,
   onClick,
   id,
   ariaControls,
   className,
-}: DebateCardProps): React.JSX.Element {
-  const data = useDebateCard(debateId, judgeId);
-
-  const debate = data?.debate;
+}: DebateCardShellProps): React.JSX.Element {
   const affTeam = debate?.affTeam ?? [];
   const negTeam = debate?.negTeam ?? [];
-  const winnerBadge =
-    judgeId != null
-      ? data?.winner === 'aff'
-        ? 'Affirmative wins'
-        : data?.winner === 'neg'
-          ? 'Negative wins'
-          : '—'
-      : null;
   const hasTeams = affTeam.length > 0 || negTeam.length > 0;
   const hasChevron = isExpanded !== undefined;
 
@@ -104,4 +94,77 @@ export function DebateCard({
       )}
     </button>
   );
+}
+
+function winnerLabel(winner: Winner | undefined): string {
+  return winner === 'aff' ? 'Affirmative wins' : winner === 'neg' ? 'Negative wins' : '—';
+}
+
+interface DebateCardProps {
+  debateId: string;
+  /** When provided, skip the debate fetch and render immediately. */
+  debate?: Debate | undefined;
+  /** Winner label when judgeId is set; used with a provided debate (no second fetch). */
+  winner?: Winner | undefined;
+  judgeId?: string | undefined;
+  badge?: React.ReactNode | undefined;
+  isExpanded?: boolean | undefined;
+  onClick: () => void;
+  id?: string | undefined;
+  ariaControls?: string | undefined;
+  className?: string | undefined;
+}
+
+function DebateCardLoaded({
+  debateId,
+  debate: debateProp,
+  winner: winnerProp,
+  judgeId,
+  badge,
+  isExpanded,
+  onClick,
+  id,
+  ariaControls,
+  className,
+}: DebateCardProps): React.JSX.Element {
+  const data = useDebateCard(debateId, judgeId);
+  const debate = debateProp ?? data?.debate;
+  const winner = winnerProp ?? data?.winner;
+  const winnerBadge = judgeId != null ? winnerLabel(winner) : null;
+
+  return (
+    <DebateCardShell
+      debate={debate}
+      winnerBadge={winnerBadge}
+      badge={badge}
+      isExpanded={isExpanded}
+      onClick={onClick}
+      id={id}
+      ariaControls={ariaControls}
+      className={className}
+    />
+  );
+}
+
+export function DebateCard(props: DebateCardProps): React.JSX.Element {
+  const { debate, winner, judgeId, badge, isExpanded, onClick, id, ariaControls, className } =
+    props;
+
+  // Callers that already have the debate paint immediately; no second fetch.
+  if (debate !== undefined) {
+    return (
+      <DebateCardShell
+        debate={debate}
+        winnerBadge={judgeId != null ? winnerLabel(winner) : null}
+        badge={badge}
+        isExpanded={isExpanded}
+        onClick={onClick}
+        id={id}
+        ariaControls={ariaControls}
+        className={className}
+      />
+    );
+  }
+
+  return <DebateCardLoaded {...props} />;
 }

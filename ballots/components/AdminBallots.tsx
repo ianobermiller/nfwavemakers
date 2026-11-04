@@ -91,6 +91,7 @@ function ByDebate(): React.JSX.Element {
             <DebateCard
               id={`debate-btn-${d.id}`}
               debateId={d.id}
+              debate={d}
               badge={`${submittedBallots.length} ballot${submittedBallots.length !== 1 ? 's' : ''}`}
               isExpanded={isOpen}
               onClick={() => toggle(d.id)}

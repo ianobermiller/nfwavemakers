@@ -5,13 +5,13 @@ import { DebateCard } from '../DebateCard.tsx';
 export function ParentDashboard({ userId }: { userId: string }): React.JSX.Element {
   const debates = useAssignedDebates();
   const submittedBallots = useSubmittedBallots();
-  const isLoading = debates === undefined || submittedBallots === undefined;
-
-  const hasAssigned = !isLoading && debates.length > 0;
+  const debatesReady = debates !== undefined;
+  const hasAssigned = debatesReady && debates.length > 0;
+  const ballotsReady = submittedBallots !== undefined;
 
   return (
     <div className="flex flex-col gap-6">
-      {!hasAssigned && (
+      {debatesReady && !hasAssigned && (
         <button
           className="w-full py-4 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white font-bold text-lg rounded-xl cursor-pointer transition-colors"
           onClick={() => navigate('judge')}
@@ -27,7 +27,12 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
           </h2>
           <div className="flex flex-col gap-3">
             {debates.map((d) => (
-              <DebateCard key={d.id} debateId={d.id} onClick={() => navigate(`judge/${d.id}`)} />
+              <DebateCard
+                key={d.id}
+                debateId={d.id}
+                debate={d}
+                onClick={() => navigate(`judge/${d.id}`)}
+              />
             ))}
           </div>
         </section>
@@ -42,7 +47,7 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
         </button>
       )}
 
-      {!isLoading && submittedBallots.length > 0 && (
+      {ballotsReady && submittedBallots.length > 0 && (
         <section>
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
             Submitted Ballots
@@ -54,7 +59,9 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
                   <DebateCard
                     key={b.id}
                     debateId={b.debate.id}
+                    debate={b.debate}
                     judgeId={userId}
+                    winner={b.winner}
                     onClick={() => navigate(`ballot/${b.id}`)}
                   />
                 );
