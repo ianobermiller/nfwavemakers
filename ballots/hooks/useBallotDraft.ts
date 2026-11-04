@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { saveBallot } from '../data/api.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
@@ -6,6 +6,7 @@ import { useDebouncedSave } from './useDebouncedSave.ts';
 import { POSITIONS, type Position, type SpeakerFormState, type Winner } from '../types.ts';
 import { scoringTotal } from '../utils/format.ts';
 import {
+  alignSpeakersToDebate,
   buildEvalPayload,
   canSubmitBallot,
   getActivePositions,
@@ -13,6 +14,7 @@ import {
   isAllScored,
   type BallotFormInit,
   type BallotIds,
+  type DebateTeams,
 } from '../services/ballot.ts';
 import { useBallotDraft as useBallotDraftRecord, useDebate, useUsers } from './data.ts';
 
@@ -28,6 +30,11 @@ export function useBallotDraft({ initial, debateId }: Props) {
   const [ids, setIds] = useState<BallotIds>(initial.ids);
   const [rankOrder, setRankOrder] = useState<Position[]>(initial.rankOrder);
   const [submitting, setSubmitting] = useState(false);
+
+  const speakersRef = useRef(speakers);
+  const idsRef = useRef(ids);
+  const rankOrderRef = useRef(rankOrder);
+  const debateRef = useRef<DebateTeams | null | undefined>(undefined);
 
   const users = useUsers(true);
   const selectedStudentIds = POSITIONS.map((pos) => speakers[pos].userId).filter(Boolean);
@@ -61,6 +68,37 @@ export function useBallotDraft({ initial, debateId }: Props) {
     },
     { flushOnUnmount: true },
   );
+
+  useEffect(() => {
+    speakersRef.current = speakers;
+    idsRef.current = ids;
+    rankOrderRef.current = rankOrder;
+    debateRef.current = debate;
+  });
+
+  useEffect(() => {
+    if (initial.needsPersist) scheduleSave();
+  }, [initial.needsPersist, scheduleSave]);
+
+  const debateSpeakerKey = debate
+    ? `${debate.affTeam.map((user) => user.id).join('|')}:${debate.negTeam.map((user) => user.id).join('|')}`
+    : '';
+
+  useEffect(() => {
+    const currentDebate = debateRef.current;
+    if (!currentDebate || !debateSpeakerKey) return;
+    const aligned = alignSpeakersToDebate(
+      speakersRef.current,
+      idsRef.current.evalIds,
+      rankOrderRef.current,
+      currentDebate,
+    );
+    if (!aligned.changed) return;
+    setSpeakers(aligned.speakers);
+    setIds((prev) => ({ ...prev, evalIds: aligned.evalIds }));
+    setRankOrder(aligned.rankOrder);
+    scheduleSave();
+  }, [debateSpeakerKey, scheduleSave]);
 
   function updateWinner(w: Winner): void {
     setWinner(w);

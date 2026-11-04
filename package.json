@@ -13,7 +13,7 @@
     "knip": "knip",
     "check": "run-p --print-label types lint knip",
     "check:push": "run-p --print-label types lint knip test:e2e",
-    "test:unit": "node --experimental-strip-types --test ballots/lib/**/*.test.ts src/site/**/*.test.ts",
+    "test:unit": "node --experimental-strip-types --test ballots/lib/**/*.test.ts ballots/services/**/*.test.ts src/site/**/*.test.ts",
     "test:e2e": "playwright test",
     "seed:test": "node --env-file-if-exists=.env --env-file-if-exists=.env.local ballots/scripts/seed-test-accounts.mjs",
     "seed:lessons": "node --env-file-if-exists=.env --env-file-if-exists=.env.local ballots/scripts/seed-lessons.mjs",

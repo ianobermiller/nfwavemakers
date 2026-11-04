@@ -69,6 +69,69 @@ export interface BallotFormInit {
   winner: Winner | undefined;
   rfd: string;
   ids: BallotIds;
+  needsPersist: boolean;
+}
+
+function desiredSpeakersFromDebate(debate: DebateTeams): Record<Position, string> {
+  return {
+    aff1: debate.affTeam[0]?.id ?? '',
+    aff2: debate.affTeam[1]?.id ?? '',
+    neg1: debate.negTeam[0]?.id ?? '',
+    neg2: debate.negTeam[1]?.id ?? '',
+  };
+}
+
+/**
+ * Re-seat speakers to match the debate's current speaking order. Eval records stay
+ * on their positions (ballot+position is unique); scores, notes, and ranks follow
+ * each speaker to their new slot.
+ */
+export function alignSpeakersToDebate(
+  speakers: Record<Position, SpeakerFormState>,
+  evalIds: Partial<Record<Position, string>>,
+  rankOrder: Position[],
+  debate: DebateTeams,
+): {
+  speakers: Record<Position, SpeakerFormState>;
+  evalIds: Partial<Record<Position, string>>;
+  rankOrder: Position[];
+  changed: boolean;
+} {
+  const desired = desiredSpeakersFromDebate(debate);
+  const stateBySpeaker = new Map<string, SpeakerFormState>();
+  for (const pos of POSITIONS) {
+    const sp = speakers[pos];
+    if (!sp.userId) continue;
+    stateBySpeaker.set(sp.userId, sp);
+  }
+
+  const nextSpeakers = makeEmptySpeakers();
+  for (const pos of POSITIONS) {
+    const userId = desired[pos];
+    if (!userId) {
+      nextSpeakers[pos] = makeEmptySpeaker();
+      continue;
+    }
+    const prev = stateBySpeaker.get(userId);
+    nextSpeakers[pos] = prev ? { ...prev, userId } : { ...makeEmptySpeaker(), userId };
+  }
+
+  const nextRankOrder: Position[] = [];
+  for (const oldPos of rankOrder) {
+    const userId = speakers[oldPos].userId;
+    if (!userId) continue;
+    const newPos = POSITIONS.find((pos) => desired[pos] === userId);
+    if (newPos && !nextRankOrder.includes(newPos)) nextRankOrder.push(newPos);
+  }
+
+  const changed = POSITIONS.some((pos) => speakers[pos].userId !== nextSpeakers[pos].userId);
+
+  return {
+    speakers: nextSpeakers,
+    evalIds,
+    rankOrder: nextRankOrder,
+    changed,
+  };
 }
 
 export function initBallotFormState(
@@ -101,27 +164,46 @@ export function initBallotFormState(
       .map((ev) => ev.position)
       .filter((pos) => POSITIONS.includes(pos));
 
+    if (debate) {
+      const aligned = alignSpeakersToDebate(speakers, ids.evalIds, rankOrder, debate);
+      return {
+        speakers: aligned.speakers,
+        rankOrder: aligned.rankOrder,
+        winner: existing.winner,
+        rfd: existing.reasonForDecision ?? '',
+        ids: { ballotId: existing.id, evalIds: aligned.evalIds },
+        needsPersist: aligned.changed,
+      };
+    }
+
     return {
       speakers,
       rankOrder,
       winner: existing.winner,
       rfd: existing.reasonForDecision ?? '',
       ids,
+      needsPersist: false,
     };
   }
 
   const speakers = makeEmptySpeakers();
 
   if (debate) {
-    const affTeam = debate.affTeam;
-    const negTeam = debate.negTeam;
-    if (affTeam[0]) speakers.aff1 = { ...makeEmptySpeaker(), userId: affTeam[0].id };
-    if (affTeam[1]) speakers.aff2 = { ...makeEmptySpeaker(), userId: affTeam[1].id };
-    if (negTeam[0]) speakers.neg1 = { ...makeEmptySpeaker(), userId: negTeam[0].id };
-    if (negTeam[1]) speakers.neg2 = { ...makeEmptySpeaker(), userId: negTeam[1].id };
+    const desired = desiredSpeakersFromDebate(debate);
+    for (const pos of POSITIONS) {
+      const userId = desired[pos];
+      if (userId) speakers[pos] = { ...makeEmptySpeaker(), userId };
+    }
   }
 
-  return { speakers, rankOrder: [], winner: undefined, rfd: '', ids: makeNewBallotIds() };
+  return {
+    speakers,
+    rankOrder: [],
+    winner: undefined,
+    rfd: '',
+    ids: makeNewBallotIds(),
+    needsPersist: false,
+  };
 }
 
 export function buildEvalPayload(
