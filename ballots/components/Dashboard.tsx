@@ -16,7 +16,7 @@ export function Dashboard({ userId, role }: Props): React.JSX.Element {
   return (
     <PageLayout>
       <div className="flex flex-col gap-6">
-        {role !== 'parent' && <UpcomingDebates />}
+        {role !== 'parent' && <UpcomingDebates role={role} />}
         {role === 'parent' && <ParentDashboard userId={userId} />}
         {role === 'student' && <StudentDashboard userId={userId} />}
         {role === 'admin' && (

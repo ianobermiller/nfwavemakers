@@ -1,14 +1,17 @@
+import type { Role } from '../../types.ts';
 import { useUpcomingDebates } from '../../hooks/data.ts';
 import { formatLocalYmd } from '../../lib/dates.ts';
-import { DEBATE_EVENT_LABELS } from '../../types.ts';
-import { formatTeam } from '../../utils/format.ts';
+import { navigate } from '@/hooks/useHashRoute.ts';
+import { DebateCard } from '../DebateCard.tsx';
 
-export function UpcomingDebates(): React.JSX.Element {
+export function UpcomingDebates({ role }: { role: Role }): React.JSX.Element {
   // Local calendar day so debates dated today stay visible after UTC midnight.
   const today = formatLocalYmd(new Date());
   const upcoming = useUpcomingDebates(today).read();
 
   if (upcoming.length === 0) return <></>;
+
+  const canEdit = role === 'admin';
 
   return (
     <section>
@@ -16,39 +19,14 @@ export function UpcomingDebates(): React.JSX.Element {
         Upcoming Debates
       </h2>
       <div className="flex flex-col gap-3">
-        {upcoming.map((d) => {
-          const affStr = formatTeam(d.affTeam);
-          const negStr = formatTeam(d.negTeam);
-          const judgeNames = d.judges.map((u) => u.name ?? '?');
-          return (
-            <div
-              key={d.id}
-              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {d.date}
-                  </span>
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {DEBATE_EVENT_LABELS[d.event]}
-                  </span>
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">{d.room}</span>
-              </div>
-              <span className="text-xs text-slate-600 dark:text-slate-300">
-                <span className="text-aff dark:text-aff-d font-semibold">{affStr}</span>
-                <span className="text-slate-400 dark:text-slate-500 mx-1">vs</span>
-                <span className="text-neg dark:text-neg-d font-semibold">{negStr}</span>
-              </span>
-              {judgeNames.length > 0 && (
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  Judge: {judgeNames.join(', ')}
-                </span>
-              )}
-            </div>
-          );
-        })}
+        {upcoming.map((d) => (
+          <DebateCard
+            key={d.id}
+            debateId={d.id}
+            debate={d}
+            {...(canEdit ? { onClick: () => navigate(`admin/${d.id}`) } : {})}
+          />
+        ))}
       </div>
     </section>
   );
