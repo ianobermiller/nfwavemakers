@@ -8,6 +8,7 @@ const MIN_PASSWORD_LENGTH = 8;
 
 export function PasswordSettings(): React.JSX.Element {
   const me = useAppUser();
+  const hasPassword = me?.passwordSet === true;
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
@@ -54,7 +55,7 @@ export function PasswordSettings(): React.JSX.Element {
     setNotice('');
     try {
       await requestPasswordReset(email);
-      setNotice('Check your email for a link to set or reset your password.');
+      setNotice('Check your email for a link to set a password.');
     } catch (cause: unknown) {
       setError(errorMessage(cause, 'Could not send a password reset email'));
     } finally {
@@ -62,12 +63,43 @@ export function PasswordSettings(): React.JSX.Element {
     }
   }
 
+  if (!hasPassword) {
+    return (
+      <section className="border-t border-slate-200 dark:border-slate-700 pt-5 mt-1">
+        <h2 className="font-semibold text-slate-800 dark:text-slate-100">Password</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-3">
+          You signed in with a code and do not have a password yet. Email yourself a link to choose
+          one.
+        </p>
+
+        {error && (
+          <p className="text-red-600 text-sm mb-3" role="alert">
+            {error}
+          </p>
+        )}
+        {notice && (
+          <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-3" role="status">
+            {notice}
+          </p>
+        )}
+
+        <button
+          className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          disabled={resetLoading || !me?.email}
+          onClick={() => void emailResetLink()}
+          type="button"
+        >
+          {resetLoading ? 'Sending…' : 'Email me a link to set a password'}
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section className="border-t border-slate-200 dark:border-slate-700 pt-5 mt-1">
       <h2 className="font-semibold text-slate-800 dark:text-slate-100">Password</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-3">
-        Change your password, or email yourself a link if you signed in with a code and do not have
-        one yet.
+        Change the password you use to sign in.
       </p>
 
       <form
@@ -132,15 +164,6 @@ export function PasswordSettings(): React.JSX.Element {
           {loading ? 'Saving…' : 'Update password'}
         </button>
       </form>
-
-      <button
-        className="w-full mt-3 py-3 border-2 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        disabled={resetLoading || !me?.email}
-        onClick={() => void emailResetLink()}
-        type="button"
-      >
-        {resetLoading ? 'Sending…' : 'Email me a link to set a password'}
-      </button>
     </section>
   );
 }

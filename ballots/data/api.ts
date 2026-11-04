@@ -28,6 +28,7 @@ interface ProfileRecord extends RecordModel {
   email_verified?: boolean;
   name: string;
   partner?: string;
+  password_set?: boolean;
   role: Role | '';
   user: string;
   expand?: {
@@ -167,6 +168,7 @@ function mapUser(record: ProfileRecord): User {
     email: optionalText(record.email || record.expand?.user?.email || ''),
     emailVerified: record.email_verified ?? false,
     name: optionalText(record.name),
+    passwordSet: record.password_set ?? false,
     partnerId: optionalText(record.partner ?? ''),
     role: record.role || undefined,
   };

@@ -10,6 +10,8 @@ export interface User {
   email?: string | undefined;
   emailVerified: boolean;
   name?: string | undefined;
+  /** True once the person has chosen a sign-in password (not the random code-only one). */
+  passwordSet: boolean;
   partnerId?: string | undefined;
   role?: Role | undefined;
 }

@@ -60,6 +60,8 @@ async function upsertUser(email, name, role) {
     approved: true,
     email_verified: true,
     ...(role === 'student' ? { category: 'tp' } : {}),
+    // Seeded accounts use a known password; code-only sign-ups leave this false.
+    password_set: true,
   };
   return profile
     ? await pb.collection('ballots_profiles').update(profile.id, profileBody)
