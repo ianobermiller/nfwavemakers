@@ -1,7 +1,13 @@
 import { useBallot } from '../hooks/data.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { cn } from 'cnfast';
-import { POSITIONS, POSITION_LABELS } from '../types.ts';
+import {
+  DEBATE_EVENT_LABELS,
+  positionLabel,
+  positionsForEvent,
+  type DebateEvent,
+  type Position,
+} from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
 import { BackLink } from './BackLink.tsx';
@@ -39,6 +45,8 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   const debate = ballot.debate;
   const judge = ballot.judge;
   const evals = ballot.speakerEvals;
+  const event: DebateEvent = debate?.event ?? 'tp';
+  const seats = positionsForEvent(event);
 
   const avatarURLs = Object.fromEntries(
     evals
@@ -69,8 +77,12 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   }
 
   const evalsByPosition = Object.fromEntries(
-    POSITIONS.map((pos) => [pos, evals.find((e) => e.position === pos)]),
+    seats.map((pos) => [pos, evals.find((e) => e.position === pos)]),
   );
+
+  function seatsForSide(side: 'aff' | 'neg'): Position[] {
+    return seats.filter((pos) => pos.startsWith(side));
+  }
 
   return (
     <PageLayout>
@@ -83,11 +95,25 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
       {/* Compact metadata line */}
       <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3 flex-wrap">
-        {judge && <span>Judge: {judge.name}</span>}
-        {judge && debate && (debate.date || debate.room) && <span>·</span>}
-        {debate?.date && <span>{debate.date}</span>}
-        {debate?.date && debate.room && <span>·</span>}
-        {debate?.room && <span>{debate.room}</span>}
+        <span>{DEBATE_EVENT_LABELS[event]}</span>
+        {judge && (
+          <>
+            <span>·</span>
+            <span>Judge: {judge.name}</span>
+          </>
+        )}
+        {debate?.date && (
+          <>
+            <span>·</span>
+            <span>{debate.date}</span>
+          </>
+        )}
+        {debate?.room && (
+          <>
+            <span>·</span>
+            <span>{debate.room}</span>
+          </>
+        )}
         {debate?.resolution && (
           <>
             <span>·</span>
@@ -136,7 +162,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
             >
               {side === 'aff' ? 'Affirmative' : 'Negative'}
             </h2>
-            {([`${side}1`, `${side}2`] as const).map((pos) => {
+            {seatsForSide(side).map((pos) => {
               const ev = evalsByPosition[pos];
               const total = scoringTotal(ev ?? {});
               return (
@@ -154,7 +180,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
                         />
                       )}
                       <span>
-                        {POSITION_LABELS[pos]}
+                        {event === 'ld' ? 'Debater' : positionLabel(event, pos)}
                         {ev?.speaker?.name && (
                           <span className="ml-2 normal-case font-normal text-slate-700 dark:text-slate-200">
                             {formatSpeakerName(ev.speaker.name)}

@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { cn } from 'cnfast';
 import { useBallotDraft, useBallotDraftLoader } from '../hooks/useBallotDraft.ts';
+import {
+  DEBATE_EVENT_LABELS,
+  positionLabel,
+  positionsForEvent,
+  type DebateEvent,
+  type Position,
+} from '../types.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
@@ -53,11 +60,17 @@ function BallotFormEditor({
   const [guideCategory, setGuideCategory] = useState<string | undefined>(undefined);
 
   const draft = useBallotDraft({ initial, debateId, judgeId });
+  const event: DebateEvent = draft.debate?.event ?? 'tp';
+  const seats = positionsForEvent(event);
   const avatarURLs = Object.fromEntries(
     draft.students
       .filter((s): s is typeof s & { avatarUrl: string } => s.avatarUrl != null)
       .map((s) => [s.id, s.avatarUrl]),
   );
+
+  function seatsForSide(side: 'aff' | 'neg'): Position[] {
+    return seats.filter((pos) => pos.startsWith(side));
+  }
 
   return (
     <>
@@ -74,6 +87,8 @@ function BallotFormEditor({
         </div>
         {draft.debate && (
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <span>{DEBATE_EVENT_LABELS[event]}</span>
+            <span>·</span>
             <span>{draft.debate.date}</span>
             <span>·</span>
             <span>{draft.debate.room}</span>
@@ -149,7 +164,7 @@ function BallotFormEditor({
           </fieldset>
         </div>
 
-        {/* Speakers — 2×2 grid on md+ */}
+        {/* Speakers — one column per side; Team Policy has two seats each. */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(['aff', 'neg'] as const).map((side) => (
             <div key={side}>
@@ -163,10 +178,11 @@ function BallotFormEditor({
               >
                 {side === 'aff' ? 'Affirmative' : 'Negative'}
               </h2>
-              {([`${side}1`, `${side}2`] as const).map((pos) => (
+              {seatsForSide(side).map((pos) => (
                 <SpeakerEvalCard
                   key={pos}
                   pos={pos}
+                  label={event === 'ld' ? 'Debater' : positionLabel(event, pos)}
                   speaker={draft.speakers[pos]}
                   students={draft.students}
                   avatarURLs={avatarURLs}

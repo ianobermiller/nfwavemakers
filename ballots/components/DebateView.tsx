@@ -1,5 +1,5 @@
 import { cn } from 'cnfast';
-import { POSITIONS, POSITION_LABELS } from '../types.ts';
+import { DEBATE_EVENT_LABELS, positionLabel, positionsForEvent, type Position } from '../types.ts';
 import { useDebateDetail } from '../hooks/data.ts';
 import { formatSpeakerName } from '../utils/format.ts';
 import { BackLink } from './BackLink.tsx';
@@ -41,6 +41,11 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   }
 
   const ballots = data.ballots;
+  const seats = positionsForEvent(debate.event);
+
+  function seatsForSide(side: 'aff' | 'neg'): Position[] {
+    return seats.filter((pos) => pos.startsWith(side));
+  }
 
   return (
     <PageLayout>
@@ -50,6 +55,9 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
       </h1>
 
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-6 flex flex-col gap-1 text-sm">
+        <div>
+          <strong>Event:</strong> {DEBATE_EVENT_LABELS[debate.event]}
+        </div>
         <div>
           <strong>Date:</strong> {debate.date}
         </div>
@@ -72,7 +80,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
       {ballots.map((ballot) => {
         const evals = ballot.speakerEvals;
         const evalsByPos = Object.fromEntries(
-          POSITIONS.map((pos) => [pos, evals.find((e) => e.position === pos)]),
+          seats.map((pos) => [pos, evals.find((e) => e.position === pos)]),
         );
         return (
           <div
@@ -106,7 +114,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                   >
                     {side === 'aff' ? 'Affirmative' : 'Negative'}
                   </h3>
-                  {([`${side}1`, `${side}2`] as const).map((pos) => {
+                  {seatsForSide(side).map((pos) => {
                     const ev = evalsByPos[pos];
                     return (
                       <div
@@ -114,7 +122,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                         className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2"
                       >
                         <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                          {POSITION_LABELS[pos]}
+                          {debate.event === 'ld' ? 'Debater' : positionLabel(debate.event, pos)}
                           {ev?.speaker?.name && (
                             <span className="ml-2 font-normal">
                               {formatSpeakerName(ev.speaker.name)}

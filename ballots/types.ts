@@ -1,6 +1,8 @@
 export type Role = 'admin' | 'student' | 'parent';
 export type Position = 'aff1' | 'aff2' | 'neg1' | 'neg2';
 export type Winner = 'aff' | 'neg';
+/** NCFCA debate event. Stored on each debate; do not infer from team size. */
+export type DebateEvent = 'tp' | 'ld';
 
 export interface SpeakerScores {
   delivery: number | undefined;
@@ -27,12 +29,33 @@ export const SCORE_CATEGORIES: { key: keyof SpeakerScores; label: string }[] = [
 
 export const POSITIONS: Position[] = ['aff1', 'aff2', 'neg1', 'neg2'];
 
-export const POSITION_LABELS: Record<Position, string> = {
+const POSITION_LABELS: Record<Position, string> = {
   aff1: 'Aff 1st Speaker',
   aff2: 'Aff 2nd Speaker',
   neg1: 'Neg 1st Speaker',
   neg2: 'Neg 2nd Speaker',
 };
+
+export const DEBATE_EVENT_LABELS: Record<DebateEvent, string> = {
+  tp: 'Team Policy',
+  ld: 'Lincoln-Douglas',
+};
+
+/** Speaker seats on the ballot for this event. LD is one debater per side. */
+export function positionsForEvent(event: DebateEvent): Position[] {
+  return event === 'ld' ? ['aff1', 'neg1'] : POSITIONS;
+}
+
+export function positionLabel(event: DebateEvent, pos: Position): string {
+  if (event === 'ld') {
+    return pos.startsWith('aff') ? 'Affirmative' : 'Negative';
+  }
+  return POSITION_LABELS[pos];
+}
+
+export function parseDebateEvent(value: string | undefined | null): DebateEvent {
+  return value === 'ld' ? 'ld' : 'tp';
+}
 
 export const SPEAKER_GUIDE_ROWS: {
   category: string;

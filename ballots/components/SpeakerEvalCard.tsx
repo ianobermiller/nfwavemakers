@@ -1,10 +1,5 @@
 import { cn } from 'cnfast';
-import {
-  POSITION_LABELS,
-  SCORE_CATEGORIES,
-  type Position,
-  type SpeakerFormState,
-} from '../types.ts';
+import { SCORE_CATEGORIES, type Position, type SpeakerFormState } from '../types.ts';
 import { scoringTotal } from '../utils/format.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
@@ -55,6 +50,7 @@ function ScoreRow({
 
 interface Props {
   pos: Position;
+  label: string;
   speaker: SpeakerFormState;
   students: { id: string; name?: string | undefined }[];
   avatarURLs: Record<string, string>;
@@ -68,6 +64,7 @@ interface Props {
 
 export function SpeakerEvalCard({
   pos,
+  label,
   speaker,
   students,
   avatarURLs,
@@ -85,7 +82,7 @@ export function SpeakerEvalCard({
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 mb-3 flex flex-col gap-2 sm:px-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          {POSITION_LABELS[pos]}
+          {label}
         </h3>
         <span
           className={cn(
@@ -113,7 +110,7 @@ export function SpeakerEvalCard({
             <Select
               style={{ width: 'auto' }}
               className="text-xs"
-              aria-label={'Rank for ' + POSITION_LABELS[pos]}
+              aria-label={'Rank for ' + label}
               value={currentRank || ''}
               onChange={(e) => {
                 const n = parseInt(e.target.value, 10);

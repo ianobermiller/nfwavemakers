@@ -1,5 +1,6 @@
 import type { RecordModel } from 'pocketbase';
-import type { Position, Role, Winner } from '../types.ts';
+import type { DebateEvent, Position, Role, Winner } from '../types.ts';
+import { parseDebateEvent } from '../types.ts';
 import type {
   AdminDebate,
   Ballot,
@@ -50,6 +51,8 @@ interface DebateRecord extends RecordModel {
   created?: string;
   date: string;
   deleted_at: string;
+  /** Absent on records written before the event field existed. */
+  event?: DebateEvent | '';
   judges: string[];
   neg_team: string[];
   resolution: string;
@@ -94,6 +97,7 @@ export interface SaveDebateInput {
   debateId?: string;
   affTeam: string[];
   date: string;
+  event: DebateEvent;
   judges: string[];
   negTeam: string[];
   /** Omitted to leave an existing resolution unchanged on update. */
@@ -247,6 +251,7 @@ function mapDebate(record: DebateRecord): Debate {
     id: record.id,
     created: record.created ?? '',
     date: record.date,
+    event: parseDebateEvent(record.event),
     resolution: optionalText(record.resolution),
     room: record.room,
     affTeam: (record.expand?.aff_team ?? []).map(mapUser),
@@ -631,6 +636,7 @@ export async function saveDebate(input: SaveDebateInput): Promise<string> {
   const body = {
     aff_team: input.affTeam,
     date: input.date,
+    event: input.event,
     judges: input.judges,
     neg_team: input.negTeam,
     room: input.room.trim(),

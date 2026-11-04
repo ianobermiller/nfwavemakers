@@ -75,6 +75,7 @@ try {
     .collection('ballots_debates')
     .getFirstListItem('date = "2024-01-15" && room = "101"');
   debate = await pb.collection('ballots_debates').update(debate.id, {
+    event: 'tp',
     aff_team: [student.id],
     neg_team: [],
     judges: [judge.id],
@@ -85,6 +86,7 @@ try {
   debate = await pb.collection('ballots_debates').create({
     date: '2024-01-15',
     room: '101',
+    event: 'tp',
     resolution: 'Resolved: test data should be deterministic.',
     aff_team: [student.id],
     neg_team: [],

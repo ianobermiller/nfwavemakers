@@ -211,7 +211,8 @@ export function buildEvalPayload(
   ids: BallotIds,
   rankOrder: Position[],
 ) {
-  return POSITIONS.map((pos) => {
+  // Skip empty seats that never got an eval row (e.g. LD only uses aff1/neg1).
+  return POSITIONS.filter((pos) => speakers[pos].userId || ids.evalIds[pos]).map((pos) => {
     const sp = speakers[pos];
     const rankIdx = rankOrder.indexOf(pos);
     return {

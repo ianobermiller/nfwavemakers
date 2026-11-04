@@ -1,11 +1,11 @@
 ---
 # nfw-42q6
 title: Add Lincoln-Douglas debates
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-11-04T14:47:03Z
-updated_at: 2026-11-04T14:47:03Z
+updated_at: 2026-11-04T14:59:19Z
 ---
 
 Club ballots only model Team Policy: four speakers, partner fill-in, and ranks 1–4. Lincoln-Douglas is the other NCFCA debate style, and club needs to schedule and judge those rounds too.
@@ -64,9 +64,13 @@ Speaking order (context only; the ballot does not time speeches). Each side has 
 
 ## Work
 
-- [ ] Add an event field on debates, defaulting existing rounds to Team Policy
-- [ ] Let the debate form choose LD and collect one student per side, without partner fill-in
-- [ ] Show an LD ballot with two speaker cards, ranks 1–2, and the same six scores
-- [ ] Label LD rounds on debate cards and lists
-- [ ] Keep Team Policy create, ballot, rank, and partner behavior unchanged
-- [ ] Verify both forms in the browser
+- [x] Add an event field on debates, defaulting existing rounds to Team Policy
+- [x] Let the debate form choose LD and collect one student per side, without partner fill-in
+- [x] Show an LD ballot with two speaker cards, ranks 1–2, and the same six scores
+- [x] Label LD rounds on debate cards and lists
+- [x] Keep Team Policy create, ballot, rank, and partner behavior unchanged
+- [x] Verify both forms in the browser
+
+## Summary of Changes
+
+Debates store an `event` of `tp` or `ld`. The create form picks the event; LD uses one student per side with no partner fill-in. Ballots for LD show two speaker cards, ranks 1–2, and the same six NCFCA scores. Cards and lists label Lincoln-Douglas vs Team Policy. Existing rounds default to Team Policy. Verified both create and ballot forms against a local PocketBase.

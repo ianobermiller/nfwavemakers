@@ -11,7 +11,7 @@ import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
-import { POSITIONS, POSITION_LABELS, type Position } from '../types.ts';
+import { positionLabel, positionsForEvent, type DebateEvent, type Position } from '../types.ts';
 import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
 import { DebateCard } from './DebateCard.tsx';
@@ -232,7 +232,11 @@ function ByStudent(): React.JSX.Element {
                               </span>
                             )}
                             {judgeEvals.map((ev) => (
-                              <StudentEvalCard key={ev.eval.id} ev={ev.eval} />
+                              <StudentEvalCard
+                                key={ev.eval.id}
+                                ev={ev.eval}
+                                event={debate?.event}
+                              />
                             ))}
                           </div>
                         );
@@ -333,8 +337,10 @@ function Stranded(): React.JSX.Element {
 
 function BallotSummary({ ballot }: { ballot: Ballot }): React.JSX.Element {
   const evals = ballot.speakerEvals;
+  const event: DebateEvent = ballot.debate?.event ?? 'tp';
+  const seats = positionsForEvent(event);
   const evalsByPos = Object.fromEntries(
-    POSITIONS.map((pos) => [pos, evals.find((e) => e.position === pos)]),
+    seats.map((pos) => [pos, evals.find((e) => e.position === pos)]),
   );
 
   return (
@@ -378,51 +384,53 @@ function BallotSummary({ ballot }: { ballot: Ballot }): React.JSX.Element {
             >
               {side === 'aff' ? 'Affirmative' : 'Negative'}
             </div>
-            {([`${side}1`, `${side}2`] as const).map((pos) => {
-              const ev = evalsByPos[pos];
-              if (!ev) return null;
-              const total = scoringTotal(ev);
-              return (
-                <div
-                  key={pos}
-                  className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2"
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                      {ev.speaker?.id && (
-                        <Avatar
-                          name={ev.speaker.name ?? ev.speaker.id}
-                          imageURL={ev.speaker.avatarUrl ?? undefined}
-                          size="xs"
-                        />
+            {seats
+              .filter((pos) => pos.startsWith(side))
+              .map((pos) => {
+                const ev = evalsByPos[pos];
+                if (!ev) return null;
+                const total = scoringTotal(ev);
+                return (
+                  <div
+                    key={pos}
+                    className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        {ev.speaker?.id && (
+                          <Avatar
+                            name={ev.speaker.name ?? ev.speaker.id}
+                            imageURL={ev.speaker.avatarUrl ?? undefined}
+                            size="xs"
+                          />
+                        )}
+                        <span>
+                          {event === 'ld' ? 'Debater' : positionLabel(event, pos)}
+                          {ev.speaker?.name && (
+                            <span className="ml-1.5 text-slate-700 dark:text-slate-200 font-semibold">
+                              {formatSpeakerName(ev.speaker.name)}
+                            </span>
+                          )}
+                          {ev.rank != null && (
+                            <span className="ml-1.5 text-slate-400 dark:text-slate-500 font-normal">
+                              · #{ev.rank}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                      {total > 0 && (
+                        <span className="text-xs font-bold text-nf-blue dark:text-nf-blue-d">
+                          {total}
+                        </span>
                       )}
-                      <span>
-                        {POSITION_LABELS[pos]}
-                        {ev.speaker?.name && (
-                          <span className="ml-1.5 text-slate-700 dark:text-slate-200 font-semibold">
-                            {formatSpeakerName(ev.speaker.name)}
-                          </span>
-                        )}
-                        {ev.rank != null && (
-                          <span className="ml-1.5 text-slate-400 dark:text-slate-500 font-normal">
-                            · #{ev.rank}
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                    {total > 0 && (
-                      <span className="text-xs font-bold text-nf-blue dark:text-nf-blue-d">
-                        {total}
-                      </span>
-                    )}
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <ScoringRows scores={ev} />
+                    </div>
+                    {ev.notes && <SpeakerNotes notes={ev.notes} />}
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <ScoringRows scores={ev} />
-                  </div>
-                  {ev.notes && <SpeakerNotes notes={ev.notes} />}
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         ))}
       </div>
@@ -437,7 +445,13 @@ function parsePosition(value: string | null | undefined): Position | undefined {
   return undefined;
 }
 
-function StudentEvalCard({ ev }: { ev: SpeakerEval }): React.JSX.Element {
+function StudentEvalCard({
+  ev,
+  event = 'tp',
+}: {
+  ev: SpeakerEval;
+  event?: DebateEvent | undefined;
+}): React.JSX.Element {
   const total = scoringTotal(ev);
   const pos = parsePosition(ev.position);
 
@@ -445,7 +459,7 @@ function StudentEvalCard({ ev }: { ev: SpeakerEval }): React.JSX.Element {
     <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs text-slate-500 dark:text-slate-400">
-          {pos ? POSITION_LABELS[pos] : ev.position}
+          {pos ? (event === 'ld' ? 'Debater' : positionLabel(event, pos)) : ev.position}
           {ev.rank != null && (
             <span className="ml-1.5 text-slate-400 dark:text-slate-500"> · #{ev.rank}</span>
           )}

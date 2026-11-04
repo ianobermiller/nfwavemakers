@@ -1,5 +1,6 @@
 import { useUpcomingDebates } from '../../hooks/data.ts';
 import { formatLocalYmd } from '../../lib/dates.ts';
+import { DEBATE_EVENT_LABELS } from '../../types.ts';
 import { formatTeam } from '../../utils/format.ts';
 
 export function UpcomingDebates(): React.JSX.Element {
@@ -25,8 +26,13 @@ export function UpcomingDebates(): React.JSX.Element {
               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {d.date}
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {d.date}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    {DEBATE_EVENT_LABELS[d.event]}
+                  </span>
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400">{d.room}</span>
               </div>

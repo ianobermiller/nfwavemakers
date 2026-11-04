@@ -72,6 +72,9 @@ function collectDefinitions() {
     BoolField: function BoolField(definition) {
       return { type: 'bool', ...definition };
     },
+    SelectField: function SelectField(definition) {
+      return { type: 'select', maxSelect: 1, ...definition };
+    },
     migrate: (up) => up(app),
     console,
   });
@@ -150,6 +153,18 @@ async function backfillProfileApproval(pb) {
   return profiles.length;
 }
 
+/** Debates created before Lincoln-Douglas support are Team Policy. */
+async function backfillDebateEvent(pb) {
+  const debates = await pb.collection('ballots_debates').getFullList({ fields: 'id,event' });
+  let updated = 0;
+  for (const debate of debates) {
+    if (debate.event === 'tp' || debate.event === 'ld') continue;
+    await pb.collection('ballots_debates').update(debate.id, { event: 'tp' });
+    updated += 1;
+  }
+  return updated;
+}
+
 export async function applyCollections({ url, email, password }) {
   const pb = new PocketBase(url);
   await pb.collection('_superusers').authWithPassword(email, password);
@@ -184,6 +199,7 @@ export async function applyCollections({ url, email, password }) {
 
   // Existing collections keep their field ids; merge missing fields and refresh rules.
   let approvalFieldsAdded = false;
+  let debateEventAdded = false;
   for (const desired of resolved) {
     const existing = existingByName.get(desired.name);
     if (!existing) continue;
@@ -197,11 +213,18 @@ export async function applyCollections({ url, email, password }) {
     ) {
       approvalFieldsAdded = true;
     }
+    if (desired.name === 'ballots_debates' && added.includes('event')) {
+      debateEventAdded = true;
+    }
   }
 
   if (approvalFieldsAdded) {
     const count = await backfillProfileApproval(pb);
     console.log(`Marked ${count} existing ballots profile(s) approved and email-verified.`);
+  }
+  if (debateEventAdded) {
+    const count = await backfillDebateEvent(pb);
+    console.log(`Marked ${count} existing debate(s) as Team Policy.`);
   }
 
   return created;

@@ -1,7 +1,7 @@
 import { cn } from 'cnfast';
 import type { Debate, User } from '../data/model.ts';
 import { useDebateCard } from '../hooks/data.ts';
-import type { Winner } from '../types.ts';
+import { DEBATE_EVENT_LABELS, type Winner } from '../types.ts';
 import { formatTeam } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
 
@@ -65,6 +65,11 @@ function DebateCardShell({
             {debate?.date}
           </span>
           <span className="text-xs text-slate-500 dark:text-slate-400">{debate?.room}</span>
+          {debate != null && (
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {DEBATE_EVENT_LABELS[debate.event]}
+            </span>
+          )}
           {badge != null && (
             <span className="text-xs text-slate-400 dark:text-slate-500">{badge}</span>
           )}

@@ -75,7 +75,7 @@ export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): Re
                 Speaker Point Guide
               </Dialog.Title>
               <Dialog.Description className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                NCFCA Team Policy · 1 Beginning → 5 Excellent
+                NCFCA Debate · 1 Beginning → 5 Excellent
               </Dialog.Description>
             </div>
             <Dialog.Close

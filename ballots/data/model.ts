@@ -1,4 +1,4 @@
-import type { Position, Role, Winner } from '../types.ts';
+import type { DebateEvent, Position, Role, Winner } from '../types.ts';
 
 export interface User {
   id: string;
@@ -16,6 +16,7 @@ export interface Debate {
   id: string;
   created: string;
   date: string;
+  event: DebateEvent;
   resolution?: string | undefined;
   room: string;
   affTeam: User[];
