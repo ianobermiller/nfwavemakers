@@ -23,7 +23,7 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
       {hasAssigned && (
         <section>
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
-            Assigned Debates
+            Your Debates
           </h2>
           <div className="flex flex-col gap-3">
             {debates.map((d) => (

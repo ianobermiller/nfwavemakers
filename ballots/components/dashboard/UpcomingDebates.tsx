@@ -1,8 +1,10 @@
 import { useUpcomingDebates } from '../../hooks/data.ts';
+import { formatLocalYmd } from '../../lib/dates.ts';
 import { formatTeam } from '../../utils/format.ts';
 
 export function UpcomingDebates(): React.JSX.Element {
-  const today = new Date().toISOString().slice(0, 10);
+  // Local calendar day so debates dated today stay visible after UTC midnight.
+  const today = formatLocalYmd(new Date());
   const upcoming = useUpcomingDebates(today);
 
   if (upcoming === undefined || upcoming.length === 0) return <></>;

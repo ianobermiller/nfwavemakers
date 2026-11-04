@@ -530,7 +530,8 @@ export async function listUpcomingDebates(today: string): Promise<Debate[]> {
 
 export async function listAssignedDebates(): Promise<Debate[]> {
   const records = await pb.collection<DebateRecord>(collections.debates).getFullList({
-    filter: activeFilter(pb.filter('judges ?= {:judge}', { judge: currentUserId() })),
+    // PocketBase needs the relation field: `judges ?= id` matches nothing.
+    filter: activeFilter(pb.filter('judges.id ?= {:judge}', { judge: currentUserId() })),
     expand: 'aff_team.user,neg_team.user,judges.user',
     sort: 'date',
   });
