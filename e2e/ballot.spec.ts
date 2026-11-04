@@ -200,6 +200,9 @@ test.describe('Student ballot view', () => {
       await expect(page.getByText('Partner, D')).toBeVisible({ timeout: 2_000 });
       await expect(page.getByText('Ranked #1')).toBeVisible({ timeout: 2_000 });
       await expect(page.getByText('Ranked #2')).toBeVisible({ timeout: 2_000 });
+      // Seed scores: Aff 1st = 26, Aff 2nd = 19.
+      await expect(page.getByLabel('Speaker points 26')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByLabel('Speaker points 19')).toBeVisible({ timeout: 2_000 });
       await expect(page.getByText('Clear and persuasive.')).toBeVisible({ timeout: 2_000 });
       await expect(page.getByText('Partner kept the structure tight.')).toBeVisible({
         timeout: 2_000,

@@ -2,6 +2,7 @@ import { cn } from 'cnfast';
 import { SCORE_CATEGORIES, type Position, type SpeakerFormState } from '../types.ts';
 import { scoringTotal } from '../utils/format.ts';
 import { AutoTextarea } from './AutoTextarea.tsx';
+import { SpeakerPointsTotal } from './SpeakerPointsTotal.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import { Select } from './ui/Select.tsx';
 
@@ -84,14 +85,7 @@ export function SpeakerEvalCard({
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {label}
         </h3>
-        <span
-          className={cn(
-            'text-sm font-bold text-nf-blue dark:text-nf-blue-d transition-opacity',
-            total > 0 ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          {total > 0 ? total : '0'}
-        </span>
+        <SpeakerPointsTotal total={total} reserveSpace />
       </div>
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">

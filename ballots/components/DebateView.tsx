@@ -1,11 +1,12 @@
 import { cn } from 'cnfast';
 import { DEBATE_EVENT_LABELS, positionLabel, positionsForEvent, type Position } from '../types.ts';
 import { useDebateDetail } from '../hooks/data.ts';
-import { formatSpeakerName } from '../utils/format.ts';
+import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { ScoringRows } from './ScoringRows.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
+import { SpeakerPointsTotal } from './SpeakerPointsTotal.tsx';
 
 interface Props {
   debateId: string;
@@ -116,24 +117,28 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                   </h3>
                   {seatsForSide(side).map((pos) => {
                     const ev = evalsByPos[pos];
+                    const total = scoringTotal(ev ?? {});
                     return (
                       <div
                         key={pos}
                         className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2"
                       >
-                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                          {debate.event === 'ld' ? 'Debater' : positionLabel(debate.event, pos)}
-                          {ev?.speaker?.name && (
-                            <span className="ml-2 font-normal">
-                              {formatSpeakerName(ev.speaker.name)}
-                            </span>
-                          )}
-                          {ev?.rank != null && (
-                            <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
-                              · Ranked #{ev.rank}
-                            </span>
-                          )}
-                        </p>
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            {debate.event === 'ld' ? 'Debater' : positionLabel(debate.event, pos)}
+                            {ev?.speaker?.name && (
+                              <span className="ml-2 font-normal">
+                                {formatSpeakerName(ev.speaker.name)}
+                              </span>
+                            )}
+                            {ev?.rank != null && (
+                              <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
+                                · Ranked #{ev.rank}
+                              </span>
+                            )}
+                          </p>
+                          <SpeakerPointsTotal total={total} />
+                        </div>
                         <ScoringRows scores={ev ?? {}} />
                         {ev?.notes && <SpeakerNotes notes={ev.notes} />}
                       </div>
