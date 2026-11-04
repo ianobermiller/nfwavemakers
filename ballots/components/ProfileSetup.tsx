@@ -28,8 +28,8 @@ export function ProfileSetup(): React.JSX.Element {
   }
 
   return (
-    <div className="flex items-start justify-center px-4 py-16">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 flex flex-col gap-4">
+    <div className="flex items-start justify-center px-4 py-8 sm:py-16">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-5 sm:p-8 flex flex-col gap-4">
         <div className="text-center">
           <h1 className="text-xl font-bold text-nf-blue dark:text-nf-blue-d mb-1">Welcome!</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">

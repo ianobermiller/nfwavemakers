@@ -12,17 +12,17 @@ export function HomePage(): React.JSX.Element {
 
   return (
     <SiteLayout current="home">
-      <section className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-20 text-center text-white">
+      <section className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white sm:py-20">
         <h1 className="text-4xl leading-tight font-extrabold tracking-tight sm:text-5xl">
           Make Waves.
           <br />
           Make Your Case.
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-sky-100">
+        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-sky-100 sm:text-lg">
           A student speech &amp; debate club in St. Johns County built on critical thinking,
           communication, truth, grace, and collaboration.
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-4">
+        <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
           <a
             href="/about"
             className={`${button} bg-nf-accent text-white shadow-md hover:bg-sky-600`}

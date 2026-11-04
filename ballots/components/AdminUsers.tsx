@@ -93,7 +93,7 @@ function UserListToggle({
   return (
     <div
       aria-label="User list"
-      className="inline-flex h-11 max-w-full shrink-0 items-stretch overflow-x-auto rounded-lg border-2 border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
+      className="inline-flex h-11 max-w-full items-stretch overflow-x-auto rounded-lg border-2 border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 sm:shrink-0"
       onKeyDown={onKeyDown}
       role="radiogroup"
     >
@@ -176,19 +176,19 @@ export function AdminUsers(): React.JSX.Element {
 
   return (
     <PageLayout>
-      <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Users</h1>
         <button
-          className="inline-flex items-center h-9 px-3 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 shrink-0"
+          className="inline-flex h-11 w-full items-center justify-center px-3 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 sm:h-9 sm:w-auto sm:shrink-0"
           onClick={() => setCreateOpen(true)}
           type="button"
         >
           Create accounts
         </button>
       </div>
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <UserListToggle value={view} onChange={setView} />
-        <div className="min-w-48 flex-1">
+        <div className="min-w-0 w-full flex-1 sm:min-w-48">
           <Input
             aria-label="Search users"
             className="h-11"
@@ -213,7 +213,7 @@ export function AdminUsers(): React.JSX.Element {
           return (
             <div
               key={u.id}
-              className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-center gap-3 ${
+              className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-start gap-3 sm:items-center ${
                 u.archived ? 'opacity-70' : ''
               }`}
             >
@@ -222,54 +222,56 @@ export function AdminUsers(): React.JSX.Element {
                 imageURL={u.avatarUrl ?? undefined}
                 size="sm"
               />
-              <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                  {u.name ?? 'Unnamed'}
-                </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {u.email ?? 'no email'}
-                </span>
-                {u.role === 'student' && u.approved && (
-                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                    {partnerLabel(u, allUsers ?? [])}
+              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {u.name ?? 'Unnamed'}
                   </span>
-                )}
-              </div>
-              <div className="ml-auto flex items-center gap-2 shrink-0">
-                {u.archived && (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
-                    archived
+                  <span className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    {u.email ?? 'no email'}
                   </span>
-                )}
-                {!u.approved && !u.archived && (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
-                    awaiting Approval
-                  </span>
-                )}
-                {!u.emailVerified && !u.archived && (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                    email unverified
-                  </span>
-                )}
-                {u.role && (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                    {u.role}
-                  </span>
-                )}
-                {!isMe && (
-                  <UserRowMenu
-                    archived={u.archived}
-                    busy={busy}
-                    name={u.name ?? u.email ?? 'user'}
-                    {...(!u.approved && !u.archived
-                      ? { onApproval: () => void runApproval(u.id) }
-                      : {})}
-                    {...(u.role === 'student' && u.approved
-                      ? { onSetPartner: () => setPartnerStudentId(u.id) }
-                      : {})}
-                    onToggleArchived={() => void toggleArchived(u.id, !u.archived)}
-                  />
-                )}
+                  {u.role === 'student' && u.approved && (
+                    <span className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      {partnerLabel(u, allUsers ?? [])}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:shrink-0 sm:justify-end">
+                  {u.archived && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                      archived
+                    </span>
+                  )}
+                  {!u.approved && !u.archived && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                      awaiting Approval
+                    </span>
+                  )}
+                  {!u.emailVerified && !u.archived && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      email unverified
+                    </span>
+                  )}
+                  {u.role && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      {u.role}
+                    </span>
+                  )}
+                  {!isMe && (
+                    <UserRowMenu
+                      archived={u.archived}
+                      busy={busy}
+                      name={u.name ?? u.email ?? 'user'}
+                      {...(!u.approved && !u.archived
+                        ? { onApproval: () => void runApproval(u.id) }
+                        : {})}
+                      {...(u.role === 'student' && u.approved
+                        ? { onSetPartner: () => setPartnerStudentId(u.id) }
+                        : {})}
+                      onToggleArchived={() => void toggleArchived(u.id, !u.archived)}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -393,7 +395,10 @@ function CreateAccountsDialog({
     >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-        <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100vw-2rem))] max-h-[min(40rem,calc(100dvh-2rem))] overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+        <Dialog.Content
+          className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] max-h-[min(40rem,calc(100vh-2rem))] overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4"
+          style={{ maxHeight: 'min(40rem, calc(100dvh - 2rem))' }}
+        >
           <div>
             <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
               Create accounts
@@ -690,7 +695,7 @@ function SetPartnerForm({
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100vw-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
         <div>
           <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
             Debate partner

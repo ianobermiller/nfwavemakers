@@ -1,12 +1,22 @@
-import { useState } from 'react';
-import { isPasskeyCanceled, passkeysSupported, registerPasskey } from '../data/passkeys.ts';
+import { useEffect, useState } from 'react';
+import { isPasskeyCanceled, passkeysUsable, registerPasskey } from '../data/passkeys.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 
 export function PasskeyRegistration(): React.JSX.Element {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
-  const supported = passkeysSupported();
+  const [supported, setSupported] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void passkeysUsable().then((usable) => {
+      if (!cancelled) setSupported(usable);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function register(): Promise<void> {
     setLoading(true);
@@ -30,7 +40,9 @@ export function PasskeyRegistration(): React.JSX.Element {
     <section className="border-t border-slate-200 dark:border-slate-700 pt-5 mt-1">
       <h2 className="font-semibold text-slate-800 dark:text-slate-100">Passkeys</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-3">
-        Use Face ID, Touch ID, or your device screen lock to sign in.
+        {supported
+          ? 'Use Face ID, Touch ID, or your device screen lock to sign in.'
+          : 'Passkeys need a device authenticator. On this phone, sign in with your password or an email code.'}
       </p>
       {error && (
         <p className="text-red-600 text-sm mb-3" role="alert">
@@ -42,14 +54,16 @@ export function PasskeyRegistration(): React.JSX.Element {
           {notice}
         </p>
       )}
-      <button
-        className="w-full py-3 border-2 border-nf-blue dark:border-nf-blue-d text-nf-blue dark:text-nf-blue-d enabled:hover:bg-nf-blue-light enabled:dark:hover:bg-slate-700 font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        disabled={loading || !supported}
-        onClick={() => void register()}
-        type="button"
-      >
-        {loading ? 'Adding passkey…' : supported ? 'Add a passkey' : 'Passkeys unavailable'}
-      </button>
+      {supported && (
+        <button
+          className="w-full py-3 border-2 border-nf-blue dark:border-nf-blue-d text-nf-blue dark:text-nf-blue-d enabled:hover:bg-nf-blue-light enabled:dark:hover:bg-slate-700 font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          disabled={loading}
+          onClick={() => void register()}
+          type="button"
+        >
+          {loading ? 'Adding passkey…' : 'Add a passkey'}
+        </button>
+      )}
     </section>
   );
 }

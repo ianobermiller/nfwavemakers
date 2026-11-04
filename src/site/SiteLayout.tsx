@@ -37,26 +37,35 @@ export function SiteLayout({ children, current }: Props): React.JSX.Element {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+    <div
+      className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100"
+      style={{ minHeight: '100dvh' }}
+    >
       <header className="sticky top-0 z-50 bg-nf-blue text-white shadow-md">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-5">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-5">
           <a
-            className="flex shrink-0 items-center gap-2.5 text-white no-underline hover:no-underline"
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-white no-underline hover:no-underline md:flex-none md:shrink-0"
             href="/"
             onClick={(event) => {
               event.preventDefault();
               go('');
             }}
           >
-            <img src="/images/logo.svg" alt="" className="h-10 w-auto brightness-0 invert" />
-            <div>
-              <div className="text-[0.95rem] leading-tight font-bold">North Florida Wavemakers</div>
-              <div className="text-[0.7rem] font-medium tracking-wider text-sky-200/80 uppercase">
+            <img
+              src="/images/logo.svg"
+              alt=""
+              className="h-9 w-auto shrink-0 brightness-0 invert sm:h-10"
+            />
+            <div className="min-w-0">
+              <div className="truncate text-[0.95rem] leading-tight font-bold">
+                North Florida Wavemakers
+              </div>
+              <div className="truncate text-[0.7rem] font-medium tracking-wider text-sky-200/80 uppercase">
                 Speech &amp; Debate Club
               </div>
             </div>
           </a>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <nav
               className={cn(
                 'absolute inset-x-0 top-16 flex-col gap-1 bg-nf-blue px-5 py-3 shadow-lg md:static md:flex md:flex-row md:items-center md:gap-1 md:bg-transparent md:p-0 md:shadow-none',
@@ -69,7 +78,7 @@ export function SiteLayout({ children, current }: Props): React.JSX.Element {
                   href={`/${item.path}`}
                   aria-current={current === item.page ? 'page' : undefined}
                   className={cn(
-                    'rounded-md px-2.5 py-2 text-sm font-medium text-sky-100 no-underline hover:bg-white/10 hover:text-white hover:no-underline',
+                    'rounded-md px-2.5 py-3 text-sm font-medium text-sky-100 no-underline hover:bg-white/10 hover:text-white hover:no-underline md:py-2',
                     current === item.page && 'bg-white/15 text-white',
                     item.cta && 'bg-nf-accent text-center text-white hover:bg-sky-600 md:ml-2',
                   )}
@@ -84,7 +93,7 @@ export function SiteLayout({ children, current }: Props): React.JSX.Element {
             </nav>
             {user && <AccountMenu />}
             <button
-              className="flex flex-col gap-1.5 p-2 md:hidden"
+              className="flex h-11 w-11 flex-col items-center justify-center gap-1.5 md:hidden"
               aria-label="Toggle navigation"
               aria-expanded={navOpen}
               type="button"
@@ -162,7 +171,7 @@ function AccountMenu(): React.JSX.Element {
     <div ref={menuRef} className="relative flex items-center">
       <button
         ref={triggerRef}
-        className="cursor-pointer rounded-full border-2 border-transparent hover:border-white/40"
+        className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-transparent hover:border-white/40"
         onClick={() => setOpen((isOpen) => !isOpen)}
         aria-label="Menu"
         aria-expanded={open}

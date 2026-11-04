@@ -19,7 +19,7 @@ export function JoinPage(): React.JSX.Element {
       </div>
       <section className="bg-nf-blue px-5 py-12 text-white">
         <div className="mx-auto max-w-5xl">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <a
               href="https://forms.gle/rQ8qeZQgbuJhdAGq7"
               target="_blank"

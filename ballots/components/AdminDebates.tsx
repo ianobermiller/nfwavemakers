@@ -34,10 +34,10 @@ export function AdminDebates(): React.JSX.Element {
 
   return (
     <PageLayout>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Debates</h1>
         <button
-          className="px-3 py-1.5 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white text-sm font-semibold rounded-lg cursor-pointer border-none transition-colors"
+          className="inline-flex h-11 items-center px-4 bg-nf-blue dark:bg-nf-blue-d hover:bg-nf-blue-mid text-white text-sm font-semibold rounded-lg cursor-pointer border-none transition-colors sm:h-9 sm:px-3"
           onClick={() => navigate('admin/new')}
         >
           + New

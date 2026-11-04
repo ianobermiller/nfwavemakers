@@ -11,7 +11,7 @@ import {
 import {
   isPasskeyCanceled,
   passkeyAutofillAvailable,
-  passkeysSupported,
+  passkeysUsable,
   registerPasskey,
   signInWithPasskey,
   signInWithPasskeyAutofill,
@@ -47,8 +47,19 @@ export function Auth({ purpose = 'ballots' }: Props): React.JSX.Element {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [supportsPasskeys, setSupportsPasskeys] = useState(false);
+  const [offerPasskeyAutofill, setOfferPasskeyAutofill] = useState(false);
   const autofillRef = useRef<AbortController>();
   const autofillSettled = useRef<Promise<void>>();
+
+  useEffect(() => {
+    void (async () => {
+      const usable = await passkeysUsable();
+      const autofill = usable ? await passkeyAutofillAvailable() : false;
+      setSupportsPasskeys(usable);
+      setOfferPasskeyAutofill(autofill);
+    })();
+  }, []);
 
   function switchPanel(next: Panel): void {
     setPanel(next);
@@ -205,19 +216,18 @@ export function Auth({ purpose = 'ballots' }: Props): React.JSX.Element {
     }
   }
 
-  const supportsPasskeys = passkeysSupported();
   const showPasskey = supportsPasskeys && panel === 'signIn' && !otpId;
 
   // Offer saved passkeys in the email field's autofill dropdown on sign-in.
+  // Only when conditional mediation works — otherwise the `webauthn` token can
+  // stall password managers on Android without Google Play Services.
   useEffect(() => {
-    if (panel !== 'signIn') return undefined;
+    if (panel !== 'signIn' || !offerPasskeyAutofill) return undefined;
 
     const controller = new AbortController();
     autofillRef.current = controller;
     autofillSettled.current = (async () => {
-      if (!supportsPasskeys || !(await passkeyAutofillAvailable()) || controller.signal.aborted) {
-        return;
-      }
+      if (controller.signal.aborted) return;
       try {
         await signInWithPasskeyAutofill(controller.signal);
       } catch {
@@ -226,11 +236,11 @@ export function Auth({ purpose = 'ballots' }: Props): React.JSX.Element {
     })();
 
     return () => controller.abort();
-  }, [panel, supportsPasskeys]);
+  }, [panel, offerPasskeyAutofill]);
 
   return (
-    <div className="flex items-start justify-center px-4 py-16">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 flex flex-col gap-4">
+    <div className="flex items-start justify-center px-4 py-8 sm:py-16">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-5 sm:p-8 flex flex-col gap-4">
         <div className="text-center">
           <h1 className="text-xl font-bold text-nf-blue dark:text-nf-blue-d mb-1">
             North Florida Wavemakers
@@ -527,7 +537,7 @@ export function Auth({ purpose = 'ballots' }: Props): React.JSX.Element {
               <Input
                 aria-describedby={error ? 'auth-error' : undefined}
                 aria-invalid={!!error}
-                autoComplete={supportsPasskeys ? 'username webauthn' : 'email'}
+                autoComplete={offerPasskeyAutofill ? 'username webauthn' : 'email'}
                 autoFocus
                 id="email"
                 onChange={(event) => setEmail(event.target.value)}

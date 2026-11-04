@@ -34,17 +34,28 @@
       'Segoe UI',
       sans-serif;
     line-height: 1.5;
+    min-height: 100vh;
     min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   label {
     @apply block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1.5;
   }
+
+  a,
+  button,
+  summary,
+  [role='button'],
+  .score-btn {
+    touch-action: manipulation;
+  }
 }
 
 @layer components {
   .score-btn {
-    @apply flex items-center justify-center w-9 h-9 shrink-0 border-2 border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer text-sm font-bold text-slate-400 dark:text-slate-500 transition-all select-none;
+    @apply flex flex-1 items-center justify-center h-11 min-w-0 border-2 border-slate-200 dark:border-slate-600 rounded-lg cursor-pointer text-sm font-bold text-slate-400 dark:text-slate-500 transition-all select-none sm:flex-none sm:h-9 sm:w-9 sm:shrink-0;
   }
   .score-btn:hover {
     @apply bg-nf-blue-light dark:bg-slate-700 border-nf-accent text-nf-accent;
@@ -57,8 +68,22 @@
 @layer utilities {
   .textarea-autosize {
     resize: none;
-    overflow: hidden;
+    overflow: auto;
     min-height: 2.5rem;
     field-sizing: content;
+  }
+
+  @supports (field-sizing: content) {
+    .textarea-autosize {
+      overflow: hidden;
+    }
+  }
+
+  /* Chrome < 104 ignores the translate property and leaves centered dialogs
+     shifted. Newer engines support translate, so this block does not run. */
+  @supports not (translate: 0) {
+    [class*='-translate-'] {
+      transform: translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0));
+    }
   }
 }

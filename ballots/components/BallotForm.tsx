@@ -89,12 +89,12 @@ function BallotFormEditor({
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4">
           <fieldset className="border-none p-0 m-0">
             <legend className="sr-only">Decision</legend>
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               {(['aff', 'neg'] as const).map((side) => (
                 <label
                   key={side}
                   className={cn(
-                    'inline-flex items-center gap-2 px-4 py-2 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors',
+                    'inline-flex w-full items-center justify-center gap-2 px-4 py-3 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors sm:w-auto sm:py-2',
                     draft.winner === side
                       ? side === 'aff'
                         ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'

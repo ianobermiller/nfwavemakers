@@ -101,12 +101,12 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
       {/* Decision */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           {(['aff', 'neg'] as const).map((side) => (
             <span
               key={side}
               className={cn(
-                'inline-flex items-center px-4 py-2 border-2 rounded-xl font-semibold text-sm',
+                'inline-flex w-full items-center justify-center px-4 py-3 border-2 rounded-xl font-semibold text-sm sm:w-auto sm:py-2',
                 ballot.winner === side
                   ? side === 'aff'
                     ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'

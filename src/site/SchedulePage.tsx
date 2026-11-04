@@ -98,8 +98,10 @@ function EventList({ events }: { events: Tournament[] }): React.JSX.Element {
   return (
     <ul className="mt-4 divide-y divide-slate-200 dark:divide-white/10">
       {events.map((event) => (
-        <li key={event.name} className="flex gap-4 py-3">
-          <span className="w-36 shrink-0 text-sm font-semibold text-nf-accent">{event.date}</span>
+        <li key={event.name} className="flex flex-col gap-0.5 py-3 sm:flex-row sm:gap-4">
+          <span className="shrink-0 text-sm font-semibold text-nf-accent sm:w-36">
+            {event.date}
+          </span>
           <span>
             {event.href ? (
               <a

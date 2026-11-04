@@ -168,7 +168,7 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
         <Dialog.Content
-          className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-2rem)] max-w-sm
+          className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm
                      bg-white dark:bg-slate-800 shadow-2xl rounded-2xl flex flex-col gap-4 p-5
                      focus:outline-none"
           aria-describedby={undefined}

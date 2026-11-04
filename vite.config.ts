@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import type { Connect, Plugin } from 'vite';
 import { defineConfig } from 'vite';
+import { downlevelCss } from './scripts/downlevel-css';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 const imagesDir = resolve(root, 'images');
@@ -68,7 +69,7 @@ function clubSite(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), clubSite()],
+  plugins: [react(), tailwindcss(), downlevelCss(), clubSite()],
   resolve: {
     alias: [{ find: /^@\//, replacement: `${resolve(root, 'src')}/` }],
   },

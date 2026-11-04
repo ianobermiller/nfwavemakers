@@ -125,8 +125,8 @@ function AppShell(): React.JSX.Element {
   if (queryError) {
     return (
       <SiteLayout current={isLessonsRoute ? 'lessons' : 'ballots'}>
-        <div className="flex items-start justify-center px-6 py-16">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg dark:bg-slate-800">
+        <div className="flex items-start justify-center px-4 py-8 sm:px-6 sm:py-16">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lg sm:p-8 dark:bg-slate-800">
             <p className="text-sm text-red-600">Auth error: {queryError}</p>
           </div>
         </div>
@@ -179,8 +179,8 @@ function BallotsFrame({ children }: { children: React.ReactNode }): React.JSX.El
 
 function StatusCard({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
-    <div className="flex items-start justify-center px-6 py-16">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg dark:bg-slate-800">
+    <div className="flex items-start justify-center px-4 py-8 sm:px-6 sm:py-16">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lg sm:p-8 dark:bg-slate-800">
         <p className="text-slate-500 dark:text-slate-400">{children}</p>
       </div>
     </div>

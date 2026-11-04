@@ -56,7 +56,7 @@ export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): Re
         <Dialog.Content
           className="fixed z-50 inset-x-0 bottom-0 md:inset-y-0 md:inset-x-auto md:right-0 md:w-96
                      bg-white dark:bg-slate-800 shadow-2xl flex flex-col
-                     rounded-t-2xl md:rounded-none max-h-[85dvh] md:max-h-none
+                     rounded-t-2xl md:rounded-none max-h-[85vh] md:max-h-none
                      focus:outline-none"
           onInteractOutside={(event) => {
             // Desktop is a side panel: scrolling or using the ballot should not close it.

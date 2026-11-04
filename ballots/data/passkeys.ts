@@ -201,13 +201,37 @@ function assertionPayload(credential: PublicKeyCredential): object {
   };
 }
 
-export function passkeysSupported(): boolean {
+function passkeysSupported(): boolean {
   return (
     window.isSecureContext &&
     typeof PublicKeyCredential !== 'undefined' &&
     typeof navigator.credentials.create === 'function' &&
     typeof navigator.credentials.get === 'function'
   );
+}
+
+/**
+ * True when WebAuthn can actually run on this device — not merely that the
+ * API objects exist. Chromium on de-googled Android often exposes
+ * PublicKeyCredential without a working credential manager / platform
+ * authenticator; treating that as support breaks password autofill when the
+ * email field uses the `webauthn` autocomplete token.
+ */
+export async function passkeysUsable(): Promise<boolean> {
+  if (!passkeysSupported()) return false;
+  try {
+    const probes: Promise<boolean>[] = [];
+    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+      probes.push(PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+    }
+    if (typeof PublicKeyCredential.isConditionalMediationAvailable === 'function') {
+      probes.push(PublicKeyCredential.isConditionalMediationAvailable());
+    }
+    if (probes.length === 0) return true;
+    return (await Promise.all(probes)).some(Boolean);
+  } catch {
+    return false;
+  }
 }
 
 export function isPasskeyCanceled(error: unknown): boolean {

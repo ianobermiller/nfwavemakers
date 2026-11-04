@@ -26,7 +26,7 @@ function ScoreRow({
   onLabelClick,
 }: ScoreRowProps): React.JSX.Element {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
       <button
         type="button"
         onClick={onLabelClick}
@@ -34,7 +34,7 @@ function ScoreRow({
       >
         {label}
       </button>
-      <div className="flex gap-1" role="radiogroup" aria-label={label}>
+      <div className="flex w-full gap-1 sm:w-auto" role="radiogroup" aria-label={label}>
         {[1, 2, 3, 4, 5].map((n) => (
           <label key={n} className={cn('score-btn', value === n && 'active')}>
             <input
@@ -82,7 +82,7 @@ export function SpeakerEvalCard({
   const total = scoringTotal(speaker);
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 flex flex-col gap-2">
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 mb-3 flex flex-col gap-2 sm:px-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {POSITION_LABELS[pos]}
