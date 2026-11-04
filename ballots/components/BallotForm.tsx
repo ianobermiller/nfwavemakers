@@ -85,44 +85,48 @@ function BallotFormEditor({
             Speaker Guide
           </button>
         </div>
-        {draft.debate && (
-          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3">
-            <span>{DEBATE_EVENT_LABELS[event]}</span>
-            <span>·</span>
-            <span>{draft.debate.date}</span>
-            <span>·</span>
-            <span>{draft.debate.room}</span>
-            {draft.debate.caseTitle && (
-              <>
-                <span>·</span>
-                <span className="truncate">{draft.debate.caseTitle}</span>
-              </>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {draft.debate && (
+            <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <span>{DEBATE_EVENT_LABELS[event]}</span>
+              <span>·</span>
+              <span>{draft.debate.date}</span>
+              <span>·</span>
+              <span>{draft.debate.room}</span>
+              {draft.debate.caseTitle && (
+                <>
+                  <span>·</span>
+                  <span className="truncate">{draft.debate.caseTitle}</span>
+                </>
+              )}
+            </div>
+          )}
+          <div
+            className={cn(
+              'inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 px-2.5 py-1 text-xs font-medium rounded-full',
+              draft.syncStatus === 'error'
+                ? 'basis-full bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100'
+                : draft.syncStatus === 'saving' || draft.syncStatus === 'pending'
+                  ? 'ml-auto bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
+                  : 'ml-auto bg-emerald-100 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-100',
+            )}
+            role="status"
+            aria-live="polite"
+          >
+            <span>{syncStatusMessage(draft.syncStatus)}</span>
+            {draft.syncStatus === 'error' && draft.syncError ? (
+              <span className="opacity-80">({draft.syncError})</span>
+            ) : null}
+            {draft.syncStatus === 'error' && (
+              <button
+                type="button"
+                className="font-semibold underline cursor-pointer bg-transparent border-none p-0 text-inherit"
+                onClick={draft.retrySync}
+              >
+                Try again
+              </button>
             )}
           </div>
-        )}
-        <div
-          className={cn(
-            'mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-3 py-2 text-xs',
-            draft.syncStatus === 'error'
-              ? 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100'
-              : 'text-slate-500 dark:text-slate-400',
-          )}
-          role="status"
-          aria-live="polite"
-        >
-          <span>{syncStatusMessage(draft.syncStatus)}</span>
-          {draft.syncStatus === 'error' && draft.syncError ? (
-            <span className="opacity-80">({draft.syncError})</span>
-          ) : null}
-          {draft.syncStatus === 'error' && (
-            <button
-              type="button"
-              className="font-semibold underline cursor-pointer bg-transparent border-none p-0 text-inherit"
-              onClick={draft.retrySync}
-            >
-              Try again
-            </button>
-          )}
         </div>
 
         {/* Decision */}
