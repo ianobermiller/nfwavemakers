@@ -4,9 +4,7 @@ import { useDebateDetail } from '../hooks/data.ts';
 import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
-import { ScoringRows } from './ScoringRows.tsx';
-import { SpeakerNotes } from './SpeakerNotes.tsx';
-import { SpeakerPointsTotal } from './SpeakerPointsTotal.tsx';
+import { SpeakerSeatCard } from './SpeakerSeatCard.tsx';
 
 interface Props {
   debateId: string;
@@ -118,30 +116,20 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
                   {seatsForSide(side).map((pos) => {
                     const ev = evalsByPos[pos];
                     const total = scoringTotal(ev ?? {});
+                    const role =
+                      debate.event === 'ld' ? 'Debater' : positionLabel(debate.event, pos);
+                    const name = ev?.speaker?.name ? formatSpeakerName(ev.speaker.name) : undefined;
                     return (
-                      <div
+                      <SpeakerSeatCard
                         key={pos}
-                        className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-lg px-3 py-2 mb-2"
-                      >
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                            {debate.event === 'ld' ? 'Debater' : positionLabel(debate.event, pos)}
-                            {ev?.speaker?.name && (
-                              <span className="ml-2 font-normal">
-                                {formatSpeakerName(ev.speaker.name)}
-                              </span>
-                            )}
-                            {ev?.rank != null && (
-                              <span className="ml-2 font-normal text-slate-400 dark:text-slate-500">
-                                · Ranked #{ev.rank}
-                              </span>
-                            )}
-                          </p>
-                          <SpeakerPointsTotal total={total} />
-                        </div>
-                        <ScoringRows scores={ev ?? {}} />
-                        {ev?.notes && <SpeakerNotes notes={ev.notes} />}
-                      </div>
+                        role={role}
+                        name={name}
+                        rank={ev?.rank}
+                        total={total}
+                        scores={ev ?? {}}
+                        notes={ev?.notes}
+                        isYou={ev?.speaker?.id === currentUserId}
+                      />
                     );
                   })}
                 </div>
