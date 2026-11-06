@@ -40,6 +40,12 @@ function collectDefinitions() {
   const referenced = new Set();
   const saved = new Map();
 
+  const settings = {
+    meta: {},
+    trustedProxy: { headers: [] },
+    batch: {},
+  };
+
   const app = {
     findCollectionByNameOrId(name) {
       const existing = saved.get(name);
@@ -51,13 +57,21 @@ function collectDefinitions() {
     findAllRecords() {
       return [];
     },
-    save(collection) {
-      collection.id = placeholder(collection.name);
-      collection.fields = withFieldApi(collection.fields);
-      saved.set(collection.name, collection);
-      const index = definitions.findIndex((item) => item.name === collection.name);
-      if (index >= 0) definitions[index] = collection;
-      else definitions.push(collection);
+    settings() {
+      return settings;
+    },
+    save(model) {
+      // Instance settings migrations call save(settings); only collections
+      // become API imports for the e2e / apply-collections path.
+      if (!model || typeof model !== 'object' || !('name' in model) || !model.name) {
+        return;
+      }
+      model.id = placeholder(model.name);
+      model.fields = withFieldApi(model.fields);
+      saved.set(model.name, model);
+      const index = definitions.findIndex((item) => item.name === model.name);
+      if (index >= 0) definitions[index] = model;
+      else definitions.push(model);
     },
     delete() {},
   };

@@ -1,0 +1,91 @@
+# Build and deploy the club PocketBase to pb.nfwavemakers.com when its tree
+# (or the JS hooks/migrations) changes. Cloudflare Pages continues to publish
+# the frontend from main on its own.
+name: PocketBase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pocketbase/**"
+      - "ballots/pocketbase/**"
+      - "ballots/content/lessons/**"
+      - "ballots/scripts/seed-lessons.mjs"
+      - ".github/workflows/pocketbase.yml"
+  pull_request:
+    paths:
+      - "pocketbase/**"
+      - "ballots/pocketbase/**"
+      - "ballots/content/lessons/**"
+      - "ballots/scripts/seed-lessons.mjs"
+      - ".github/workflows/pocketbase.yml"
+  workflow_dispatch:
+
+jobs:
+  pocketbase:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pocketbase
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: pocketbase/go.mod
+          cache-dependency-path: pocketbase/go.sum
+
+      - name: Test
+        run: make test
+
+      - name: Build linux-arm64
+        run: make linux-arm64
+
+      - name: Bundle hooks and migrations
+        working-directory: .
+        run: |
+          COPYFILE_DISABLE=1 tar -czf /tmp/pb-nfw-bundle.tgz \
+            --exclude='._*' --exclude='.DS_Store' \
+            -C ballots/pocketbase pb_hooks pb_migrations
+
+      - name: Deploy to Oracle VM
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          SSH_KEY: ${{ secrets.POCKETBASE_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H pb.obermillers.com >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            dist/pocketbase-linux-arm64 \
+            opc@pb.obermillers.com:/tmp/pocketbase-linux-arm64
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            /tmp/pb-nfw-bundle.tgz \
+            opc@pb.obermillers.com:/tmp/pb-nfw-bundle.tgz
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            scripts/remote-install.sh \
+            opc@pb.obermillers.com:/tmp/pb-nfw-remote-install.sh
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new opc@pb.obermillers.com \
+            'set -euo pipefail
+             chmod +x /tmp/pb-nfw-remote-install.sh /tmp/pocketbase-linux-arm64
+             sudo /tmp/pb-nfw-remote-install.sh
+             rm -f /tmp/pb-nfw-remote-install.sh'
+
+      - name: Seed missing lessons
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        working-directory: .
+        env:
+          VITE_POCKETBASE_URL: https://pb.nfwavemakers.com
+          PB_SUPERUSER_EMAIL: ${{ secrets.PB_SUPERUSER_EMAIL }}
+          PB_SUPERUSER_PASSWORD: ${{ secrets.PB_SUPERUSER_PASSWORD }}
+          ALLOW_REMOTE_LESSON_SEED: "1"
+        run: |
+          if [ -z "${PB_SUPERUSER_EMAIL}" ] || [ -z "${PB_SUPERUSER_PASSWORD}" ]; then
+            echo "PB_SUPERUSER_EMAIL / PB_SUPERUSER_PASSWORD secrets are unset; skipping lesson seed."
+            exit 0
+          fi
+          npm ci
+          npm run seed:lessons

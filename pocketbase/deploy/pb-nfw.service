@@ -1,0 +1,25 @@
+[Unit]
+Description=NF Wavemakers PocketBase
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pb-nfw
+Group=pb-nfw
+WorkingDirectory=/opt/pb-nfw
+ExecStart=/opt/pb-nfw/pocketbase serve --http=127.0.0.1:8091
+Restart=always
+RestartSec=5s
+LimitNOFILE=4096
+Environment=GOMEMLIMIT=512MiB
+Environment=PASSKEY_RP_DOMAINS=nfwavemakers.com,localhost
+Environment="PASSKEY_RP_NAME=NF Wavemakers"
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/pb-nfw
+
+[Install]
+WantedBy=multi-user.target

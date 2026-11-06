@@ -1,14 +1,17 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // Serves a throwaway PocketBase for the e2e suite so tests never touch the
-// production instance. Uses the custom binary from the obermillers repo, which
-// is the one that serves the /api/passkey routes.
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const sourceDir = resolve(root, '../../obermillers/pocketbase');
-const dataDir = join(root, '.pb-test/pb_data');
+// production instance. Builds the custom binary from this repo (passkeys +
+// JS hooks/migrations). Data sits beside pb_hooks and pb_migrations so the
+// process finds them without extra flags.
+const ballotsRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = join(ballotsRoot, '..');
+const sourceDir = join(repoRoot, 'pocketbase');
+const pocketbaseTree = join(ballotsRoot, 'pocketbase');
+const dataDir = join(pocketbaseTree, '.pb-test/pb_data');
 
 const port = process.argv.includes('--port')
   ? process.argv[process.argv.indexOf('--port') + 1]
@@ -22,9 +25,9 @@ function binaryPath() {
   const built = join(sourceDir, 'pocketbase');
   if (existsSync(built)) return built;
 
-  if (!existsSync(sourceDir)) {
+  if (!existsSync(join(sourceDir, 'go.mod'))) {
     throw new Error(
-      `No PocketBase binary. Set POCKETBASE_BIN, or clone obermillers.com next to this repo so ${sourceDir} exists.`,
+      `No PocketBase binary. Set POCKETBASE_BIN, or keep the Go module at ${sourceDir}.`,
     );
   }
 
@@ -44,7 +47,13 @@ if (superuser.status !== 0) {
 }
 
 const server = spawn(binary, ['serve', `--http=127.0.0.1:${port}`, `--dir=${dataDir}`], {
+  cwd: pocketbaseTree,
   stdio: 'inherit',
+  env: {
+    ...process.env,
+    PASSKEY_RP_DOMAINS: process.env.PASSKEY_RP_DOMAINS ?? 'nfwavemakers.com,localhost',
+    PASSKEY_RP_NAME: process.env.PASSKEY_RP_NAME ?? 'NF Wavemakers',
+  },
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

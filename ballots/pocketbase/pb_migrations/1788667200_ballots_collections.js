@@ -95,11 +95,14 @@ migrate(
     });
     app.save(debates);
 
+    // list/view rules that walk ballots_speaker_evals_via_ballot only validate
+    // after that collection exists, so create ballots with a temporary rule and
+    // tighten it after speaker evals are saved.
     const ballots = new Collection({
       name: "ballots_ballots",
       type: "base",
-      listRule: `${admin} || judge.user = @request.auth.id || ballots_speaker_evals_via_ballot.speaker.user ?= @request.auth.id`,
-      viewRule: `${admin} || judge.user = @request.auth.id || ballots_speaker_evals_via_ballot.speaker.user ?= @request.auth.id`,
+      listRule: `${admin} || judge.user = @request.auth.id`,
+      viewRule: `${admin} || judge.user = @request.auth.id`,
       createRule:
         '@request.auth.id != "" && judge.user = @request.auth.id && @request.body.deleted_at:isset = false',
       updateRule: `${admin} || (judge.user = @request.auth.id && @request.body.judge:changed = false && @request.body.deleted_at:changed = false)`,
@@ -182,6 +185,11 @@ migrate(
       ],
     });
     app.save(speakerEvals);
+
+    const ballotsWithEvals = app.findCollectionByNameOrId("ballots_ballots");
+    ballotsWithEvals.listRule = `${admin} || judge.user = @request.auth.id || ballots_speaker_evals_via_ballot.speaker.user ?= @request.auth.id`;
+    ballotsWithEvals.viewRule = `${admin} || judge.user = @request.auth.id || ballots_speaker_evals_via_ballot.speaker.user ?= @request.auth.id`;
+    app.save(ballotsWithEvals);
   },
   (app) => {
     for (const name of [

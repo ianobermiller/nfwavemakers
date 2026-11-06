@@ -7,7 +7,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const hooksDir = join(root, 'pocketbase/pb_hooks');
 const host = process.env.POCKETBASE_SSH_HOST ?? 'opc@129.213.88.91';
 const identity = process.env.POCKETBASE_SSH_IDENTITY ?? `${process.env.HOME}/.ssh/oracle-pocketbase`;
-const remoteDir = process.env.POCKETBASE_REMOTE_DIR ?? '/opt/pocketbase';
+const remoteDir = process.env.POCKETBASE_REMOTE_DIR ?? '/opt/pb-nfw';
+const remoteUser = process.env.POCKETBASE_REMOTE_USER ?? 'pb-nfw';
+const unitName = process.env.POCKETBASE_UNIT ?? 'pb-nfw';
 
 const hooks = readdirSync(hooksDir).filter((name) => name.endsWith('.pb.js'));
 if (hooks.length === 0) {
@@ -23,7 +25,10 @@ function run(command, args, options = {}) {
 const ssh = ['-i', identity, host];
 
 console.log(`Deploying ${hooks.length} hook(s) to ${host}:${remoteDir}/pb_hooks`);
-run('ssh', [...ssh, `sudo mkdir -p ${remoteDir}/pb_hooks && sudo chown pocketbase:pocketbase ${remoteDir}/pb_hooks`]);
+run('ssh', [
+  ...ssh,
+  `sudo mkdir -p ${remoteDir}/pb_hooks && sudo chown ${remoteUser}:${remoteUser} ${remoteDir}/pb_hooks`,
+]);
 
 for (const hook of hooks) {
   const local = join(hooksDir, hook);
@@ -31,9 +36,9 @@ for (const hook of hooks) {
   run('scp', ['-i', identity, local, `${host}:${remoteTmp}`]);
   run('ssh', [
     ...ssh,
-    `sudo mv ${remoteTmp} ${remoteDir}/pb_hooks/${hook} && sudo chown pocketbase:pocketbase ${remoteDir}/pb_hooks/${hook}`,
+    `sudo mv ${remoteTmp} ${remoteDir}/pb_hooks/${hook} && sudo chown ${remoteUser}:${remoteUser} ${remoteDir}/pb_hooks/${hook}`,
   ]);
 }
 
-run('ssh', [...ssh, 'sudo systemctl restart pocketbase']);
-console.log('Hooks deployed and PocketBase restarted.');
+run('ssh', [...ssh, `sudo systemctl restart ${unitName}`]);
+console.log(`Hooks deployed and ${unitName} restarted.`);

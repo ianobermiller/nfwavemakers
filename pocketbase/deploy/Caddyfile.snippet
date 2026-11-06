@@ -1,0 +1,17 @@
+# Append this site block to /etc/caddy/Caddyfile (keep the family site).
+# DNS: A record pb.nfwavemakers.com → 129.213.88.91, DNS only (not proxied).
+
+pb.nfwavemakers.com {
+	encode gzip
+	request_body {
+		max_size 32MB
+	}
+	reverse_proxy 127.0.0.1:8091 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		transport http {
+			read_timeout 360s
+		}
+	}
+}

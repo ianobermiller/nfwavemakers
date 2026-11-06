@@ -9,3 +9,6 @@ test-results/
 .env
 .env.local
 ballots/.pb-test/
+ballots/pocketbase/.pb-test/
+pocketbase/pocketbase
+pocketbase/dist/
