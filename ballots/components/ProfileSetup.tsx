@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { cn } from 'cnfast';
 import { updateProfile } from '../data/api.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 import { useAppUser } from '../hooks/auth.tsx';
 import { STUDENT_CATEGORY_LABELS, type Role, type StudentCategory } from '../types.ts';
+import { Button } from './ui/Button.tsx';
+import { CenteredPanel } from './ui/Panel.tsx';
+import { ChoiceButton } from './ui/ChoiceButton.tsx';
+import { FieldError } from './ui/FieldError.tsx';
+import { Heading } from './ui/Heading.tsx';
 import { Input } from './ui/Input.tsx';
+import { Muted } from './ui/Muted.tsx';
 
 const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = [
   { value: 'student', label: 'Student', description: 'I compete as a debater' },
@@ -47,107 +52,77 @@ export function ProfileSetup(): React.JSX.Element {
   }
 
   return (
-    <div className="flex items-start justify-center px-4 py-8 sm:py-16">
-      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-5 sm:p-8 flex flex-col gap-4">
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-nf-blue dark:text-nf-blue-d mb-1">Welcome!</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Tell us a bit about yourself to get started.
-          </p>
-        </div>
+    <CenteredPanel>
+      <div className="text-center">
+        <h1 className="text-xl font-bold text-nf-blue dark:text-nf-blue-d mb-1">Welcome!</h1>
+        <Muted>Tell us a bit about yourself to get started.</Muted>
+      </div>
 
-        <div>
-          <label htmlFor="name">Full name</label>
-          <Input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Jane Smith"
-            autoFocus
-            required
-            aria-required="true"
-          />
-        </div>
+      <div>
+        <label htmlFor="name">Full name</label>
+        <Input
+          id="name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Jane Smith"
+          autoFocus
+          required
+          aria-required="true"
+        />
+      </div>
 
+      <div>
+        <Muted id="role-group-label" className="mb-2 font-semibold">
+          I am a…
+        </Muted>
+        <div role="group" aria-labelledby="role-group-label" className="flex flex-col gap-2">
+          {SELECTABLE_ROLES.map((r) => (
+            <ChoiceButton
+              key={r.value}
+              pressed={role === r.value}
+              onClick={() => chooseRole(r.value)}
+            >
+              <Heading as="p" variant="name">
+                {r.label}
+              </Heading>
+              <Muted as="p" size="xs" className="mt-0.5">
+                {r.description}
+              </Muted>
+            </ChoiceButton>
+          ))}
+        </div>
+      </div>
+
+      {needsCategory && (
         <div>
-          <p
-            id="role-group-label"
-            className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2"
-          >
-            I am a…
-          </p>
-          <div role="group" aria-labelledby="role-group-label" className="flex flex-col gap-2">
-            {SELECTABLE_ROLES.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => chooseRole(r.value)}
-                aria-pressed={role === r.value}
-                className={cn(
-                  'text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer',
-                  role === r.value
-                    ? 'border-nf-blue dark:border-nf-blue-d bg-nf-blue-light dark:bg-slate-700'
-                    : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500',
-                )}
+          <Muted id="category-group-label" className="mb-2 font-semibold">
+            I compete in…
+          </Muted>
+          <div role="group" aria-labelledby="category-group-label" className="flex flex-col gap-2">
+            {CATEGORY_OPTIONS.map((option) => (
+              <ChoiceButton
+                key={option.value}
+                pressed={category === option.value}
+                onClick={() => setCategory(option.value)}
               >
-                <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">
-                  {r.label}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{r.description}</p>
-              </button>
+                <Heading as="p" variant="name">
+                  {STUDENT_CATEGORY_LABELS[option.value]}
+                </Heading>
+                <Muted as="p" size="xs" className="mt-0.5">
+                  {option.description}
+                </Muted>
+              </ChoiceButton>
             ))}
           </div>
         </div>
+      )}
 
-        {needsCategory && (
-          <div>
-            <p
-              id="category-group-label"
-              className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2"
-            >
-              I compete in…
-            </p>
-            <div
-              role="group"
-              aria-labelledby="category-group-label"
-              className="flex flex-col gap-2"
-            >
-              {CATEGORY_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setCategory(option.value)}
-                  aria-pressed={category === option.value}
-                  className={cn(
-                    'text-left px-4 py-3 border-2 rounded-xl transition-colors cursor-pointer',
-                    category === option.value
-                      ? 'border-nf-blue dark:border-nf-blue-d bg-nf-blue-light dark:bg-slate-700'
-                      : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500',
-                  )}
-                >
-                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">
-                    {STUDENT_CATEGORY_LABELS[option.value]}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {option.description}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+      {error && <FieldError>{error}</FieldError>}
 
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        <button
-          className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-semibold rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          onClick={() => void save()}
-          disabled={loading || !canSave}
-        >
-          {loading ? 'Saving…' : 'Continue'}
-        </button>
-      </div>
-    </div>
+      <Button fullWidth onClick={() => void save()} disabled={loading || !canSave}>
+        {loading ? 'Saving…' : 'Continue'}
+      </Button>
+    </CenteredPanel>
   );
 }

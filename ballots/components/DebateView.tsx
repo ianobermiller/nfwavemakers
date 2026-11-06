@@ -1,10 +1,12 @@
-import { cn } from 'cnfast';
 import { DEBATE_EVENT_LABELS, positionLabel, positionsForEvent, type Position } from '../types.ts';
 import { useDebateDetail } from '../hooks/data.ts';
 import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { SpeakerSeatCard } from './SpeakerSeatCard.tsx';
+import { Heading } from './ui/Heading.tsx';
+import { Muted } from './ui/Muted.tsx';
+import { SideLabel } from './ui/SideLabel.tsx';
 
 interface Props {
   debateId: string;
@@ -86,13 +88,11 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
             key={ballot.id}
             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-5 shadow-sm"
           >
-            <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">
-              Judge: {ballot.judge?.name ?? '—'}
-            </h2>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+            <Heading variant="card">Judge: {ballot.judge?.name ?? '—'}</Heading>
+            <Muted as="p" size="xs" className="mb-4">
               Winner:{' '}
               {ballot.winner === 'aff' ? 'Affirmative' : ballot.winner === 'neg' ? 'Negative' : '—'}
-            </p>
+            </Muted>
 
             {ballot.reasonForDecision && (
               <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 whitespace-pre-wrap">
@@ -103,16 +103,9 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {(['aff', 'neg'] as const).map((side) => (
                 <div key={side}>
-                  <h3
-                    className={cn(
-                      'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-2',
-                      side === 'aff'
-                        ? 'bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                        : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d',
-                    )}
-                  >
+                  <SideLabel side={side} as="h3">
                     {side === 'aff' ? 'Affirmative' : 'Negative'}
-                  </h3>
+                  </SideLabel>
                   {seatsForSide(side).map((pos) => {
                     const ev = evalsByPos[pos];
                     const total = scoringTotal(ev ?? {});

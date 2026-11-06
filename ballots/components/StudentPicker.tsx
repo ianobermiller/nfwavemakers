@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from 'cnfast';
 import { Input } from './ui/Input.tsx';
 import { Avatar } from './Avatar.tsx';
+import { Muted } from './ui/Muted.tsx';
 
 interface Props {
   id: string;
@@ -202,11 +203,7 @@ export function StudentPicker({
               <span className="truncate">{s.name ?? s.id}</span>
             </button>
           ))}
-          {filtered.length === 0 && (
-            <p className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500">
-              No students found
-            </p>
-          )}
+          {filtered.length === 0 && <Muted className="px-3 py-2">No students found</Muted>}
         </div>
       )}
     </div>

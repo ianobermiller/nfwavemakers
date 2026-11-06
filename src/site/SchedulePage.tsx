@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { PageHero } from './PageHero.tsx';
 import { SiteLayout } from './SiteLayout.tsx';
+import { Muted } from '../../ballots/components/ui/Muted.tsx';
 
 const CHURCH =
   'https://www.google.com/maps/place/Cross+Creek+Presbyterian+Church/data=!4m2!3m1!1s0x0:0x6081a76fd27dbafc?sa=X&ved=1t:2428&ictx=111';
@@ -115,7 +117,9 @@ function EventList({ events }: { events: Tournament[] }): React.JSX.Element {
             ) : (
               <span className="text-slate-800 dark:text-slate-100">{event.name}</span>
             )}
-            <span className="block text-xs text-slate-500 dark:text-slate-400">{event.loc}</span>
+            <Muted as="span" size="xs" className="block">
+              {event.loc}
+            </Muted>
           </span>
         </li>
       ))}
@@ -130,12 +134,11 @@ export function SchedulePage(): React.JSX.Element {
 
   return (
     <SiteLayout current="schedule">
-      <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-        <h1 className="text-4xl font-extrabold tracking-tight">Schedule</h1>
-        <p className="mx-auto mt-3 max-w-xl text-balance text-sky-100">
-          Tuesday meetings at Cross Creek, and the 2026–27 tournaments our members attend.
-        </p>
-      </div>
+      <PageHero
+        lead="Tuesday meetings at Cross Creek, and the 2026–27 tournaments our members attend."
+        leadClassName="text-balance"
+        title="Schedule"
+      />
 
       <section className="px-5 py-16">
         <div className="mx-auto max-w-5xl">
@@ -162,9 +165,9 @@ export function SchedulePage(): React.JSX.Element {
               ))}
             </tbody>
           </table>
-          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          <Muted className="mt-4">
             First meeting of the 2026–27 year: <strong>Tuesday, September 15, 2026</strong>
-          </p>
+          </Muted>
           <p className="mt-2 text-sm">
             <a
               href="/lessons"
@@ -185,7 +188,7 @@ export function SchedulePage(): React.JSX.Element {
             <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
               <h3 className="text-lg font-bold text-nf-blue dark:text-white">Regional</h3>
               <EventList events={REGIONAL} />
-              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+              <Muted className="mt-4">
                 Dates not yet linked are tentative.{' '}
                 <a
                   href="https://ncfca.org/tournaments?_region=region-15"
@@ -195,12 +198,12 @@ export function SchedulePage(): React.JSX.Element {
                 >
                   Region 15 on NCFCA →
                 </a>
-              </p>
+              </Muted>
             </div>
             <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
               <h3 className="text-lg font-bold text-nf-blue dark:text-white">National</h3>
               <EventList events={NATIONAL} />
-              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+              <Muted className="mt-4">
                 <a
                   href="https://ncfca.org/tournaments?_e=0&_region=national"
                   target="_blank"
@@ -209,7 +212,7 @@ export function SchedulePage(): React.JSX.Element {
                 >
                   National events on NCFCA →
                 </a>
-              </p>
+              </Muted>
             </div>
           </div>
         </div>

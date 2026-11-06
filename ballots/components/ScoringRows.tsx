@@ -1,4 +1,5 @@
 import { SCORE_CATEGORIES, type SpeakerScores } from '../types.ts';
+import { Muted } from './ui/Muted.tsx';
 
 interface Props {
   scores: Partial<Record<keyof SpeakerScores, number | null | undefined>>;
@@ -16,7 +17,9 @@ export function ScoringRows({ scores, showTotal = false }: Props): React.JSX.Ele
             key={cat.key}
             className="flex items-center justify-between py-0.5 border-b border-slate-100 dark:border-slate-700 last:border-b-0"
           >
-            <span className="text-xs text-slate-500 dark:text-slate-400">{cat.label}</span>
+            <Muted as="span" size="xs">
+              {cat.label}
+            </Muted>
             <span className="text-xs font-bold text-nf-blue dark:text-nf-blue-d min-w-4 text-right">
               {typeof val === 'number' ? val : '—'}
             </span>

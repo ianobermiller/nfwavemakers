@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import aboutHtml from './content/about.html?raw';
+import { PageHero } from './PageHero.tsx';
 import { SiteLayout } from './SiteLayout.tsx';
 import { navigate } from '../hooks/useHashRoute.ts';
 
@@ -10,12 +11,7 @@ export function AboutPage(): React.JSX.Element {
 
   return (
     <SiteLayout current="about">
-      <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-        <h1 className="text-4xl font-extrabold tracking-tight">About</h1>
-        <p className="mx-auto mt-3 max-w-xl text-sky-100">
-          Who we are, what we run, and answers to common questions.
-        </p>
-      </div>
+      <PageHero lead="Who we are, what we run, and answers to common questions." title="About" />
       <div
         dangerouslySetInnerHTML={{ __html: aboutHtml }}
         onClick={(event) => {

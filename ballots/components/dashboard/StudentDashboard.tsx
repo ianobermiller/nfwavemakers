@@ -1,5 +1,9 @@
 import { useSpeakerBallots } from '../../hooks/data.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
+import { Card } from '../ui/Card.tsx';
+import { EmptyState } from '../ui/EmptyState.tsx';
+import { Heading } from '../ui/Heading.tsx';
+import { Muted } from '../ui/Muted.tsx';
 
 export function StudentDashboard({ userId: _userId }: { userId: string }): React.JSX.Element {
   const ballots = useSpeakerBallots().read();
@@ -14,12 +18,8 @@ export function StudentDashboard({ userId: _userId }: { userId: string }): React
 
   return (
     <div>
-      <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">My Feedback</h2>
-      {byGroup.size === 0 && (
-        <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
-          No submitted ballots yet.
-        </p>
-      )}
+      <Heading>My Feedback</Heading>
+      {byGroup.size === 0 && <EmptyState>No submitted ballots yet.</EmptyState>}
       <div className="flex flex-col gap-3">
         {[...byGroup.entries()].map(([groupKey, evs]) => {
           const ballot = evs[0];
@@ -34,25 +34,28 @@ export function StudentDashboard({ userId: _userId }: { userId: string }): React
             ),
           ];
           return (
-            <button
+            <Card
               key={groupKey}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex flex-col gap-1 text-left cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all"
+              as="button"
+              interactive
+              padding="sm"
+              className="flex w-full flex-col gap-1"
               onClick={() => navigate(viewRoute)}
             >
               <strong className="text-sm text-slate-800 dark:text-slate-100">
                 {displayDate}
                 {debate?.room && (
-                  <span className="font-normal text-slate-500 dark:text-slate-400 ml-2">
+                  <Muted as="span" className="ml-2 font-normal">
                     · {debate.room}
-                  </span>
+                  </Muted>
                 )}
               </strong>
               {judgeNames.map((name) => (
-                <span key={name} className="text-xs text-slate-500 dark:text-slate-400 italic">
+                <Muted key={name} as="span" size="xs" className="italic">
                   Judge: {name}
-                </span>
+                </Muted>
               ))}
-            </button>
+            </Card>
           );
         })}
       </div>

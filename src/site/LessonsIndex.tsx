@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { deleteLesson } from '../../ballots/data/lessons.ts';
 import { useLessons } from '../../ballots/hooks/data.ts';
 import { useAppUser } from '../../ballots/hooks/auth.tsx';
+import { Muted } from '../../ballots/components/ui/Muted.tsx';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { PageHero } from './PageHero.tsx';
 import { SiteLayout } from './SiteLayout.tsx';
 
 export function LessonsIndex(): React.JSX.Element {
@@ -23,11 +25,7 @@ export function LessonsIndex(): React.JSX.Element {
 
   return (
     <SiteLayout current="lessons">
-      <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-        <h1 className="text-4xl font-extrabold tracking-tight">Lessons</h1>
-        <p className="mx-auto mt-3 max-w-xl text-balance text-sky-100">
-          Topics and homework from club.
-        </p>
+      <PageHero lead="Topics and homework from club." leadClassName="text-balance" title="Lessons">
         {isAdmin && (
           <p className="mt-4">
             <a
@@ -42,13 +40,11 @@ export function LessonsIndex(): React.JSX.Element {
             </a>
           </p>
         )}
-      </div>
+      </PageHero>
 
       <section className="px-5 py-16">
         <div className="mx-auto max-w-5xl">
-          {lessons.length === 0 && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">No lessons published yet.</p>
-          )}
+          {lessons.length === 0 && <Muted>No lessons published yet.</Muted>}
           {lessons.length > 0 && (
             <>
               {[...new Set(lessons.map((lesson) => lesson.year))].map((year) => {

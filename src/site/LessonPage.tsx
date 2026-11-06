@@ -4,6 +4,7 @@ import { useAppUser } from '../../ballots/hooks/auth.tsx';
 import { useLessonBySlug, useLessons } from '../../ballots/hooks/data.ts';
 import type { Lesson } from '../../ballots/data/model.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { PageHero } from './PageHero.tsx';
 import { renderLessonMarkdown } from './renderLessonMarkdown.ts';
 import { SiteLayout } from './SiteLayout.tsx';
 
@@ -31,8 +32,7 @@ export function LessonPage({ year, number }: Props): React.JSX.Element {
 function MissingLesson(): React.JSX.Element {
   return (
     <SiteLayout current="lessons">
-      <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-        <h1 className="text-4xl font-extrabold">Lesson not found</h1>
+      <PageHero title="Lesson not found">
         <p className="mt-3">
           <a
             href="/lessons"
@@ -45,7 +45,7 @@ function MissingLesson(): React.JSX.Element {
             Back to all lessons
           </a>
         </p>
-      </div>
+      </PageHero>
     </SiteLayout>
   );
 }
@@ -76,24 +76,26 @@ function LoadedLesson({
 
   return (
     <SiteLayout current="lessons">
-      <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-        <p className="mb-2 text-xs font-bold tracking-widest text-sky-100 uppercase">
-          <a
-            href="/lessons"
-            className="text-white underline-offset-2 hover:underline"
-            onClick={(event) => {
-              event.preventDefault();
-              navigate('lessons');
-            }}
-          >
-            Lessons
-          </a>{' '}
-          · {seasonLabel}
-        </p>
-        <h1 className="text-4xl font-extrabold tracking-tight">{lesson.title}</h1>
-        <p className="mt-3 text-sky-100">
-          Lesson {lesson.number} · {dateLabel}
-        </p>
+      <PageHero
+        eyebrow={
+          <p className="mb-2 text-xs font-bold tracking-widest text-sky-100 uppercase">
+            <a
+              href="/lessons"
+              className="text-white underline-offset-2 hover:underline"
+              onClick={(event) => {
+                event.preventDefault();
+                navigate('lessons');
+              }}
+            >
+              Lessons
+            </a>{' '}
+            · {seasonLabel}
+          </p>
+        }
+        lead={`Lesson ${lesson.number} · ${dateLabel}`}
+        leadClassName="mt-3"
+        title={lesson.title}
+      >
         {isAdmin && (
           <p className="mt-4">
             <a
@@ -108,7 +110,7 @@ function LoadedLesson({
             </a>
           </p>
         )}
-      </div>
+      </PageHero>
 
       <section className="px-5 py-16">
         <div className="mx-auto max-w-5xl">

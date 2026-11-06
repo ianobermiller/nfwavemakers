@@ -15,7 +15,11 @@ import {
 } from '../data/passkeys.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 import { schedulePasskeyOffer } from './PasskeyPrompt.tsx';
+import { Button } from './ui/Button.tsx';
+import { CenteredPanel } from './ui/Panel.tsx';
+import { FieldError, StatusNote } from './ui/FieldError.tsx';
 import { Input } from './ui/Input.tsx';
+import { Muted } from './ui/Muted.tsx';
 
 type Panel = 'code' | 'password' | 'verify';
 
@@ -184,203 +188,159 @@ export function Auth({ purpose = 'ballots' }: Props): React.JSX.Element {
       : 'Enter your email to judge rounds and review feedback.';
 
   return (
-    <div className="flex items-start justify-center px-4 py-8 sm:py-16">
-      <div className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-800 sm:p-8">
-        <div className="text-center">
-          <h1 className="mb-1 text-xl font-bold text-nf-blue dark:text-nf-blue-d">
-            Sign in or create account
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
-        </div>
-
-        {panel === 'verify' && otpId ? (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void verifyCode();
-            }}
-          >
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              We sent a code to{' '}
-              <strong className="text-slate-700 dark:text-slate-200">{email}</strong>.
-            </p>
-            <div>
-              <label htmlFor="code">Verification code</label>
-              <Input
-                aria-describedby={error ? 'code-error' : undefined}
-                aria-invalid={!!error}
-                autoFocus
-                id="code"
-                inputMode="numeric"
-                onChange={(event) => setCode(event.target.value)}
-                placeholder="123456"
-                required
-                type="text"
-                value={code}
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-red-600 -mt-2" id="code-error" role="alert">
-                {error}
-              </p>
-            )}
-            <button
-              className="w-full cursor-pointer rounded-xl border-none bg-nf-blue py-3 font-semibold text-white transition-colors enabled:hover:bg-nf-blue-mid disabled:cursor-not-allowed disabled:opacity-50 dark:bg-nf-blue-d"
-              disabled={loading || !code.trim()}
-              type="submit"
-            >
-              {loading ? 'Verifying…' : 'Verify'}
-            </button>
-            <button
-              className="cursor-pointer border-none bg-transparent text-center text-sm text-nf-accent underline"
-              onClick={showCodePanel}
-              type="button"
-            >
-              Use a different email
-            </button>
-          </form>
-        ) : panel === 'password' ? (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submitPassword();
-            }}
-          >
-            <div>
-              <label htmlFor="email">Email address</label>
-              <Input
-                aria-describedby={error ? 'auth-error' : undefined}
-                aria-invalid={!!error}
-                autoComplete={offerPasskeyAutofill ? 'username webauthn' : 'email'}
-                autoFocus
-                id="email"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                required
-                type="email"
-                value={email}
-              />
-            </div>
-            <div>
-              <label htmlFor="password">Password</label>
-              <Input
-                autoComplete="current-password"
-                id="password"
-                minLength={MIN_PASSWORD_LENGTH}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                type="password"
-                value={password}
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-red-600 -mt-2" id="auth-error" role="alert">
-                {error}
-              </p>
-            )}
-            {notice && (
-              <p className="text-sm text-emerald-700 dark:text-emerald-300" role="status">
-                {notice}
-              </p>
-            )}
-            <button
-              className="w-full cursor-pointer rounded-xl border-none bg-nf-blue py-3 font-semibold text-white transition-colors enabled:hover:bg-nf-blue-mid disabled:cursor-not-allowed disabled:opacity-50 dark:bg-nf-blue-d"
-              disabled={loading || !email.trim() || password.length < MIN_PASSWORD_LENGTH}
-              type="submit"
-            >
-              {loading ? 'Please wait…' : 'Sign In'}
-            </button>
-            <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-sm">
-              <button
-                className="cursor-pointer border-none bg-transparent text-nf-accent underline"
-                onClick={() => void resetPassword()}
-                type="button"
-              >
-                Forgot password?
-              </button>
-              <button
-                className="cursor-pointer border-none bg-transparent text-nf-accent underline"
-                onClick={showCodePanel}
-                type="button"
-              >
-                Email me a code
-              </button>
-              {supportsPasskeys && (
-                <button
-                  className="cursor-pointer border-none bg-transparent text-nf-accent underline disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={loading}
-                  onClick={() => void handlePasskeySignIn()}
-                  type="button"
-                >
-                  Sign in with a passkey
-                </button>
-              )}
-            </div>
-          </form>
-        ) : (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void sendCode();
-            }}
-          >
-            <div>
-              <label htmlFor="email">Email address</label>
-              <Input
-                aria-describedby={error ? 'auth-error' : undefined}
-                aria-invalid={!!error}
-                autoComplete={offerPasskeyAutofill ? 'username webauthn' : 'email'}
-                autoFocus
-                id="email"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                required
-                type="email"
-                value={email}
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-red-600 -mt-2" id="auth-error" role="alert">
-                {error}
-              </p>
-            )}
-            {notice && (
-              <p className="text-sm text-emerald-700 dark:text-emerald-300" role="status">
-                {notice}
-              </p>
-            )}
-            <button
-              className="w-full cursor-pointer rounded-xl border-none bg-nf-blue py-3 font-semibold text-white transition-colors enabled:hover:bg-nf-blue-mid disabled:cursor-not-allowed disabled:opacity-50 dark:bg-nf-blue-d"
-              disabled={loading || !email.trim()}
-              type="submit"
-            >
-              {loading ? 'Please wait…' : 'Email me a code'}
-            </button>
-            <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-sm">
-              <button
-                className="cursor-pointer border-none bg-transparent text-nf-accent underline"
-                onClick={showPasswordPanel}
-                type="button"
-              >
-                Use a password
-              </button>
-              {supportsPasskeys && (
-                <button
-                  className="cursor-pointer border-none bg-transparent text-nf-accent underline disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={loading}
-                  onClick={() => void handlePasskeySignIn()}
-                  type="button"
-                >
-                  Sign in with a passkey
-                </button>
-              )}
-            </div>
-          </form>
-        )}
+    <CenteredPanel>
+      <div className="text-center">
+        <h1 className="mb-1 text-xl font-bold text-nf-blue dark:text-nf-blue-d">
+          Sign in or create account
+        </h1>
+        <Muted>{subtitle}</Muted>
       </div>
-    </div>
+
+      {panel === 'verify' && otpId ? (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void verifyCode();
+          }}
+        >
+          <Muted>
+            We sent a code to{' '}
+            <strong className="text-slate-700 dark:text-slate-200">{email}</strong>.
+          </Muted>
+          <div>
+            <label htmlFor="code">Verification code</label>
+            <Input
+              aria-describedby={error ? 'code-error' : undefined}
+              aria-invalid={!!error}
+              autoFocus
+              id="code"
+              inputMode="numeric"
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="123456"
+              required
+              type="text"
+              value={code}
+            />
+          </div>
+          {error && (
+            <FieldError className="-mt-2" id="code-error">
+              {error}
+            </FieldError>
+          )}
+          <Button fullWidth disabled={loading || !code.trim()} type="submit">
+            {loading ? 'Verifying…' : 'Verify'}
+          </Button>
+          <Button variant="link" className="text-center" onClick={showCodePanel}>
+            Use a different email
+          </Button>
+        </form>
+      ) : panel === 'password' ? (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submitPassword();
+          }}
+        >
+          <div>
+            <label htmlFor="email">Email address</label>
+            <Input
+              aria-describedby={error ? 'auth-error' : undefined}
+              aria-invalid={!!error}
+              autoComplete={offerPasskeyAutofill ? 'username webauthn' : 'email'}
+              autoFocus
+              id="email"
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              required
+              type="email"
+              value={email}
+            />
+          </div>
+          <div>
+            <label htmlFor="password">Password</label>
+            <Input
+              autoComplete="current-password"
+              id="password"
+              minLength={MIN_PASSWORD_LENGTH}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              type="password"
+              value={password}
+            />
+          </div>
+          {error && (
+            <FieldError className="-mt-2" id="auth-error">
+              {error}
+            </FieldError>
+          )}
+          {notice && <StatusNote>{notice}</StatusNote>}
+          <Button
+            fullWidth
+            disabled={loading || !email.trim() || password.length < MIN_PASSWORD_LENGTH}
+            type="submit"
+          >
+            {loading ? 'Please wait…' : 'Sign In'}
+          </Button>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-sm">
+            <Button variant="link" onClick={() => void resetPassword()}>
+              Forgot password?
+            </Button>
+            <Button variant="link" onClick={showCodePanel}>
+              Email me a code
+            </Button>
+            {supportsPasskeys && (
+              <Button variant="link" disabled={loading} onClick={() => void handlePasskeySignIn()}>
+                Sign in with a passkey
+              </Button>
+            )}
+          </div>
+        </form>
+      ) : (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void sendCode();
+          }}
+        >
+          <div>
+            <label htmlFor="email">Email address</label>
+            <Input
+              aria-describedby={error ? 'auth-error' : undefined}
+              aria-invalid={!!error}
+              autoComplete={offerPasskeyAutofill ? 'username webauthn' : 'email'}
+              autoFocus
+              id="email"
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              required
+              type="email"
+              value={email}
+            />
+          </div>
+          {error && (
+            <FieldError className="-mt-2" id="auth-error">
+              {error}
+            </FieldError>
+          )}
+          {notice && <StatusNote>{notice}</StatusNote>}
+          <Button fullWidth disabled={loading || !email.trim()} type="submit">
+            {loading ? 'Please wait…' : 'Email me a code'}
+          </Button>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-sm">
+            <Button variant="link" onClick={showPasswordPanel}>
+              Use a password
+            </Button>
+            {supportsPasskeys && (
+              <Button variant="link" disabled={loading} onClick={() => void handlePasskeySignIn()}>
+                Sign in with a passkey
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
+    </CenteredPanel>
   );
 }

@@ -4,6 +4,8 @@ import { signOut } from '../../ballots/data/auth.ts';
 import { useAppUser, useAuthState } from '../../ballots/hooks/auth.tsx';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { Avatar } from '../../ballots/components/Avatar.tsx';
+import { cardSurface } from '../../ballots/components/ui/Card.tsx';
+import { Heading } from '../../ballots/components/ui/Heading.tsx';
 import { PasskeyPrompt } from '../../ballots/components/PasskeyPrompt.tsx';
 import { NoClubNotice } from './NoClubNotice.tsx';
 
@@ -197,7 +199,10 @@ function AccountMenu(): React.JSX.Element {
           id="app-nav-menu"
           role="menu"
           aria-label="Account menu"
-          className="absolute top-full right-0 z-20 mt-1 min-w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800"
+          className={cn(
+            cardSurface,
+            'absolute top-full right-0 z-20 mt-1 min-w-44 overflow-hidden rounded-xl shadow-xl',
+          )}
           onKeyDown={(event) => {
             const items = Array.from(
               dropdownRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
@@ -221,9 +226,9 @@ function AccountMenu(): React.JSX.Element {
         >
           {name && (
             <div className="border-b border-slate-100 px-4 py-3 sm:hidden dark:border-slate-700">
-              <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+              <Heading as="p" variant="name" className="truncate">
                 {name}
-              </p>
+              </Heading>
             </div>
           )}
           <button

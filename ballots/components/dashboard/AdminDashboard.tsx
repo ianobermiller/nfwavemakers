@@ -1,42 +1,24 @@
 import { navigate } from '@/hooks/useHashRoute.ts';
+import { Card } from '../ui/Card.tsx';
+import { Muted } from '../ui/Muted.tsx';
+import { Heading } from '../ui/Heading.tsx';
 
 export function AdminDashboard(): React.JSX.Element {
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button
-          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-left cursor-pointer hover:border-nf-accent hover:shadow-md transition-all"
-          onClick={() => navigate('admin')}
-        >
-          <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">
-            Manage Debates
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Create and edit debates, assign students and judges.
-          </p>
-        </button>
-        <button
-          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-left cursor-pointer hover:border-nf-accent hover:shadow-md transition-all"
-          onClick={() => navigate('admin-ballots')}
-        >
-          <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">
-            All Ballots
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Browse submitted ballots by debate or by student.
-          </p>
-        </button>
-        <button
-          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-left cursor-pointer hover:border-nf-accent hover:shadow-md transition-all"
-          onClick={() => navigate('admin-users')}
-        >
-          <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">
-            Manage Users
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Create accounts, archive members, and manage club roles.
-          </p>
-        </button>
+        <Card as="button" interactive padding="lg" onClick={() => navigate('admin')}>
+          <Heading variant="card">Manage Debates</Heading>
+          <Muted>Create and edit debates, assign students and judges.</Muted>
+        </Card>
+        <Card as="button" interactive padding="lg" onClick={() => navigate('admin-ballots')}>
+          <Heading variant="card">All Ballots</Heading>
+          <Muted>Browse submitted ballots by debate or by student.</Muted>
+        </Card>
+        <Card as="button" interactive padding="lg" onClick={() => navigate('admin-users')}>
+          <Heading variant="card">Manage Users</Heading>
+          <Muted>Create accounts, archive members, and manage club roles.</Muted>
+        </Card>
       </div>
     </div>
   );

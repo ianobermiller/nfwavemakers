@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
 import { cn } from 'cnfast';
+import { mutedClass } from './ui/Muted.tsx';
 import { SPEAKER_GUIDE_ROWS } from '../types.ts';
 
 /** Matches Tailwind's `md` breakpoint, where the guide is a side panel. */
@@ -74,7 +75,7 @@ export function SpeakerPointGuide({ isOpen, onClose, focusCategory }: Props): Re
               <Dialog.Title className="font-bold text-sm text-slate-900 dark:text-slate-100">
                 Speaker Point Guide
               </Dialog.Title>
-              <Dialog.Description className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              <Dialog.Description className={mutedClass('xs', 'mt-0.5')}>
                 NCFCA Debate · 1 Beginning → 5 Excellent
               </Dialog.Description>
             </div>

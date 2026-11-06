@@ -13,6 +13,7 @@ import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
+import { SideLabel } from './ui/SideLabel.tsx';
 
 interface Props {
   debateId: string;
@@ -172,16 +173,7 @@ function BallotFormEditor({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(['aff', 'neg'] as const).map((side) => (
             <div key={side}>
-              <h2
-                className={cn(
-                  'text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg mb-2',
-                  side === 'aff'
-                    ? 'bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                    : 'bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d',
-                )}
-              >
-                {side === 'aff' ? 'Affirmative' : 'Negative'}
-              </h2>
+              <SideLabel side={side}>{side === 'aff' ? 'Affirmative' : 'Negative'}</SideLabel>
               {seatsForSide(side).map((pos) => (
                 <SpeakerEvalCard
                   key={pos}

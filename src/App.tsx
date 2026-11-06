@@ -18,6 +18,8 @@ import { AdminUsers } from '../ballots/components/AdminUsers.tsx';
 import { ProfileEdit } from '../ballots/components/ProfileEdit.tsx';
 import { isFullMember } from '../ballots/data/api.ts';
 import type { User } from '../ballots/data/model.ts';
+import { FieldError } from '../ballots/components/ui/FieldError.tsx';
+import { Muted } from '../ballots/components/ui/Muted.tsx';
 import { SiteLayout } from './site/SiteLayout.tsx';
 import { HomePage } from './site/HomePage.tsx';
 import { AboutPage } from './site/AboutPage.tsx';
@@ -136,7 +138,7 @@ function AppShell({ path }: { path: string }): React.JSX.Element {
       <SiteLayout current={isLessonsRoute ? 'lessons' : 'ballots'}>
         <div className="flex items-start justify-center px-4 py-8 sm:px-6 sm:py-16">
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lg sm:p-8 dark:bg-slate-800">
-            <p className="text-sm text-red-600">Auth error: {queryError}</p>
+            <FieldError>Auth error: {queryError}</FieldError>
           </div>
         </div>
       </SiteLayout>
@@ -205,7 +207,7 @@ function StatusCard({ children }: { children: React.ReactNode }): React.JSX.Elem
   return (
     <div className="flex items-start justify-center px-4 py-8 sm:px-6 sm:py-16">
       <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lg sm:p-8 dark:bg-slate-800">
-        <p className="text-slate-500 dark:text-slate-400">{children}</p>
+        <Muted>{children}</Muted>
       </div>
     </div>
   );

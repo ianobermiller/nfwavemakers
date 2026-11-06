@@ -13,6 +13,7 @@ import { PageLayout } from '@/site/PageLayout.tsx';
 import { Input } from './ui/Input.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import { JudgePicker } from './JudgePicker.tsx';
+import { SideLabel } from './ui/SideLabel.tsx';
 
 interface DebateForm {
   date: string;
@@ -248,9 +249,9 @@ function AdminDebateFormEditor({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-aff-bg dark:bg-aff-bg-d text-aff dark:text-aff-d mb-3">
+            <SideLabel side="aff" as="div" className="mb-3">
               {isLd ? 'Affirmative' : 'Affirmative Team'}
-            </div>
+            </SideLabel>
             <div className="flex flex-col gap-2">
               <div>
                 <label htmlFor="aff1">{isLd ? 'Debater' : '1st Speaker'}</label>
@@ -278,9 +279,9 @@ function AdminDebateFormEditor({
           </div>
 
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-neg-bg dark:bg-neg-bg-d text-neg dark:text-neg-d mb-3">
+            <SideLabel side="neg" as="div" className="mb-3">
               {isLd ? 'Negative' : 'Negative Team'}
-            </div>
+            </SideLabel>
             <div className="flex flex-col gap-2">
               <div>
                 <label htmlFor="neg1">{isLd ? 'Debater' : '1st Speaker'}</label>

@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
 import { navigate } from '../hooks/useHashRoute.ts';
+import { HeroLink } from './HeroLink.tsx';
+import { PageHero } from './PageHero.tsx';
 import { SiteLayout } from './SiteLayout.tsx';
-
-const button =
-  'inline-flex items-center justify-center rounded-lg px-6 py-3 text-[0.95rem] font-semibold no-underline hover:no-underline';
 
 export function HomePage(): React.JSX.Element {
   useEffect(() => {
@@ -12,39 +11,39 @@ export function HomePage(): React.JSX.Element {
 
   return (
     <SiteLayout current="home">
-      <section className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white sm:py-20">
-        <h1 className="text-4xl leading-tight font-extrabold tracking-tight sm:text-5xl">
-          Make Waves.
-          <br />
-          Make Your Case.
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-sky-100 sm:text-lg">
-          A student speech &amp; debate club in St. Johns County built on critical thinking,
-          communication, truth, grace, and collaboration.
-        </p>
+      <PageHero
+        lead="A student speech & debate club in St. Johns County built on critical thinking, communication, truth, grace, and collaboration."
+        spacious
+        title={
+          <>
+            Make Waves.
+            <br />
+            Make Your Case.
+          </>
+        }
+      >
         <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
-          <a
+          <HeroLink
             href="/about"
-            className={`${button} bg-nf-accent text-white shadow-md hover:bg-sky-600`}
             onClick={(event) => {
               event.preventDefault();
               navigate('about');
             }}
           >
             About the Club
-          </a>
-          <a
+          </HeroLink>
+          <HeroLink
             href="/join"
-            className={`${button} border-2 border-white/70 text-white hover:border-white hover:bg-white/10`}
+            variant="outline"
             onClick={(event) => {
               event.preventDefault();
               navigate('join');
             }}
           >
             Get in Touch
-          </a>
+          </HeroLink>
         </div>
-      </section>
+      </PageHero>
 
       <div className="bg-gradient-to-b from-nf-blue to-[#0d2347] px-6 py-12 text-center text-white">
         <img

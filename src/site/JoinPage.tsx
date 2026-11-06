@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
+import { HeroLink } from './HeroLink.tsx';
+import { PageHero } from './PageHero.tsx';
 import { SiteLayout } from './SiteLayout.tsx';
-
-const button =
-  'inline-flex items-center justify-center rounded-lg px-6 py-3 text-[0.95rem] font-semibold no-underline hover:no-underline';
 
 export function JoinPage(): React.JSX.Element {
   useEffect(() => {
@@ -11,31 +10,28 @@ export function JoinPage(): React.JSX.Element {
 
   return (
     <SiteLayout current="join">
-      <div className="bg-gradient-to-br from-nf-blue to-nf-blue-mid px-5 py-14 text-center text-white">
-        <h1 className="text-4xl font-extrabold tracking-tight">Join Us</h1>
-        <p className="mx-auto mt-3 max-w-xl text-sky-100">
-          Interested in joining, or have questions? Reach out to our club coordinator.
-        </p>
-      </div>
+      <PageHero
+        lead="Interested in joining, or have questions? Reach out to our club coordinator."
+        title="Join Us"
+      />
       <section className="bg-nf-blue px-5 py-12 text-white">
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <a
+            <HeroLink
               href="https://forms.gle/rQ8qeZQgbuJhdAGq7"
               target="_blank"
               rel="noopener noreferrer"
-              className={`${button} bg-nf-accent text-white shadow-md hover:bg-sky-600`}
             >
               Request More Information →
-            </a>
-            <a
+            </HeroLink>
+            <HeroLink
               href="https://docs.google.com/forms/d/e/1FAIpQLSdBPD9Ich6SrqcRPW6UxAfQy86RSRtf67yCWMti78QEucDKpg/viewform"
               target="_blank"
               rel="noopener noreferrer"
-              className={`${button} border-2 border-white/70 text-white hover:border-white hover:bg-white/10`}
+              variant="outline"
             >
               Register for 2026–27 Season →
-            </a>
+            </HeroLink>
           </div>
           <div className="mt-6 max-w-md rounded-xl border border-white/15 bg-white/5 p-8">
             <div className="mb-4 text-xl font-bold">Rebekah Behrens</div>

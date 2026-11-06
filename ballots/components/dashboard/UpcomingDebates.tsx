@@ -5,6 +5,7 @@ import { useUndoDelete } from '../../hooks/useUndoDelete.ts';
 import { formatLocalYmd } from '../../lib/dates.ts';
 import { AdminDebateItem, type DebateDeletePayload, UndoDebateRow } from '../AdminDebateItem.tsx';
 import { DebateCard } from '../DebateCard.tsx';
+import { Heading } from '../ui/Heading.tsx';
 
 export function UpcomingDebates({ role }: { role: Role }): React.JSX.Element {
   // Local calendar day so debates dated today stay visible after UTC midnight.
@@ -35,9 +36,7 @@ export function UpcomingDebates({ role }: { role: Role }): React.JSX.Element {
 
   return (
     <section>
-      <h2 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
-        Upcoming Debates
-      </h2>
+      <Heading>Upcoming Debates</Heading>
       <div className="flex flex-col gap-3">
         {pendingList.map((pd) => (
           <UndoDebateRow key={pd.id} payload={pd} onUndo={() => undo(pd.id)} />

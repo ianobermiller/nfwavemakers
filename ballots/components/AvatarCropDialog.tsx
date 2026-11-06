@@ -1,6 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { cn } from 'cnfast';
 import { cropImageToWebP, loadImageFromFile } from '../utils/imageUtils.ts';
+import { cardSurface } from './ui/Card.tsx';
 
 const MAX_ZOOM = 4;
 
@@ -168,9 +170,10 @@ export function AvatarCropDialog({ file, onCancel, onConfirm }: Props): React.JS
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
         <Dialog.Content
-          className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm
-                     bg-white dark:bg-slate-800 shadow-2xl rounded-2xl flex flex-col gap-4 p-5
-                     focus:outline-none"
+          className={cn(
+            cardSurface,
+            'fixed top-1/2 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-2xl p-5 shadow-2xl focus:outline-none',
+          )}
           aria-describedby={undefined}
         >
           <Dialog.Title className="font-bold text-sm text-slate-900 dark:text-slate-100">

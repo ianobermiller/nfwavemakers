@@ -4,6 +4,9 @@ import { useDebateCard } from '../hooks/data.ts';
 import { DEBATE_EVENT_LABELS, type Winner } from '../types.ts';
 import { formatTeam } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
+import { Card } from './ui/Card.tsx';
+import { Heading } from './ui/Heading.tsx';
+import { Muted } from './ui/Muted.tsx';
 
 function AvatarStack({ members }: { members: User[] }): React.JSX.Element | null {
   if (members.length === 0) return null;
@@ -54,10 +57,12 @@ function DebateCardShell({
     <>
       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <Heading as="span" variant="name">
             {debate?.date}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">{debate?.room}</span>
+          </Heading>
+          <Muted as="span" size="xs">
+            {debate?.room}
+          </Muted>
           {debate != null && (
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
               {DEBATE_EVENT_LABELS[debate.event]}
@@ -101,31 +106,29 @@ function DebateCardShell({
     </>
   );
 
-  const sharedClassName = cn(
-    'w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-left',
-    onClick != null && 'cursor-pointer hover:border-nf-accent hover:shadow-sm transition-all',
-    className,
-  );
+  const sharedClassName = cn('flex w-full items-center justify-between gap-3', className);
 
   if (onClick != null) {
     return (
-      <button
+      <Card
+        as="button"
+        interactive
+        padding="sm"
         id={id}
-        type="button"
         className={sharedClassName}
         onClick={onClick}
         aria-expanded={hasChevron ? isExpanded : undefined}
         aria-controls={ariaControls}
       >
         {content}
-      </button>
+      </Card>
     );
   }
 
   return (
-    <div id={id} className={sharedClassName}>
+    <Card id={id} padding="sm" className={sharedClassName}>
       {content}
-    </div>
+    </Card>
   );
 }
 

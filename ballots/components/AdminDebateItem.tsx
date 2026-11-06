@@ -3,6 +3,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { navigate } from '@/hooks/useHashRoute.ts';
 import type { Debate } from '../data/model.ts';
 import { DebateCard } from './DebateCard.tsx';
+import { UndoNotice } from './ui/UndoNotice.tsx';
 
 export interface DebateDeletePayload {
   id: string;
@@ -100,18 +101,7 @@ export function UndoDebateRow({
     payload.ballotCount > 0
       ? ` and ${payload.ballotCount} ballot${payload.ballotCount !== 1 ? 's' : ''}`
       : '';
-  return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-500 dark:text-slate-400">
-      <span>Debate{ballotNote} deleted.</span>
-      <button
-        className="shrink-0 text-nf-blue dark:text-nf-blue-d font-semibold hover:underline cursor-pointer border-none bg-transparent text-sm"
-        onClick={onUndo}
-        type="button"
-      >
-        Undo
-      </button>
-    </div>
-  );
+  return <UndoNotice onUndo={onUndo}>Debate{ballotNote} deleted.</UndoNotice>;
 }
 
 function KebabIcon(): React.JSX.Element {

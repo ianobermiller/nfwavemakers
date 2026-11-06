@@ -2,6 +2,9 @@ import { useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import { cn } from 'cnfast';
+import { dialogClass } from './ui/Card.tsx';
+import { headingClass } from './ui/Heading.tsx';
+import { mutedClass } from './ui/Muted.tsx';
 import {
   approveUser,
   createAccounts,
@@ -479,14 +482,12 @@ function CreateAccountsDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
         <Dialog.Content
-          className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] max-h-[min(40rem,calc(100vh-2rem))] overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4"
+          className={dialogClass('max-h-[min(40rem,calc(100vh-2rem))] overflow-y-auto')}
           style={{ maxHeight: 'min(40rem, calc(100dvh - 2rem))' }}
         >
           <div>
-            <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
-              Create accounts
-            </Dialog.Title>
-            <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <Dialog.Title className={headingClass('card')}>Create accounts</Dialog.Title>
+            <Dialog.Description className={mutedClass('sm', 'mt-1')}>
               People can sign in later with an email code. Nothing is emailed when you create an
               account.
             </Dialog.Description>
@@ -765,12 +766,10 @@ function ApproveUserForm({
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+      <Dialog.Content className={dialogClass('overflow-visible')}>
         <div>
-          <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
-            Approve {name}
-          </Dialog.Title>
-          <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <Dialog.Title className={headingClass('card')}>Approve {name}</Dialog.Title>
+          <Dialog.Description className={mutedClass('sm', 'mt-1')}>
             Confirm whether they are a student or a parent. Students also need a category.
           </Dialog.Description>
         </div>
@@ -873,12 +872,10 @@ function SetCategoryForm({
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+      <Dialog.Content className={dialogClass('overflow-visible')}>
         <div>
-          <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
-            Student category
-          </Dialog.Title>
-          <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <Dialog.Title className={headingClass('card')}>Student category</Dialog.Title>
+          <Dialog.Description className={mutedClass('sm', 'mt-1')}>
             {name} will appear in debate searches that match this category. Speech-only students
             stay out of those searches.
           </Dialog.Description>
@@ -993,12 +990,10 @@ function SetPartnerForm({
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(32rem,calc(100%-2rem))] overflow-visible bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-5 flex flex-col gap-4">
+      <Dialog.Content className={dialogClass('overflow-visible')}>
         <div>
-          <Dialog.Title className="text-base font-bold text-slate-800 dark:text-slate-100">
-            Debate partner
-          </Dialog.Title>
-          <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <Dialog.Title className={headingClass('card')}>Debate partner</Dialog.Title>
+          <Dialog.Description className={mutedClass('sm', 'mt-1')}>
             {name} and the student you pick become each other's regular partner. A debate can still
             use a different teammate.
           </Dialog.Description>
