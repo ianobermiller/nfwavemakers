@@ -14,6 +14,10 @@ export function PendingAccess({ user }: Props): React.JSX.Element {
   const email = user.email ?? '';
 
   useEffect(() => {
+    document.title = 'Almost there — North Florida Wavemakers';
+  }, []);
+
+  useEffect(() => {
     if (user.emailVerified) return undefined;
 
     async function refreshVerified(): Promise<void> {
@@ -61,7 +65,8 @@ export function PendingAccess({ user }: Props): React.JSX.Element {
         <div className="text-center">
           <h1 className="text-xl font-bold text-nf-blue dark:text-nf-blue-d mb-1">Almost there</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            New accounts need an email check and club Approval before ballots open up.
+            Thanks for joining. Once your email is verified and a club admin approves your account,
+            lessons and ballots will open up.
           </p>
         </div>
 

@@ -153,6 +153,10 @@ function AppShell({ path }: { path: string }): React.JSX.Element {
         </SiteLayout>
       );
     }
+    const gate = memberGate(user);
+    if (gate) {
+      return <SiteLayout current="lessons">{gate}</SiteLayout>;
+    }
     if (!param) return <LessonsIndex />;
 
     const isAdmin = user.role === 'admin';
@@ -190,7 +194,7 @@ function AppShell({ path }: { path: string }): React.JSX.Element {
   return <AuthenticatedApp userId={user.id} path={path} />;
 }
 
-/** Profile setup first, then email verification + Approval, then full ballots. */
+/** Profile setup first, then email verification + Approval, then lessons and ballots. */
 function memberGate(user: User): React.JSX.Element | null {
   if (!user.name || !user.role) return <ProfileSetup />;
   // Students must pick Speech / TP / LD before leaving setup.
