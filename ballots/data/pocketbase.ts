@@ -1,17 +1,16 @@
 import PocketBase, { ClientResponseError } from 'pocketbase';
 
-const url = import.meta.env['VITE_POCKETBASE_URL'] || 'https://pb.obermillers.com';
+const url = import.meta.env['VITE_POCKETBASE_URL'] || 'https://pb.nfwavemakers.com';
 
 export const pb = new PocketBase(url);
 pb.autoCancellation(false);
 
 export const collections = {
-  authUsers: 'users',
-  profiles: 'ballots_profiles',
-  debates: 'ballots_debates',
-  ballots: 'ballots_ballots',
-  speakerEvals: 'ballots_speaker_evals',
-  lessons: 'ballots_lessons',
+  users: 'users',
+  debates: 'debates',
+  ballots: 'ballots',
+  speakerEvals: 'speaker_evals',
+  lessons: 'lessons',
 } as const;
 
 function fieldErrorMessage(value: unknown): string | undefined {

@@ -68,7 +68,7 @@ for (const lesson of lessons) {
     number: lesson.number,
   });
   const existing = await pb
-    .collection('ballots_lessons')
+    .collection('lessons')
     .getFirstListItem(filter)
     .catch((error) => {
       if (error?.status === 404) return null;
@@ -80,7 +80,7 @@ for (const lesson of lessons) {
     continue;
   }
 
-  await pb.collection('ballots_lessons').create(lesson);
+  await pb.collection('lessons').create(lesson);
   created += 1;
 }
 

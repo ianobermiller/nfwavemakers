@@ -4,7 +4,7 @@
 
 ## Project
 
-nfwavemakers is one React app. Club pages live in `src/`. Ballot screens, data, and hooks live in `ballots/`, next to the PocketBase migrations and hooks. `npm run build` writes `_site/`.
+nfwavemakers is one React app. Club pages live in `src/`. Ballot screens, data, and hooks live in `ballots/`, next to the PocketBase migrations and hooks. The custom PocketBase binary and VM deploy live in `pocketbase/`. `npm run build` writes `_site/`.
 
 ## Work tracking
 

@@ -9,3 +9,15 @@ test-results/
 .env
 .env.local
 ballots/.pb-test/
+ballots/pocketbase/.pb-test/
+pocketbase/pocketbase
+pocketbase/dist/
+
+# Local PocketBase snapshots taken while copying club data. Not app source.
+.pb-old/
+.pb-old2/
+.pb-new/
+.pb-old.tgz
+.pb-old2.tgz
+.pb-new.tgz
+.migrate.py

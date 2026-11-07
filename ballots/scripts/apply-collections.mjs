@@ -32,6 +32,14 @@ function withFieldApi(fields) {
       },
     });
   }
+  if (typeof list.getByName !== 'function') {
+    Object.defineProperty(list, 'getByName', {
+      enumerable: false,
+      value(name) {
+        return list.find((field) => field.name === name) ?? null;
+      },
+    });
+  }
   return list;
 }
 
@@ -39,6 +47,12 @@ function collectDefinitions() {
   const definitions = [];
   const referenced = new Set();
   const saved = new Map();
+
+  const settings = {
+    meta: {},
+    trustedProxy: { headers: [] },
+    batch: {},
+  };
 
   const app = {
     findCollectionByNameOrId(name) {
@@ -51,16 +65,48 @@ function collectDefinitions() {
     findAllRecords() {
       return [];
     },
-    save(collection) {
-      collection.id = placeholder(collection.name);
-      collection.fields = withFieldApi(collection.fields);
-      saved.set(collection.name, collection);
-      const index = definitions.findIndex((item) => item.name === collection.name);
-      if (index >= 0) definitions[index] = collection;
-      else definitions.push(collection);
+    settings() {
+      return settings;
     },
-    delete() {},
+    save(model) {
+      // Instance settings migrations call save(settings); only collections
+      // become API imports for the e2e / apply-collections path.
+      if (!model || typeof model !== 'object' || !('name' in model) || !model.name) {
+        return;
+      }
+      const nextId = placeholder(model.name);
+      // A rename changes the placeholder id. Relation fields still hold the old one.
+      if (model.id && model.id !== nextId) {
+        for (const item of saved.values()) {
+          for (const field of item.fields ?? []) {
+            if (field.collectionId === model.id) field.collectionId = nextId;
+          }
+        }
+      }
+      model.id = nextId;
+      model.fields = withFieldApi(model.fields);
+      saved.set(model.name, model);
+      const index = definitions.findIndex((item) => item.name === model.name);
+      if (index >= 0) definitions[index] = model;
+      else definitions.push(model);
+    },
+    delete(model) {
+      forget(model?.name);
+    },
+    // Real PocketBase renames in save(). The replay also has to drop the old name
+    // so apply-collections does not try to recreate ballots_* collections.
+    forgetCollection(name) {
+      forget(name);
+    },
   };
+
+  function forget(name) {
+    if (!name) return;
+    referenced.delete(name);
+    saved.delete(name);
+    const index = definitions.findIndex((item) => item.name === name);
+    if (index >= 0) definitions.splice(index, 1);
+  }
 
   const context = createContext({
     Collection: function Collection(definition) {
@@ -135,31 +181,32 @@ async function syncExistingCollection(pb, existing, desired) {
     updateRule: desired.updateRule ?? existing.updateRule,
     deleteRule: desired.deleteRule ?? existing.deleteRule,
     indexes: desired.indexes ?? existing.indexes,
+    ...(desired.otp ? { otp: desired.otp } : {}),
     fields,
   };
   await pb.collections.update(existing.id, next);
   return added;
 }
 
-/** New bool columns default to false; mark every existing profile as already admitted. */
+/** New bool columns default to false; mark every existing member as already admitted. */
 async function backfillProfileApproval(pb) {
-  const profiles = await pb.collection('ballots_profiles').getFullList({ fields: 'id' });
-  for (const profile of profiles) {
-    await pb.collection('ballots_profiles').update(profile.id, {
+  const users = await pb.collection('users').getFullList({ fields: 'id' });
+  for (const user of users) {
+    await pb.collection('users').update(user.id, {
       approved: true,
-      email_verified: true,
+      verified: true,
     });
   }
-  return profiles.length;
+  return users.length;
 }
 
 /** Debates created before Lincoln-Douglas support are Team Policy. */
 async function backfillDebateEvent(pb) {
-  const debates = await pb.collection('ballots_debates').getFullList({ fields: 'id,event' });
+  const debates = await pb.collection('debates').getFullList({ fields: 'id,event' });
   let updated = 0;
   for (const debate of debates) {
     if (debate.event === 'tp' || debate.event === 'ld') continue;
-    await pb.collection('ballots_debates').update(debate.id, { event: 'tp' });
+    await pb.collection('debates').update(debate.id, { event: 'tp' });
     updated += 1;
   }
   return updated;
@@ -167,16 +214,14 @@ async function backfillDebateEvent(pb) {
 
 /** Students created before categories existed are Team Policy. */
 async function backfillStudentCategory(pb) {
-  const profiles = await pb
-    .collection('ballots_profiles')
-    .getFullList({ fields: 'id,role,category' });
+  const profiles = await pb.collection('users').getFullList({ fields: 'id,role,category' });
   let updated = 0;
   for (const profile of profiles) {
     if (profile.role !== 'student') continue;
     if (profile.category === 'speech' || profile.category === 'tp' || profile.category === 'ld') {
       continue;
     }
-    await pb.collection('ballots_profiles').update(profile.id, { category: 'tp' });
+    await pb.collection('users').update(profile.id, { category: 'tp' });
     updated += 1;
   }
   return updated;
@@ -225,16 +270,13 @@ export async function applyCollections({ url, email, password }) {
       const details = JSON.stringify(error.response?.data ?? error.response ?? {});
       throw new Error(`Could not update ${desired.name}: ${details}`);
     });
-    if (
-      desired.name === 'ballots_profiles' &&
-      (added.includes('approved') || added.includes('email_verified'))
-    ) {
+    if (desired.name === 'users' && (added.includes('approved') || added.includes('verified'))) {
       approvalFieldsAdded = true;
     }
-    if (desired.name === 'ballots_profiles' && added.includes('category')) {
+    if (desired.name === 'users' && added.includes('category')) {
       studentCategoryAdded = true;
     }
-    if (desired.name === 'ballots_debates' && added.includes('event')) {
+    if (desired.name === 'debates' && added.includes('event')) {
       debateEventAdded = true;
     }
   }

@@ -39,33 +39,17 @@ async function upsertUser(email, name, role) {
     password,
     passwordConfirm: password,
     verified: true,
-  };
-  authUser = authUser
-    ? await pb.collection('users').update(authUser.id, body)
-    : await pb.collection('users').create(body);
-
-  let profile;
-  try {
-    profile = await pb
-      .collection('ballots_profiles')
-      .getFirstListItem(pb.filter('user = {:user}', { user: authUser.id }));
-  } catch (error) {
-    if (error?.status !== 404) throw error;
-  }
-  const profileBody = {
-    user: authUser.id,
     name,
     role,
     archived: false,
     approved: true,
-    email_verified: true,
-    ...(role === 'student' ? { category: 'tp' } : {}),
+    ...(role === 'student' ? { category: 'tp' } : { category: '' }),
     // Seeded accounts use a known password; code-only sign-ups leave this false.
     password_set: true,
   };
-  return profile
-    ? await pb.collection('ballots_profiles').update(profile.id, profileBody)
-    : await pb.collection('ballots_profiles').create(profileBody);
+  return authUser
+    ? await pb.collection('users').update(authUser.id, body)
+    : await pb.collection('users').create(body);
 }
 
 const student = await upsertUser('student@example.com', 'Alice Student', 'student');
@@ -76,9 +60,9 @@ await upsertUser('admin@example.com', 'Carol Admin', 'admin');
 let debate;
 try {
   debate = await pb
-    .collection('ballots_debates')
+    .collection('debates')
     .getFirstListItem('date = "2024-01-15" && room = "101"');
-  debate = await pb.collection('ballots_debates').update(debate.id, {
+  debate = await pb.collection('debates').update(debate.id, {
     event: 'tp',
     aff_team: [student.id, partner.id],
     neg_team: [],
@@ -87,7 +71,7 @@ try {
   });
 } catch (error) {
   if (error?.status !== 404) throw error;
-  debate = await pb.collection('ballots_debates').create({
+  debate = await pb.collection('debates').create({
     date: '2024-01-15',
     room: '101',
     event: 'tp',
@@ -100,13 +84,13 @@ try {
 
 let ballot;
 try {
-  ballot = await pb.collection('ballots_ballots').getFirstListItem(
+  ballot = await pb.collection('ballots').getFirstListItem(
     pb.filter('judge = {:judge} && debate = {:debate}', {
       judge: judge.id,
       debate: debate.id,
     }),
   );
-  ballot = await pb.collection('ballots_ballots').update(ballot.id, {
+  ballot = await pb.collection('ballots').update(ballot.id, {
     winner: 'aff',
     reason_for_decision: 'Affirmative had stronger evidence.',
     submitted_at: new Date('2024-01-15T18:00:00Z').toISOString(),
@@ -114,7 +98,7 @@ try {
   });
 } catch (error) {
   if (error?.status !== 404) throw error;
-  ballot = await pb.collection('ballots_ballots').create({
+  ballot = await pb.collection('ballots').create({
     debate: debate.id,
     judge: judge.id,
     winner: 'aff',
@@ -126,7 +110,7 @@ try {
 async function upsertEval(body) {
   let evaluation;
   try {
-    evaluation = await pb.collection('ballots_speaker_evals').getFirstListItem(
+    evaluation = await pb.collection('speaker_evals').getFirstListItem(
       pb.filter('ballot = {:ballot} && position = {:position}', {
         ballot: body.ballot,
         position: body.position,
@@ -136,9 +120,9 @@ async function upsertEval(body) {
     if (error?.status !== 404) throw error;
   }
   if (evaluation) {
-    await pb.collection('ballots_speaker_evals').update(evaluation.id, body);
+    await pb.collection('speaker_evals').update(evaluation.id, body);
   } else {
-    await pb.collection('ballots_speaker_evals').create(body);
+    await pb.collection('speaker_evals').create(body);
   }
 }
 

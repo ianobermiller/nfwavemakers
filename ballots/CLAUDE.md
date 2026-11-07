@@ -12,8 +12,10 @@ Ballot screens, hooks, and data live in this directory. The club site and the Vi
 
 ## Backend
 
-This app uses PocketBase at `pb.obermillers.com`. Keep authorization in
-PocketBase collection API rules, use the official JavaScript SDK, and use batch
-requests for multi-record writes that must be atomic. The instance is shared:
-prefix every app-owned collection with `ballots_` and do not add app-specific
-fields or rules to the shared `users` auth collection.
+This app owns PocketBase at `pb.nfwavemakers.com` (binary and deploy live in
+`pocketbase/` at the repo root; hooks and migrations stay in
+`ballots/pocketbase/`). `.env.production` points there. Keep authorization in
+collection API rules, use the official JavaScript SDK, and use batch requests
+for multi-record writes that must be atomic. Club membership fields live on
+`users`. Record collections are `debates`, `ballots`, `speaker_evals`, and
+`lessons`.
