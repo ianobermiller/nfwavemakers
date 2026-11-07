@@ -172,6 +172,7 @@ async function syncExistingCollection(pb, existing, desired) {
     updateRule: desired.updateRule ?? existing.updateRule,
     deleteRule: desired.deleteRule ?? existing.deleteRule,
     indexes: desired.indexes ?? existing.indexes,
+    ...(desired.otp ? { otp: desired.otp } : {}),
     fields,
   };
   await pb.collections.update(existing.id, next);
