@@ -28,3 +28,5 @@ Point `.env.production` at `https://pb.nfwavemakers.com`, update the app to read
 The app now talks to `users` for membership (role, approval, category, partner, password) and to `debates`, `ballots`, `speaker_evals`, and `lessons`. `.env.production` is `https://pb.nfwavemakers.com`. The club instance has the copied records, corrected ballot list rules, avatar thumbs, SMTP, and 6-digit sign-in codes. The family instance was not modified.
 
 A check on 2026-11-07 found no new debates, ballots, speaker evals, or lessons on the family instance. Three passwords changed there after the copy (Ian, Brynn, Andrew), and Andrew registered a passkey; those auth fields were copied onto the club instance. A soft-deleted test debate that was created on the club instance during sign-in testing was left in place.
+
+Speaker-eval access has to use `aff_team.id ?=` / `neg_team.id ?=`. Without `.id`, a debater could open a submitted ballot and see only their own scores.

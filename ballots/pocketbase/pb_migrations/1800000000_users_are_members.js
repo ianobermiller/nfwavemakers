@@ -164,8 +164,8 @@ function applyFinalRules(app) {
       deleteRule: admin,
     },
     speaker_evals: {
-      listRule: `${admin} || (${member} && (ballot.judge = @request.auth.id || speaker = @request.auth.id || (ballot.submitted_at != "" && (ballot.debate.aff_team ?= @request.auth.id || ballot.debate.neg_team ?= @request.auth.id))))`,
-      viewRule: `${admin} || (${member} && (ballot.judge = @request.auth.id || speaker = @request.auth.id || (ballot.submitted_at != "" && (ballot.debate.aff_team ?= @request.auth.id || ballot.debate.neg_team ?= @request.auth.id))))`,
+      listRule: `${admin} || (${member} && (ballot.judge = @request.auth.id || speaker = @request.auth.id || (ballot.submitted_at != "" && (ballot.debate.aff_team.id ?= @request.auth.id || ballot.debate.neg_team.id ?= @request.auth.id))))`,
+      viewRule: `${admin} || (${member} && (ballot.judge = @request.auth.id || speaker = @request.auth.id || (ballot.submitted_at != "" && (ballot.debate.aff_team.id ?= @request.auth.id || ballot.debate.neg_team.id ?= @request.auth.id))))`,
       createRule: `${admin} || (${member} && ballot.judge = @request.auth.id)`,
       updateRule: `${admin} || (${member} && ballot.judge = @request.auth.id && @request.body.ballot:changed = false)`,
       deleteRule: `${admin} || (${member} && ballot.judge = @request.auth.id)`,
