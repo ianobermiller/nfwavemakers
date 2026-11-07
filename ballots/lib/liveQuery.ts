@@ -70,3 +70,8 @@ export function clearLiveErrors(): void {
     if (entry.status === 'error') cache.delete(key);
   }
 }
+
+/** Drop every cached query so a new login cannot reuse stale or empty results. */
+export function clearLiveCache(): void {
+  cache.clear();
+}

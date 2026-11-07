@@ -9,6 +9,20 @@ export function shouldEndSession(error: unknown, tokenAtStart: string, tokenNow:
   return errorStatus(error) === 401;
 }
 
+/** Authorization bearer from a PocketBase send options object. */
+export function requestAuthToken(headers: HeadersInit | undefined): string {
+  if (!headers) return '';
+  if (headers instanceof Headers) return headers.get('Authorization') ?? '';
+  if (Array.isArray(headers)) {
+    const match = headers.find(([name]) => name.toLowerCase() === 'authorization');
+    return match?.[1] ?? '';
+  }
+  for (const [name, value] of Object.entries(headers)) {
+    if (name.toLowerCase() === 'authorization' && typeof value === 'string') return value;
+  }
+  return '';
+}
+
 function errorStatus(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null || !('status' in error)) return undefined;
   const status = error.status;

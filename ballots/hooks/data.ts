@@ -48,9 +48,12 @@ function useLiveData<T>(
     let active = true;
 
     const refresh = (): void => {
+      // Without a login PocketBase list rules return empty 200s; publishing
+      // those would blank the page before auth can push back to sign-in.
+      if (!pb.authStore.isValid) return;
       void load()
         .then((next) => {
-          if (!active) return;
+          if (!active || !pb.authStore.isValid) return;
           writeLive(key, next);
           setTick((tick) => tick + 1);
         })

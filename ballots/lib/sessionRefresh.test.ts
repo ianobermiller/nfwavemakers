@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { shouldEndSession } from './sessionRefresh.ts';
+import { requestAuthToken, shouldEndSession } from './sessionRefresh.ts';
 
 const token = 'login-token';
 
@@ -20,4 +20,12 @@ void test('network, server, and aborted refreshes keep the login', () => {
   assert.equal(shouldEndSession({ status: 401, isAbort: true }, token, token), false);
   assert.equal(shouldEndSession(new Error('Failed to fetch'), token, token), false);
   assert.equal(shouldEndSession(null, token, token), false);
+});
+
+void test('requestAuthToken reads Authorization from each headers shape', () => {
+  assert.equal(requestAuthToken(undefined), '');
+  assert.equal(requestAuthToken({ Authorization: token }), token);
+  assert.equal(requestAuthToken({ authorization: token }), token);
+  assert.equal(requestAuthToken([['Authorization', token]]), token);
+  assert.equal(requestAuthToken(new Headers({ Authorization: token })), token);
 });

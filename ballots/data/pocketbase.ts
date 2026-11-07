@@ -1,9 +1,26 @@
-import PocketBase, { ClientResponseError } from 'pocketbase';
+import PocketBase, { ClientResponseError, type SendOptions } from 'pocketbase';
+import { requestAuthToken, shouldEndSession } from '../lib/sessionRefresh.ts';
 
 const url = import.meta.env['VITE_POCKETBASE_URL'] || 'https://pb.nfwavemakers.com';
 
 export const pb = new PocketBase(url);
 pb.autoCancellation(false);
+
+// A rejected token on any request should end the session the same way refresh does.
+function endSessionOnUnauthorized(
+  response: Response,
+  data: unknown,
+  options?: SendOptions,
+): unknown {
+  if (response.status === 401) {
+    const sent = requestAuthToken(options?.headers);
+    if (shouldEndSession({ status: 401 }, sent, pb.authStore.token)) {
+      pb.authStore.clear();
+    }
+  }
+  return data;
+}
+pb.afterSend = endSessionOnUnauthorized;
 
 export const collections = {
   users: 'users',

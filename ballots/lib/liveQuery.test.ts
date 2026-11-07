@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clearLiveErrors, ensureLive, readLive, writeLive } from './liveQuery.ts';
+import { clearLiveCache, clearLiveErrors, ensureLive, readLive, writeLive } from './liveQuery.ts';
 
 void test('readLive suspends until the query resolves, then returns the value', async () => {
   let resolve: (value: string) => void = () => {};
@@ -62,4 +62,30 @@ void test('writeLive updates a cached query without suspending', async () => {
   }
   writeLive(key, 'second');
   assert.equal(readLive(key), 'second');
+});
+
+void test('clearLiveCache drops ready queries and abandons in-flight ones', async () => {
+  let resolve: (value: string) => void = () => {};
+  const pendingKey = 'test-clear-pending';
+  const readyKey = 'test-clear-ready';
+  ensureLive(readyKey, () => Promise.resolve('ready'));
+  try {
+    readLive(readyKey);
+  } catch (thrown) {
+    assert.ok(thrown instanceof Promise);
+    await thrown;
+  }
+  ensureLive(
+    pendingKey,
+    () =>
+      new Promise<string>((done) => {
+        resolve = done;
+      }),
+  );
+  clearLiveCache();
+  assert.throws(() => readLive(readyKey), /No live query/);
+  resolve('late');
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.throws(() => readLive(pendingKey), /No live query/);
 });
