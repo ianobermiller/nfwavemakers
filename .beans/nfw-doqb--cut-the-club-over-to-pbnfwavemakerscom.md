@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-11-06T12:11:44Z
-updated_at: 2026-11-06T15:32:18Z
+updated_at: 2026-11-07T12:04:44Z
 ---
 
 Point `.env.production` at `https://pb.nfwavemakers.com`, update the app to read club fields from `users` directly (drop `ballots_profiles`), configure SMTP on the new instance, and remove the ballots hooks/collections from the family PocketBase when the app is stable on the club host.
@@ -20,7 +20,7 @@ Point `.env.production` at `https://pb.nfwavemakers.com`, update the app to read
 - [x] `.env.production` points at `https://pb.nfwavemakers.com`
 - [x] SMTP configured on the club instance (Resend, sender noreply@updates.obermillers.com)
 - [x] `npm run check` and `npm run build` pass
-- [ ] Land this branch so Cloudflare Pages publishes the new `VITE_POCKETBASE_URL`
+- [x] Land this branch so Cloudflare Pages publishes the new `VITE_POCKETBASE_URL`
 - [ ] After the club site is stable on pb.nfwavemakers.com, remove ballots hooks and collections from the family PocketBase
 
 ## Summary of Changes
