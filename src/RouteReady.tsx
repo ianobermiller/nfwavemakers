@@ -1,9 +1,12 @@
-import { Component, Suspense, type ReactNode } from 'react';
+import { Component, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { clearLiveErrors } from '../ballots/lib/liveQuery.ts';
 import { RouteSkeleton } from './RouteSkeleton.tsx';
 import { SiteLayout } from './site/SiteLayout.tsx';
 
 type NavPage = 'home' | 'about' | 'schedule' | 'lessons' | 'ballots' | 'join';
+
+/** Wait this long before showing the bar so a cached switch never flashes. */
+const PENDING_BAR_DELAY_MS = 800;
 
 function navCurrent(path: string): NavPage {
   const segment = path.split('/')[0] ?? '';
@@ -16,18 +19,29 @@ function navCurrent(path: string): NavPage {
 }
 
 function NavigationPending({ pending }: { pending: boolean }): React.JSX.Element {
+  const [visible, setVisible] = useState(false);
+
+  // Drop the bar as soon as the transition ends. Show it only after a timer.
+  if (!pending && visible) setVisible(false);
+
+  useEffect(() => {
+    if (!pending) return undefined;
+    const id = window.setTimeout(() => setVisible(true), PENDING_BAR_DELAY_MS);
+    return () => window.clearTimeout(id);
+  }, [pending]);
+
   return (
     <>
       <div
-        aria-hidden={pending ? undefined : true}
-        aria-valuetext={pending ? 'Loading page' : undefined}
+        aria-hidden={visible ? undefined : true}
+        aria-valuetext={visible ? 'Loading page' : undefined}
         className={`pointer-events-none fixed inset-x-0 top-0 z-[60] h-1 bg-white transition-opacity ${
-          pending ? 'animate-pulse opacity-100' : 'opacity-0'
+          visible ? 'animate-pulse opacity-100' : 'opacity-0'
         }`}
         role="progressbar"
       />
       <div aria-live="polite" className="sr-only">
-        {pending ? 'Loading page' : ''}
+        {visible ? 'Loading page' : ''}
       </div>
     </>
   );
