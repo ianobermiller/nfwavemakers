@@ -2,7 +2,7 @@ import { cn } from 'cnfast';
 import type { Debate, User } from '../data/model.ts';
 import { useDebateCard } from '../hooks/data.ts';
 import { DEBATE_EVENT_LABELS, type Winner } from '../types.ts';
-import { formatTeam } from '../utils/format.ts';
+import { compareByLastName, formatTeam } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
 import { Card } from './ui/Card.tsx';
 import { Heading } from './ui/Heading.tsx';
@@ -50,7 +50,7 @@ function DebateCardShell({
 }: DebateCardShellProps): React.JSX.Element {
   const affTeam = debate?.affTeam ?? [];
   const negTeam = debate?.negTeam ?? [];
-  const judges = debate?.judges ?? [];
+  const judges = [...(debate?.judges ?? [])].sort(compareByLastName);
   const judgeNames = judges.map((u) => u.name ?? '?');
   const hasTeams = affTeam.length > 0 || negTeam.length > 0;
   const hasChevron = isExpanded !== undefined;

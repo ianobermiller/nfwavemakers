@@ -12,6 +12,7 @@ import type {
 } from './model.ts';
 import { fetchBallotRelations, orEqualFilter, uniqueIds } from '../lib/ballotHydrate.ts';
 import { debatePartnerUpdates } from '../lib/debatePartners.ts';
+import { compareByLastName } from '../utils/format.ts';
 import { collections, createRecordId, pb } from './pocketbase.ts';
 
 interface UserRecord extends RecordModel {
@@ -350,7 +351,8 @@ export async function listUsers(includeArchived = false): Promise<User[]> {
     filter: includeArchived ? '' : 'archived = false',
     sort: 'name',
   });
-  return records.map(mapUser);
+  // PocketBase sorts the full string; re-sort by last name for people lists.
+  return records.map(mapUser).sort(compareByLastName);
 }
 
 /** Name, and category for students. Role is only sent on first signup setup. */

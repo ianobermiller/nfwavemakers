@@ -1,5 +1,6 @@
 import { useSpeakerBallots } from '../../hooks/data.ts';
 import { navigate } from '@/hooks/useHashRoute.ts';
+import { compareByLastName } from '../../utils/format.ts';
 import { Card } from '../ui/Card.tsx';
 import { EmptyState } from '../ui/EmptyState.tsx';
 import { Heading } from '../ui/Heading.tsx';
@@ -32,7 +33,7 @@ export function StudentDashboard({ userId: _userId }: { userId: string }): React
             ...new Set(
               evs.map((ev) => ev.judge?.name).filter((name): name is string => name != null),
             ),
-          ];
+          ].sort((a, b) => compareByLastName({ name: a }, { name: b }));
           return (
             <Card
               key={groupKey}

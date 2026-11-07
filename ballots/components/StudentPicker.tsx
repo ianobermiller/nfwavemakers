@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from 'cnfast';
+import { compareByLastName } from '../utils/format.ts';
 import { Input } from './ui/Input.tsx';
 import { Avatar } from './Avatar.tsx';
 import { Muted } from './ui/Muted.tsx';
@@ -31,10 +32,11 @@ export function StudentPicker({
   const displayText = open ? query : (selected?.name ?? selected?.id ?? '');
   const showAvatar = !open && selected !== undefined;
 
+  const sortedStudents = [...students].sort(compareByLastName);
   // "None" option is index 0; filtered items start at index 1
   const filtered = query.trim()
-    ? students.filter((s) => (s.name ?? s.id).toLowerCase().includes(query.toLowerCase()))
-    : students;
+    ? sortedStudents.filter((s) => (s.name ?? s.id).toLowerCase().includes(query.toLowerCase()))
+    : sortedStudents;
 
   // Total options = 1 (None) + filtered.length
   const totalOptions = 1 + filtered.length;
