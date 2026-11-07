@@ -5,5 +5,5 @@
     "ballots/scripts/*.mjs",
     "ballots/pocketbase/pb_migrations/*.js"
   ],
-  "ignore": ["**/*.pb.js"]
+  "ignore": ["**/*.pb.js", "ballots/pocketbase/pb_hooks/**"]
 }

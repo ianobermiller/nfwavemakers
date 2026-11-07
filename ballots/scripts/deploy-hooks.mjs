@@ -9,8 +9,10 @@ const host = process.env.POCKETBASE_SSH_HOST ?? 'opc@129.213.88.91';
 const identity = process.env.POCKETBASE_SSH_IDENTITY ?? `${process.env.HOME}/.ssh/oracle-pocketbase`;
 const remoteDir = process.env.POCKETBASE_REMOTE_DIR ?? '/opt/pocketbase';
 
-const hooks = readdirSync(hooksDir).filter((name) => name.endsWith('.pb.js'));
-if (hooks.length === 0) {
+// .pb.js files are hook entrypoints. Other .js files are modules those
+// handlers require() — they are not loaded on their own.
+const hooks = readdirSync(hooksDir).filter((name) => name.endsWith('.js'));
+if (!hooks.some((name) => name.endsWith('.pb.js'))) {
   console.error(`No .pb.js hooks in ${hooksDir}`);
   process.exit(1);
 }

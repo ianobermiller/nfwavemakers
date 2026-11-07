@@ -2,46 +2,45 @@
  * Keep ballots_profiles.email_verified in sync with the shared users.verified
  * flag. Self-signup cannot set email_verified itself except by confirming the
  * PocketBase verification email (or completing an OTP that marks verified).
+ *
+ * Helpers are required inside the handler. A top-level function is not
+ * visible when PocketBase runs the handler, and a throw after the user row
+ * is written fails the request even though the change was saved.
  */
 
-function syncProfileEmailVerified(app, authUser) {
-  if (!authUser || !authUser.getBool('verified')) return;
-
-  let profile;
-  try {
-    profile = app.findFirstRecordByFilter('ballots_profiles', 'user = {:user}', {
-      user: authUser.id,
-    });
-  } catch {
-    return;
-  }
-
-  if (profile.getBool('email_verified')) return;
-  profile.set('email_verified', true);
-  app.save(profile);
-}
-
 onRecordAfterUpdateSuccess((e) => {
-  if (e.record.collection().name === 'users') {
-    syncProfileEmailVerified(e.app, e.record);
-  }
   e.next();
-});
+  const { syncProfileEmailVerified } = require(`${__hooks}/ballots_profile_flags.js`);
+  try {
+    syncProfileEmailVerified(e.app, e.record);
+  } catch (err) {
+    console.error('Failed to sync email_verified', err);
+  }
+}, 'users');
 
 onRecordAfterCreateSuccess((e) => {
-  if (e.record.collection().name === 'users') {
-    syncProfileEmailVerified(e.app, e.record);
-  }
   e.next();
-});
+  const { syncProfileEmailVerified } = require(`${__hooks}/ballots_profile_flags.js`);
+  try {
+    syncProfileEmailVerified(e.app, e.record);
+  } catch (err) {
+    console.error('Failed to sync email_verified', err);
+  }
+}, 'users');
 
 // OTP proves inbox access. Mark verified after a successful auth, then sync.
 onRecordAuthWithOTPRequest((e) => {
   e.next();
   if (e.status() !== 200 || !e.record) return;
-  if (!e.record.getBool('verified')) {
-    e.record.set('verified', true);
-    e.app.save(e.record);
+
+  const { syncProfileEmailVerified } = require(`${__hooks}/ballots_profile_flags.js`);
+  try {
+    if (!e.record.getBool('verified')) {
+      e.record.set('verified', true);
+      e.app.save(e.record);
+    }
+    syncProfileEmailVerified(e.app, e.record);
+  } catch (err) {
+    console.error('Failed to sync email_verified after OTP', err);
   }
-  syncProfileEmailVerified(e.app, e.record);
 }, 'users');
