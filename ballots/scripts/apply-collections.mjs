@@ -74,7 +74,16 @@ function collectDefinitions() {
       if (!model || typeof model !== 'object' || !('name' in model) || !model.name) {
         return;
       }
-      model.id = placeholder(model.name);
+      const nextId = placeholder(model.name);
+      // A rename changes the placeholder id. Relation fields still hold the old one.
+      if (model.id && model.id !== nextId) {
+        for (const item of saved.values()) {
+          for (const field of item.fields ?? []) {
+            if (field.collectionId === model.id) field.collectionId = nextId;
+          }
+        }
+      }
+      model.id = nextId;
       model.fields = withFieldApi(model.fields);
       saved.set(model.name, model);
       const index = definitions.findIndex((item) => item.name === model.name);
