@@ -26,7 +26,9 @@ export function ProfileSetup(): React.JSX.Element {
   const me = useAppUser();
   const [name, setName] = useState(me?.name ?? '');
   const [role, setRole] = useState<Role | ''>(me?.role === 'admin' ? '' : (me?.role ?? ''));
-  const [category, setCategory] = useState<StudentCategory | ''>(me?.category ?? '');
+  const [category, setCategory] = useState<StudentCategory | ''>(
+    me?.category || (me?.role === 'student' ? 'speech' : ''),
+  );
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -48,7 +50,11 @@ export function ProfileSetup(): React.JSX.Element {
 
   function chooseRole(next: Role): void {
     setRole(next);
-    if (next !== 'student') setCategory('');
+    if (next === 'student') {
+      setCategory((current) => current || 'speech');
+    } else {
+      setCategory('');
+    }
   }
 
   return (

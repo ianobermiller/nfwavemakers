@@ -1,11 +1,11 @@
 ---
 # nfw-afga
 title: Collect name and category before approval
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-11-07T12:12:17Z
-updated_at: 2026-11-07T12:12:17Z
+updated_at: 2026-11-07T12:49:27Z
 ---
 
 The first real sign-up landed in Manage Users as Unnamed, with no category, and the approver cannot fix either field without a modal.
@@ -21,8 +21,12 @@ On the Pending row:
 
 ## Tasks
 
-- [ ] Ask for full name, role, and student category on every sign-up path, including lessons
-- [ ] Let an approver edit the name on the user row
-- [ ] Remove the "awaiting Approval" badge
-- [ ] Replace the "No category" badge and the approval modal with a category dropdown and a one-click Approve
-- [ ] Verify the pending row and the sign-up profile screen in the browser
+- [x] Ask for full name, role, and student category on every sign-up path, including lessons
+- [x] Let an approver edit the name on the user row
+- [x] Remove the "awaiting Approval" badge
+- [x] Replace the "No category" badge and the approval modal with a category dropdown and a one-click Approve
+- [x] Verify the pending row and the sign-up profile screen in the browser
+
+## Summary of Changes
+
+Lessons now run the same profile setup as ballots. Choosing Student preselects Speech-only. On Manage Users, name, role, and category live in the actions menu under Edit. A pending row keeps Approve, which stays off until the person has a name and a role. Approving a student who never picked a category saves them as speech-only.

@@ -49,6 +49,7 @@ routerAdd(
 
     authUser.set('name', name);
     authUser.set('role', role);
+    authUser.set('category', role === 'student' ? 'speech' : '');
     authUser.set('archived', false);
     authUser.set('approved', true);
     authUser.set('verified', true);

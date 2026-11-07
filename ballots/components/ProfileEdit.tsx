@@ -35,7 +35,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
   const me = useAppUser();
   const currentCategory = me?.category;
   const [name, setName] = useState(currentName);
-  const [category, setCategory] = useState<StudentCategory | ''>(currentCategory ?? '');
+  const [category, setCategory] = useState<StudentCategory | ''>(currentCategory ?? 'speech');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);

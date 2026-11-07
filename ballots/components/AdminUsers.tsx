@@ -10,9 +10,8 @@ import {
   createAccounts,
   type CreateAccountResult,
   setDebatePartner,
-  setStudentCategory,
   setUserArchived,
-  setUserRole,
+  updateMember,
 } from '../data/api.ts';
 import type { User } from '../data/model.ts';
 import { errorMessage } from '../data/pocketbase.ts';
@@ -65,6 +64,10 @@ function isPendingUser(user: User): boolean {
 function roleFromSelect(value: string): Role {
   if (value === 'admin' || value === 'parent' || value === 'student') return value;
   return 'student';
+}
+
+function roleLabel(role: Role): string {
+  return ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
 }
 
 function UserListToggle({
@@ -151,8 +154,7 @@ export function AdminUsers(): React.JSX.Element {
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [partnerStudentId, setPartnerStudentId] = useState<string | null>(null);
-  const [approvalUserId, setApprovalUserId] = useState<string | null>(null);
-  const [categoryUserId, setCategoryUserId] = useState<string | null>(null);
+  const [editUserId, setEditUserId] = useState<string | null>(null);
   // Active and archived load together so tab switches filter without a refetch.
   const allUsers = allUsersLive.read();
 
@@ -176,13 +178,15 @@ export function AdminUsers(): React.JSX.Element {
     }
   }
 
-  async function changeRole(userId: string, role: Role): Promise<void> {
-    setPendingId(userId);
+  async function approve(user: User): Promise<void> {
+    if (!user.name?.trim() || !user.role) return;
+    setPendingId(user.id);
     setError('');
     try {
-      await setUserRole(userId, role);
+      // Students who never picked a category are admitted as speech-only.
+      await approveUser(user.id, user.role === 'student' && !user.category ? 'speech' : undefined);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update role');
+      setError(e instanceof Error ? e.message : 'Failed to approve user');
     } finally {
       setPendingId(null);
     }
@@ -224,6 +228,13 @@ export function AdminUsers(): React.JSX.Element {
         {listedUsers.map((u) => {
           const isMe = me?.id === u.id;
           const busy = pendingId === u.id;
+          const pending = !u.approved && !u.archived;
+          const canApprove = Boolean(u.name?.trim() && u.role);
+          const approveHint = !u.name?.trim()
+            ? 'Add a name before approving'
+            : !u.role
+              ? 'Choose a role before approving'
+              : undefined;
           return (
             <div
               key={u.id}
@@ -239,7 +250,7 @@ export function AdminUsers(): React.JSX.Element {
               <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {u.name ?? 'Unnamed'}
+                    {u.name?.trim() || 'Unnamed'}
                   </span>
                   <span className="truncate text-xs text-slate-500 dark:text-slate-400">
                     {u.email ?? 'no email'}
@@ -256,89 +267,38 @@ export function AdminUsers(): React.JSX.Element {
                       archived
                     </span>
                   )}
-                  {!u.approved && !u.archived && (
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
-                      awaiting Approval
-                    </span>
-                  )}
                   {!u.emailVerified && !u.archived && (
                     <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                       email unverified
                     </span>
                   )}
-                  {isMe ? (
-                    u.role && (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                        {ROLE_OPTIONS.find((option) => option.value === u.role)?.label ?? u.role}
-                      </span>
-                    )
-                  ) : (
-                    <label
-                      className={`flex min-w-0 items-center gap-2 ${
-                        !u.approved && !u.archived ? 'w-full sm:w-auto' : ''
-                      }`}
-                    >
-                      <span
-                        className={`text-xs font-semibold text-slate-500 dark:text-slate-400 ${
-                          !u.approved && !u.archived ? '' : 'sr-only'
-                        }`}
-                      >
-                        Role
-                      </span>
-                      <Select
-                        aria-label={`Role for ${u.name ?? u.email ?? 'user'}`}
-                        className={
-                          !u.approved && !u.archived
-                            ? 'h-11 min-w-[10.5rem] py-2 text-sm font-semibold'
-                            : 'h-9 w-auto min-w-[8.5rem] py-1.5 text-sm'
-                        }
-                        disabled={busy}
-                        onChange={(event) => {
-                          const next = event.target.value;
-                          if (!next) return;
-                          void changeRole(u.id, roleFromSelect(next));
-                        }}
-                        value={u.role ?? ''}
-                      >
-                        {!u.role && (
-                          <option disabled value="">
-                            Choose role
-                          </option>
-                        )}
-                        {ROLE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </label>
+                  {!pending && u.role && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      {roleLabel(u.role)}
+                    </span>
                   )}
-                  {!isMe && !u.approved && !u.archived && (
+                  {!pending && u.role === 'student' && (
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {STUDENT_CATEGORY_LABELS[u.category ?? 'speech']}
+                    </span>
+                  )}
+                  {!isMe && pending && (
                     <button
                       className="inline-flex h-11 items-center justify-center px-3 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 disabled:cursor-not-allowed sm:h-9"
-                      disabled={busy || !u.role}
-                      onClick={() => setApprovalUserId(u.id)}
+                      disabled={busy || !canApprove}
+                      onClick={() => void approve(u)}
+                      title={approveHint}
                       type="button"
                     >
-                      {busy ? 'Saving…' : 'Approval'}
+                      {busy ? 'Saving…' : 'Approve'}
                     </button>
-                  )}
-                  {u.role === 'student' && (
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                      {u.category ? STUDENT_CATEGORY_LABELS[u.category] : 'No category'}
-                    </span>
                   )}
                   {!isMe && (
                     <UserRowMenu
                       archived={u.archived}
                       busy={busy}
                       name={u.name ?? u.email ?? 'user'}
-                      {...(!u.approved && !u.archived
-                        ? { onApproval: () => setApprovalUserId(u.id) }
-                        : {})}
-                      {...(u.role === 'student'
-                        ? { onSetCategory: () => setCategoryUserId(u.id) }
-                        : {})}
+                      onEdit={() => setEditUserId(u.id)}
                       {...(u.role === 'student' && u.approved
                         ? { onSetPartner: () => setPartnerStudentId(u.id) }
                         : {})}
@@ -353,23 +313,17 @@ export function AdminUsers(): React.JSX.Element {
       </div>
 
       <CreateAccountsDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <EditUserDialog
+        user={allUsers.find((user) => user.id === editUserId) ?? null}
+        onOpenChange={(open) => {
+          if (!open) setEditUserId(null);
+        }}
+      />
       <SetPartnerDialog
         student={allUsers.find((user) => user.id === partnerStudentId) ?? null}
         students={allUsers}
         onOpenChange={(open) => {
           if (!open) setPartnerStudentId(null);
-        }}
-      />
-      <ApproveUserDialog
-        user={allUsers.find((user) => user.id === approvalUserId) ?? null}
-        onOpenChange={(open) => {
-          if (!open) setApprovalUserId(null);
-        }}
-      />
-      <SetCategoryDialog
-        user={allUsers.find((user) => user.id === categoryUserId) ?? null}
-        onOpenChange={(open) => {
-          if (!open) setCategoryUserId(null);
         }}
       />
     </PageLayout>
@@ -707,7 +661,7 @@ function CreateAccountsDialog({
   );
 }
 
-function ApproveUserDialog({
+function EditUserDialog({
   onOpenChange,
   user,
 }: {
@@ -716,47 +670,32 @@ function ApproveUserDialog({
 }): React.JSX.Element {
   return (
     <Dialog.Root open={user !== null} onOpenChange={onOpenChange}>
-      {user && <ApproveUserForm key={user.id} user={user} onClose={() => onOpenChange(false)} />}
+      {user && <EditUserForm key={user.id} user={user} onClose={() => onOpenChange(false)} />}
     </Dialog.Root>
   );
 }
 
-const APPROVAL_ROLES: { value: 'student' | 'parent'; label: string }[] = [
-  { value: 'student', label: 'Student' },
-  { value: 'parent', label: 'Parent / Judge' },
-];
-
-function approvalRole(role: Role | undefined): 'student' | 'parent' {
-  return role === 'parent' ? 'parent' : 'student';
-}
-
-function ApproveUserForm({
-  onClose,
-  user,
-}: {
-  onClose: () => void;
-  user: User;
-}): React.JSX.Element {
-  const [role, setRole] = useState<'student' | 'parent'>(approvalRole(user.role));
-  const [category, setCategory] = useState<StudentCategory | ''>(user.category ?? '');
+function EditUserForm({ onClose, user }: { onClose: () => void; user: User }): React.JSX.Element {
+  const [name, setName] = useState(user.name ?? '');
+  const [role, setRole] = useState<Role | ''>(user.role ?? '');
+  const [category, setCategory] = useState<StudentCategory>(user.category ?? 'speech');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const name = user.name ?? user.email ?? 'This user';
-  const isStudent = role === 'student';
-  const canSave = !isStudent || Boolean(category);
+  const canSave = Boolean(name.trim() && role);
 
   async function save(): Promise<void> {
-    if (isStudent && !category) return;
+    if (!role) return;
     setBusy(true);
     setError('');
     try {
-      await approveUser(user.id, {
+      await updateMember(user.id, {
+        name,
         role,
-        ...(isStudent && category ? { category } : {}),
+        ...(role === 'student' ? { category } : {}),
       });
       onClose();
     } catch (cause: unknown) {
-      setError(errorMessage(cause, 'Could not approve user'));
+      setError(errorMessage(cause, 'Could not save user'));
     } finally {
       setBusy(false);
     }
@@ -765,39 +704,59 @@ function ApproveUserForm({
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className={dialogClass('overflow-visible')}>
+      <Dialog.Content className={dialogClass()}>
         <div>
-          <Dialog.Title className={headingClass('card')}>Approve {name}</Dialog.Title>
+          <Dialog.Title className={headingClass('card')}>Edit user</Dialog.Title>
           <Dialog.Description className={mutedClass('sm', 'mt-1')}>
-            Confirm whether they are a student or a parent. Students also need a category.
+            {user.email ?? 'This account'}
           </Dialog.Description>
         </div>
         <div>
-          <label htmlFor="approve-role">Role</label>
-          <Select
-            id="approve-role"
-            value={role}
-            onChange={(e) => setRole(e.target.value === 'parent' ? 'parent' : 'student')}
+          <label htmlFor="edit-user-name">Full name</label>
+          <Input
+            id="edit-user-name"
             disabled={busy}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Full name"
+            type="text"
+            value={name}
+          />
+        </div>
+        <div>
+          <label htmlFor="edit-user-role">Role</label>
+          <Select
+            id="edit-user-role"
+            disabled={busy}
+            onChange={(event) => {
+              const next = roleFromSelect(event.target.value);
+              setRole(next);
+            }}
+            value={role}
           >
-            {APPROVAL_ROLES.map((option) => (
+            {!role && (
+              <option disabled value="">
+                Choose role
+              </option>
+            )}
+            {ROLE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
         </div>
-        {isStudent && (
+        {role === 'student' && (
           <div>
-            <label htmlFor="approve-category">Category</label>
+            <label htmlFor="edit-user-category">Category</label>
             <Select
-              id="approve-category"
-              value={category}
-              onChange={(e) => setCategory(parseStudentCategory(e.target.value) ?? '')}
+              id="edit-user-category"
               disabled={busy}
-              required
+              onChange={(event) => {
+                const next = parseStudentCategory(event.target.value);
+                if (next) setCategory(next);
+              }}
+              value={category}
             >
-              <option value="">Select category…</option>
               {STUDENT_CATEGORIES.map((value) => (
                 <option key={value} value={value}>
                   {STUDENT_CATEGORY_LABELS[value]}
@@ -820,97 +779,7 @@ function ApproveUserForm({
             onClick={() => void save()}
             type="button"
           >
-            {busy ? 'Saving…' : 'Approve'}
-          </button>
-        </div>
-      </Dialog.Content>
-    </Dialog.Portal>
-  );
-}
-
-function SetCategoryDialog({
-  onOpenChange,
-  user,
-}: {
-  onOpenChange: (open: boolean) => void;
-  user: User | null;
-}): React.JSX.Element {
-  return (
-    <Dialog.Root open={user !== null} onOpenChange={onOpenChange}>
-      {user && <SetCategoryForm key={user.id} user={user} onClose={() => onOpenChange(false)} />}
-    </Dialog.Root>
-  );
-}
-
-function SetCategoryForm({
-  onClose,
-  user,
-}: {
-  onClose: () => void;
-  user: User;
-}): React.JSX.Element {
-  const [category, setCategory] = useState<StudentCategory | ''>(user.category ?? '');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const name = user.name ?? user.email ?? 'This student';
-
-  async function save(): Promise<void> {
-    if (!category) return;
-    setBusy(true);
-    setError('');
-    try {
-      await setStudentCategory(user.id, category);
-      onClose();
-    } catch (cause: unknown) {
-      setError(errorMessage(cause, 'Could not save category'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog.Portal>
-      <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className={dialogClass('overflow-visible')}>
-        <div>
-          <Dialog.Title className={headingClass('card')}>Student category</Dialog.Title>
-          <Dialog.Description className={mutedClass('sm', 'mt-1')}>
-            {name} will appear in debate searches that match this category. Speech-only students
-            stay out of those searches.
-          </Dialog.Description>
-        </div>
-        <div>
-          <label htmlFor="student-category">Category</label>
-          <Select
-            id="student-category"
-            value={category}
-            onChange={(e) => setCategory(parseStudentCategory(e.target.value) ?? '')}
-            disabled={busy}
-            required
-          >
-            <option value="">Select category…</option>
-            {STUDENT_CATEGORIES.map((value) => (
-              <option key={value} value={value}>
-                {STUDENT_CATEGORY_LABELS[value]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <Dialog.Close
-            className="px-3 py-2 text-sm font-semibold rounded-lg text-slate-600 dark:text-slate-300 enabled:hover:bg-slate-100 enabled:dark:hover:bg-slate-700"
-            type="button"
-          >
-            Cancel
-          </Dialog.Close>
-          <button
-            className="px-3 py-2 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={busy || !category}
-            onClick={() => void save()}
-            type="button"
-          >
-            {busy ? 'Saving…' : 'Save category'}
+            {busy ? 'Saving…' : 'Save'}
           </button>
         </div>
       </Dialog.Content>
@@ -1034,16 +903,14 @@ function UserRowMenu({
   archived,
   busy,
   name,
-  onApproval,
-  onSetCategory,
+  onEdit,
   onSetPartner,
   onToggleArchived,
 }: {
   archived: boolean;
   busy: boolean;
   name: string;
-  onApproval?: () => void;
-  onSetCategory?: () => void;
+  onEdit: () => void;
   onSetPartner?: () => void;
   onToggleArchived: () => void;
 }): React.JSX.Element {
@@ -1069,34 +936,18 @@ function UserRowMenu({
           role="menu"
           sideOffset={4}
         >
-          {onApproval && (
-            <button
-              className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={busy}
-              onClick={() => {
-                setOpen(false);
-                onApproval();
-              }}
-              role="menuitem"
-              type="button"
-            >
-              Approval
-            </button>
-          )}
-          {onSetCategory && (
-            <button
-              className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={busy}
-              onClick={() => {
-                setOpen(false);
-                onSetCategory();
-              }}
-              role="menuitem"
-              type="button"
-            >
-              Set category
-            </button>
-          )}
+          <button
+            className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={busy}
+            onClick={() => {
+              setOpen(false);
+              onEdit();
+            }}
+            role="menuitem"
+            type="button"
+          >
+            Edit
+          </button>
           {onSetPartner && (
             <button
               className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"

@@ -364,8 +364,8 @@ export async function updateProfile(
     ...(role !== undefined
       ? {
           role,
-          // Parents/admins clear category; students store Speech / TP / LD.
-          category: role === 'student' ? (category ?? '') : '',
+          // Parents/admins clear category. Students default to speech-only.
+          category: role === 'student' ? (category ?? 'speech') : '',
         }
       : category !== undefined
         ? { category }
@@ -406,34 +406,30 @@ export async function setUserArchived(userId: string, archived: boolean): Promis
   await pb.collection(collections.users).update(userId, { archived });
 }
 
-/** Club admin Approval — admits a pending signup into the club. */
-export async function approveUser(
-  userId: string,
-  options: { role: 'student' | 'parent'; category?: StudentCategory },
-): Promise<void> {
+/**
+ * Club admin Approval. A student with no category is admitted as speech-only.
+ * Pass `category` only to fill that default; an existing category is left alone.
+ */
+export async function approveUser(userId: string, category?: StudentCategory): Promise<void> {
   if (userId === currentUserId()) throw new Error('You cannot approve your own account');
   await pb.collection(collections.users).update(userId, {
     approved: true,
-    role: options.role,
-    category: options.role === 'student' ? (options.category ?? '') : '',
+    ...(category ? { category } : {}),
   });
 }
 
-/** Admin sets (or clears) a student's Speech / TP / LD category. */
-export async function setStudentCategory(
+/** Club admins edit another member's name, role, and category from Manage Users. */
+export async function updateMember(
   userId: string,
-  category: StudentCategory | '',
+  input: { name: string; role: Role; category?: StudentCategory },
 ): Promise<void> {
-  await pb.collection(collections.users).update(userId, { category });
-}
-
-/** Club admins set another member's role. Self-service cannot change role after signup. */
-export async function setUserRole(userId: string, role: Role): Promise<void> {
-  if (userId === currentUserId()) throw new Error('You cannot change your own role');
+  if (userId === currentUserId()) throw new Error('You cannot edit your own account here');
+  const name = input.name.trim();
+  if (!name) throw new Error('Name is required');
   await pb.collection(collections.users).update(userId, {
-    role,
-    // Leaving student drops Speech / TP / LD. Staying a student keeps the category.
-    ...(role === 'student' ? {} : { category: '' }),
+    name,
+    role: input.role,
+    category: input.role === 'student' ? (input.category ?? 'speech') : '',
   });
 }
 
@@ -525,6 +521,7 @@ async function createOneAccount(input: CreateAccountInput): Promise<CreateAccoun
       passwordConfirm: password,
       name,
       role,
+      ...(role === 'student' ? { category: 'speech' } : {}),
       archived: false,
       approved: true,
     });

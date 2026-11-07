@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { usePathRoute, navigate } from './hooks/useHashRoute.ts';
+import { usePathRoute, redirect } from './hooks/useHashRoute.ts';
 import { RouteReady } from './RouteReady.tsx';
 import { RouteSkeleton } from './RouteSkeleton.tsx';
 import { AuthProvider, useAppUser, useAuthState } from '../ballots/hooks/auth.tsx';
@@ -189,16 +189,26 @@ function AppShell({ path }: { path: string }): React.JSX.Element {
     );
   }
 
-  if (!user) return <Redirect to="ballots" />;
+  if (!user) {
+    return (
+      <BallotsFrame>
+        <Auth />
+      </BallotsFrame>
+    );
+  }
 
   return <AuthenticatedApp userId={user.id} path={path} />;
 }
 
+function needsProfileSetup(user: User): boolean {
+  if (!user.name || !user.role) return true;
+  // Students must pick Speech / TP / LD before leaving setup.
+  return user.role === 'student' && !user.category;
+}
+
 /** Profile setup first, then email verification + Approval, then lessons and ballots. */
 function memberGate(user: User): React.JSX.Element | null {
-  if (!user.name || !user.role) return <ProfileSetup />;
-  // Students must pick Speech / TP / LD before leaving setup.
-  if (user.role === 'student' && !user.category) return <ProfileSetup />;
+  if (needsProfileSetup(user)) return <ProfileSetup />;
   if (!isFullMember(user)) return <PendingAccess user={user} />;
   return null;
 }
@@ -219,7 +229,7 @@ function StatusCard({ children }: { children: React.ReactNode }): React.JSX.Elem
 
 function Redirect({ to }: { to: string }): React.JSX.Element {
   useEffect(() => {
-    navigate(to);
+    redirect(to);
   }, [to]);
   return (
     <BallotsFrame>
