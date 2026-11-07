@@ -21,16 +21,14 @@ export function AdminDebateItem({
   onDelete: () => void;
 }): React.JSX.Element {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 min-w-0">
-        <DebateCard
-          debateId={debateId}
-          debate={debate}
-          onClick={() => navigate(`admin/${debateId}`)}
-        />
-      </div>
-      <DebateActionsMenu onEdit={() => navigate(`admin/${debateId}`)} onDelete={onDelete} />
-    </div>
+    <DebateCard
+      debateId={debateId}
+      debate={debate}
+      onClick={() => navigate(`admin/${debateId}`)}
+      actions={
+        <DebateActionsMenu onEdit={() => navigate(`admin/${debateId}`)} onDelete={onDelete} />
+      }
+    />
   );
 }
 
