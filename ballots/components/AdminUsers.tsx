@@ -660,14 +660,13 @@ function CreateAccountsDialog({
                   >
                     {result.status === 'created' && (
                       <>
-                        Created sign-in account and profile for {result.name} ({result.email}) as{' '}
-                        {result.role}
+                        Created an account for {result.name} ({result.email}) as {result.role}
                       </>
                     )}
                     {result.status === 'linked' && (
                       <>
-                        Linked profile for {result.name} ({result.email}) to existing sign-in
-                        account as {result.role}
+                        Added a club role for {result.name} ({result.email}) on the existing sign-in
+                        as {result.role}
                       </>
                     )}
                     {result.status === 'skipped' && (

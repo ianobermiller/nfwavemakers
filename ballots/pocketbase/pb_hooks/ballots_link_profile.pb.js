@@ -1,7 +1,7 @@
 /**
- * Admin (or superuser) can attach a ballots_profiles row to an existing
- * shared users auth record. The users list/view rules hide other members'
- * emails from the SPA, so the client cannot look up the auth id itself.
+ * Admin (or superuser) fills club fields on an auth user that already
+ * exists (for example a code-only signup) so Manage Users can admit them
+ * without creating a second record. The route name stays link-profile.
  */
 routerAdd(
   'POST',
@@ -9,16 +9,7 @@ routerAdd(
   (e) => {
     if (!e.hasSuperuserAuth()) {
       const auth = e.auth;
-      if (!auth) {
-        throw new UnauthorizedError('Sign in required');
-      }
-      try {
-        e.app.findFirstRecordByFilter(
-          'ballots_profiles',
-          "user = {:user} && role = 'admin'",
-          { user: auth.id },
-        );
-      } catch {
+      if (auth.collection().name !== 'users' || auth.getString('role') !== 'admin') {
         throw new ForbiddenError('Admin only');
       }
     }
@@ -46,38 +37,27 @@ routerAdd(
       throw new NotFoundError('No sign-in account for that email');
     }
 
-    try {
-      const existing = e.app.findFirstRecordByFilter(
-        'ballots_profiles',
-        'user = {:user} || email = {:email}',
-        { user: authUser.id, email },
-      );
+    if (authUser.getString('role') || authUser.getBool('approved')) {
       return e.json(200, {
         status: 'exists',
-        userId: existing.id,
+        userId: authUser.id,
         email,
-        name: existing.getString('name') || name,
-        role: existing.getString('role') || role,
+        name: authUser.getString('name') || name,
+        role: authUser.getString('role') || role,
       });
-    } catch {
-      // No profile yet — create one linked to the existing auth user.
     }
 
-    const collection = e.app.findCollectionByNameOrId('ballots_profiles');
-    const profile = new Record(collection);
-    profile.set('user', authUser.id);
-    profile.set('name', name);
-    profile.set('email', email);
-    profile.set('role', role);
-    profile.set('archived', false);
-    // Admin is admitting this person by creating the profile.
-    profile.set('approved', true);
-    profile.set('email_verified', true);
-    e.app.save(profile);
+    authUser.set('name', name);
+    authUser.set('role', role);
+    authUser.set('archived', false);
+    authUser.set('approved', true);
+    authUser.set('verified', true);
+    authUser.set('emailVisibility', true);
+    e.app.save(authUser);
 
     return e.json(200, {
       status: 'created',
-      userId: profile.id,
+      userId: authUser.id,
       email,
       name,
       role,

@@ -25,11 +25,11 @@ const ballotCollections = [
   collections.ballots,
   collections.speakerEvals,
   collections.debates,
-  collections.profiles,
+  collections.users,
 ];
-const debateCollections = [collections.debates, collections.profiles];
-const userCollections = [collections.profiles];
-const adminDebateCollections = [collections.debates, collections.ballots, collections.profiles];
+const debateCollections = [collections.debates, collections.users];
+const userCollections = [collections.users];
+const adminDebateCollections = [collections.debates, collections.ballots, collections.users];
 
 export interface LiveQuery<T> {
   /** Call after the component's other hooks. Suspends until this query has a value. */

@@ -1,41 +1,20 @@
 /**
- * Keep ballots_profiles.email_verified in sync with the shared users.verified
- * flag. Self-signup cannot set email_verified itself except by confirming the
- * PocketBase verification email (or completing an OTP that marks verified).
+ * OTP proves inbox access, so a successful code sign-in marks the auth
+ * record verified. Club email visibility stays on so admins can see
+ * addresses in Manage Users (this instance is only the club).
+ * An admin creating a member marks that record verified: the admin is
+ * admitting them, same as the old profile email_verified flag.
  */
 
-function syncProfileEmailVerified(app, authUser) {
-  if (!authUser || !authUser.getBool('verified')) return;
-
-  let profile;
-  try {
-    profile = app.findFirstRecordByFilter('ballots_profiles', 'user = {:user}', {
-      user: authUser.id,
-    });
-  } catch {
-    return;
-  }
-
-  if (profile.getBool('email_verified')) return;
-  profile.set('email_verified', true);
-  app.save(profile);
-}
-
-onRecordAfterUpdateSuccess((e) => {
-  if (e.record.collection().name === 'users') {
-    syncProfileEmailVerified(e.app, e.record);
+onRecordCreateRequest((e) => {
+  e.record.set('emailVisibility', true);
+  const auth = e.auth;
+  if (auth && auth.collection().name === 'users' && auth.getString('role') === 'admin') {
+    e.record.set('verified', true);
   }
   e.next();
-});
+}, 'users');
 
-onRecordAfterCreateSuccess((e) => {
-  if (e.record.collection().name === 'users') {
-    syncProfileEmailVerified(e.app, e.record);
-  }
-  e.next();
-});
-
-// OTP proves inbox access. Mark verified after a successful auth, then sync.
 onRecordAuthWithOTPRequest((e) => {
   e.next();
   if (e.status() !== 200 || !e.record) return;
@@ -43,5 +22,4 @@ onRecordAuthWithOTPRequest((e) => {
     e.record.set('verified', true);
     e.app.save(e.record);
   }
-  syncProfileEmailVerified(e.app, e.record);
 }, 'users');

@@ -24,7 +24,7 @@ async function refreshSessionOnce(): Promise<SessionRefreshResult> {
   const tokenAtStart = pb.authStore.token;
   if (!tokenAtStart || !pb.authStore.isValid) return 'skipped';
   try {
-    await pb.collection(collections.authUsers).authRefresh();
+    await pb.collection(collections.users).authRefresh();
     return 'refreshed';
   } catch (error: unknown) {
     if (!shouldEndSession(error, tokenAtStart, pb.authStore.token)) return 'skipped';
@@ -34,16 +34,16 @@ async function refreshSessionOnce(): Promise<SessionRefreshResult> {
 }
 
 export async function requestSignInCode(email: string): Promise<string> {
-  const result = await pb.collection(collections.authUsers).requestOTP(email);
+  const result = await pb.collection(collections.users).requestOTP(email);
   return result.otpId;
 }
 
 export async function signInWithCode(otpId: string, code: string): Promise<void> {
-  await pb.collection(collections.authUsers).authWithOTP(otpId, code);
+  await pb.collection(collections.users).authWithOTP(otpId, code);
 }
 
 export async function signInWithPassword(email: string, password: string): Promise<void> {
-  await pb.collection(collections.authUsers).authWithPassword(email, password);
+  await pb.collection(collections.users).authWithPassword(email, password);
 }
 
 /**
@@ -54,7 +54,7 @@ export async function signInWithPassword(email: string, password: string): Promi
 export async function createPasswordlessAccount(email: string): Promise<string | undefined> {
   const password = randomPassword();
   try {
-    await pb.collection(collections.authUsers).create({
+    await pb.collection(collections.users).create({
       email,
       password,
       passwordConfirm: password,
@@ -62,7 +62,7 @@ export async function createPasswordlessAccount(email: string): Promise<string |
     // Passkey / later password sign-in still needs the verification email.
     // OTP sign-up proves the inbox and marks verified in a PocketBase hook.
     await pb
-      .collection(collections.authUsers)
+      .collection(collections.users)
       .requestVerification(email)
       .catch(() => undefined);
     return password;
@@ -73,7 +73,7 @@ export async function createPasswordlessAccount(email: string): Promise<string |
 }
 
 export async function resendVerificationEmail(email: string): Promise<void> {
-  await pb.collection(collections.authUsers).requestVerification(email);
+  await pb.collection(collections.users).requestVerification(email);
 }
 
 function randomPassword(): string {
@@ -92,7 +92,7 @@ function isEmailTaken(error: unknown): boolean {
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  await pb.collection(collections.authUsers).requestPasswordReset(email);
+  await pb.collection(collections.users).requestPasswordReset(email);
 }
 
 /** Change the signed-in user's password. Re-authenticates so the session stays valid. */
@@ -101,7 +101,7 @@ export async function changePassword(oldPassword: string, newPassword: string): 
   const email = typeof record?.['email'] === 'string' ? record['email'] : '';
   if (!record?.id || !email) throw new Error('Not authenticated');
 
-  await pb.collection(collections.authUsers).update(record.id, {
+  await pb.collection(collections.users).update(record.id, {
     oldPassword,
     password: newPassword,
     passwordConfirm: newPassword,

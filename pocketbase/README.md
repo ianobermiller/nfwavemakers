@@ -91,16 +91,11 @@ Store the superuser email/password as GitHub Actions secrets
 deploy. Store the `opc` private key as `POCKETBASE_SSH_KEY` (same key the
 family repo uses).
 
-### 5. Point the app at this instance (after data cutover)
+### 5. App
 
-`.env.production` currently still targets the shared family PocketBase. When
-auth and ballot records have been copied here, set:
-
-```
-VITE_POCKETBASE_URL=https://pb.nfwavemakers.com
-```
-
-Until then, production keeps using `https://pb.obermillers.com`.
+`.env.production` is `VITE_POCKETBASE_URL=https://pb.nfwavemakers.com`. Club
+fields live on `users`. Collections are `debates`, `ballots`, `speaker_evals`,
+and `lessons`.
 
 ## Push deploy
 
@@ -111,7 +106,7 @@ Until then, production keeps using `https://pb.obermillers.com`.
 2. Installs the binary under `/opt/pb-nfw`
 3. Syncs `pb_hooks` and `pb_migrations` (migrations apply on restart)
 4. Restarts **only** `pb-nfw` (the family unit stays up)
-5. Seeds any missing `ballots_lessons` rows
+5. Seeds any missing `lessons` rows
 
 Cloudflare Pages already publishes the frontend from `main`. A single push that
 changes UI and schema updates both surfaces once Pages and this workflow finish.

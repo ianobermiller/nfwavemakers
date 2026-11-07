@@ -4,9 +4,9 @@ Judge debate rounds, record speaker scores, and share feedback with students.
 
 The React app talks to PocketBase for authentication, records, files, access
 rules, and realtime updates. The club instance is `https://pb.nfwavemakers.com`
-(built from `pocketbase/` in this repo). `.env.production` may still point at
-the older shared `https://pb.obermillers.com` until the data cutover; see
-[`pocketbase/README.md`](pocketbase/README.md).
+(built from `pocketbase/` in this repo). `.env.production` points there. The
+older shared `https://pb.obermillers.com` is the family instance and is not
+used by this app. See [`pocketbase/README.md`](pocketbase/README.md).
 
 ## Develop
 
@@ -23,30 +23,28 @@ the value in `.env.production` and can be overridden in `.env.local`.
 Hooks and schema migrations live in `ballots/pocketbase/`. The custom binary in
 `pocketbase/` loads them on boot from `/opt/pb-nfw`. They:
 
-- create `ballots_profiles`, `ballots_debates`, `ballots_ballots`,
-  `ballots_speaker_evals`, and `ballots_lessons`;
+- keep club fields (role, approval, category, partner) on `users`;
+- create `debates`, `ballots`, `speaker_evals`, and `lessons`;
 - enable the batch API and set app / trusted-proxy metadata;
 - add indexes, relation limits, and record-level access rules.
 
-Every app-owned collection is prefixed with `ballots_`. Debate teams and judges
-relate to `ballots_profiles`. Ballot and speaker-evaluation changes use the
-batch API so autosaves remain transactional. Club lesson notes live in
-`ballots_lessons` (markdown bodies); only signed-in members can list or view
-them, and only admins can write. Pushing lesson markdown to `main` seeds any
-missing year/number pairs; you can also run
+Debate teams, judges, and speakers relate to `users`. Ballot and
+speaker-evaluation changes use the batch API so autosaves remain transactional.
+Club lesson notes live in `lessons` (markdown bodies); only signed-in members
+can list or view them, and only admins can write. Pushing lesson markdown to
+`main` seeds any missing year/number pairs; you can also run
 `ALLOW_REMOTE_LESSON_SEED=1 npm run seed:lessons` by hand.
 
-Make the first administrator by setting their `ballots_profiles.role` to `admin`
-in the PocketBase dashboard. Admins can create student, parent, and admin
-accounts from Manage Users (one at a time or from a CSV of names and emails).
-Created accounts store email on the profile so they appear in assignment pickers
-before the person signs in. If the email already has a `users` auth record (and
-no ballots profile yet), Manage Users attaches a profile through the admin-only
-`/api/ballots/link-profile` hook instead of failing. Users can also register
-themselves with email/password or sign in with an email OTP. Self-signups stay
-pending until the person verifies their email and a club admin takes the
-Approval action on Manage Users. Accounts an admin creates are already approved.
-Password resets use PocketBase's configured email flow.
+Make the first administrator by setting their `users.role` to `admin` in the
+PocketBase dashboard. Admins can create student, parent, and admin accounts
+from Manage Users (one at a time or from a CSV of names and emails). If the
+email already has a `users` record with no role yet, Manage Users fills the
+club fields through the admin-only `/api/ballots/link-profile` hook instead of
+failing. Users can also register themselves with email/password or sign in with
+an email OTP. Self-signups stay pending until the person verifies their email
+and a club admin takes the Approval action on Manage Users. Accounts an admin
+creates are already approved. Password resets use PocketBase's configured email
+flow.
 
 ## Test data
 

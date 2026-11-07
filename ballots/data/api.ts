@@ -14,26 +14,18 @@ import { fetchBallotRelations, orEqualFilter, uniqueIds } from '../lib/ballotHyd
 import { debatePartnerUpdates } from '../lib/debatePartners.ts';
 import { collections, createRecordId, pb } from './pocketbase.ts';
 
-interface AuthUserRecord extends RecordModel {
-  email: string;
-}
-
-interface ProfileRecord extends RecordModel {
+interface UserRecord extends RecordModel {
   approved?: boolean;
-  archived: boolean;
+  archived?: boolean;
   avatar: string;
   /** Absent on records written before the category field existed. */
   category?: StudentCategory | '';
   email: string;
-  email_verified?: boolean;
   name: string;
   partner?: string;
   password_set?: boolean;
-  role: Role | '';
-  user: string;
-  expand?: {
-    user?: AuthUserRecord;
-  };
+  role?: Role | '';
+  verified?: boolean;
 }
 
 export interface CreateAccountInput {
@@ -50,7 +42,6 @@ export type CreateAccountResult =
 
 interface DebateRecord extends RecordModel {
   aff_team: string[];
-  /** Absent until autodate fields are added to ballots_debates. */
   created?: string;
   date: string;
   deleted_at: string;
@@ -62,9 +53,9 @@ interface DebateRecord extends RecordModel {
   resolution: string;
   room: string;
   expand?: {
-    aff_team?: ProfileRecord[];
-    judges?: ProfileRecord[];
-    neg_team?: ProfileRecord[];
+    aff_team?: UserRecord[];
+    judges?: UserRecord[];
+    neg_team?: UserRecord[];
   };
 }
 
@@ -76,7 +67,7 @@ interface BallotRecord extends RecordModel {
   submitted_at: string;
   winner: Winner | '';
   expand?: {
-    judge?: ProfileRecord;
+    judge?: UserRecord;
   };
 }
 
@@ -93,7 +84,7 @@ interface SpeakerEvalRecord extends RecordModel {
   refutation: number | null;
   speaker: string;
   expand?: {
-    speaker?: ProfileRecord;
+    speaker?: UserRecord;
   };
 }
 
@@ -158,16 +149,15 @@ function optionalText(value: string): string | undefined {
   return value || undefined;
 }
 
-function mapUser(record: ProfileRecord): User {
+function mapUser(record: UserRecord): User {
   return {
     id: record.id,
     approved: record.approved ?? false,
-    archived: record.archived,
+    archived: record.archived ?? false,
     avatarUrl: record.avatar ? pb.files.getURL(record, record.avatar, { thumb: '100x100' }) : null,
     category: parseStudentCategory(record.category),
-    // Prefer the denormalized profile email: other members' auth emails are not readable.
-    email: optionalText(record.email || record.expand?.user?.email || ''),
-    emailVerified: record.email_verified ?? false,
+    email: optionalText(record.email),
+    emailVerified: record.verified ?? false,
     name: optionalText(record.name),
     passwordSet: record.password_set ?? false,
     partnerId: optionalText(record.partner ?? ''),
@@ -205,48 +195,13 @@ export async function loadCurrentUser(): Promise<User | undefined> {
     return undefined;
   }
 
-  const filter = pb.filter('user = {:user}', { user: authUserId() });
-  const authEmail = optionalText(
-    typeof pb.authStore.record?.['email'] === 'string' ? pb.authStore.record['email'] : '',
-  );
-  const authVerified = pb.authStore.record?.['verified'] === true;
-  let record: ProfileRecord;
+  let record: UserRecord;
   try {
-    record = await pb.collection<ProfileRecord>(collections.profiles).getFirstListItem(filter, {
-      expand: 'user',
-    });
-    const patch: { email?: string; email_verified?: boolean } = {};
-    if (authEmail && !record.email) patch.email = authEmail;
-    // PocketBase may have verified the auth email before the profile hook ran.
-    if (authVerified && !record.email_verified) patch.email_verified = true;
-    if (Object.keys(patch).length > 0) {
-      record = await pb
-        .collection<ProfileRecord>(collections.profiles)
-        .update(record.id, patch, { expand: 'user' });
-    }
+    record = await pb.collection<UserRecord>(collections.users).getOne(authUserId());
   } catch (error: unknown) {
     if (!isNotFound(error)) throw error;
-    try {
-      // Self-create must omit approved/email_verified (defaults false). Sync
-      // email_verified in a follow-up update once PocketBase has verified auth.
-      record = await pb.collection<ProfileRecord>(collections.profiles).create(
-        {
-          user: authUserId(),
-          ...(authEmail ? { email: authEmail } : {}),
-        },
-        { expand: 'user' },
-      );
-      if (authVerified) {
-        record = await pb
-          .collection<ProfileRecord>(collections.profiles)
-          .update(record.id, { email_verified: true }, { expand: 'user' });
-      }
-    } catch (createError: unknown) {
-      if (!isConflict(createError)) throw createError;
-      record = await pb.collection<ProfileRecord>(collections.profiles).getFirstListItem(filter, {
-        expand: 'user',
-      });
-    }
+    clearCurrentUser();
+    return undefined;
   }
   activeProfile = mapUser(record);
   return activeProfile;
@@ -391,9 +346,8 @@ function isConflict(error: unknown): boolean {
 }
 
 export async function listUsers(includeArchived = false): Promise<User[]> {
-  const records = await pb.collection<ProfileRecord>(collections.profiles).getFullList({
+  const records = await pb.collection<UserRecord>(collections.users).getFullList({
     filter: includeArchived ? '' : 'archived = false',
-    expand: 'user',
     sort: 'name',
   });
   return records.map(mapUser);
@@ -405,22 +359,18 @@ export async function updateProfile(
   role?: Role,
   category?: StudentCategory,
 ): Promise<User> {
-  const record = await pb.collection<ProfileRecord>(collections.profiles).update(
-    currentUserId(),
-    {
-      name: name.trim(),
-      ...(role !== undefined
-        ? {
-            role,
-            // Parents/admins clear category; students store Speech / TP / LD.
-            category: role === 'student' ? (category ?? '') : '',
-          }
-        : category !== undefined
-          ? { category }
-          : {}),
-    },
-    { expand: 'user' },
-  );
+  const record = await pb.collection<UserRecord>(collections.users).update(currentUserId(), {
+    name: name.trim(),
+    ...(role !== undefined
+      ? {
+          role,
+          // Parents/admins clear category; students store Speech / TP / LD.
+          category: role === 'student' ? (category ?? '') : '',
+        }
+      : category !== undefined
+        ? { category }
+        : {}),
+  });
   activeProfile = mapUser(record);
   window.dispatchEvent(new Event('ballots-profile-changed'));
   return activeProfile;
@@ -429,9 +379,7 @@ export async function updateProfile(
 export async function updateAvatar(file: Blob): Promise<User> {
   const form = new FormData();
   form.set('avatar', file, 'avatar.webp');
-  const record = await pb
-    .collection<ProfileRecord>(collections.profiles)
-    .update(currentUserId(), form, { expand: 'user' });
+  const record = await pb.collection<UserRecord>(collections.users).update(currentUserId(), form);
   activeProfile = mapUser(record);
   window.dispatchEvent(new Event('ballots-profile-changed'));
   return activeProfile;
@@ -448,14 +396,14 @@ export async function setDebatePartner(studentId: string, partnerId: string): Pr
 
   const batch = pb.createBatch();
   for (const update of updates) {
-    batch.collection(collections.profiles).update(update.id, { partner: update.partnerId });
+    batch.collection(collections.users).update(update.id, { partner: update.partnerId });
   }
   await batch.send();
 }
 
 export async function setUserArchived(userId: string, archived: boolean): Promise<void> {
   if (userId === currentUserId()) throw new Error('You cannot archive your own account');
-  await pb.collection(collections.profiles).update(userId, { archived });
+  await pb.collection(collections.users).update(userId, { archived });
 }
 
 /** Club admin Approval — admits a pending signup into the club. */
@@ -464,7 +412,7 @@ export async function approveUser(
   options: { role: 'student' | 'parent'; category?: StudentCategory },
 ): Promise<void> {
   if (userId === currentUserId()) throw new Error('You cannot approve your own account');
-  await pb.collection(collections.profiles).update(userId, {
+  await pb.collection(collections.users).update(userId, {
     approved: true,
     role: options.role,
     category: options.role === 'student' ? (options.category ?? '') : '',
@@ -476,27 +424,26 @@ export async function setStudentCategory(
   userId: string,
   category: StudentCategory | '',
 ): Promise<void> {
-  await pb.collection(collections.profiles).update(userId, { category });
+  await pb.collection(collections.users).update(userId, { category });
 }
 
 /** Club admins set another member's role. Self-service cannot change role after signup. */
 export async function setUserRole(userId: string, role: Role): Promise<void> {
   if (userId === currentUserId()) throw new Error('You cannot change your own role');
-  await pb.collection(collections.profiles).update(userId, {
+  await pb.collection(collections.users).update(userId, {
     role,
     // Leaving student drops Speech / TP / LD. Staying a student keeps the category.
     ...(role === 'student' ? {} : { category: '' }),
   });
 }
 
-async function profileExistsForEmail(email: string): Promise<boolean> {
+async function findUserByEmail(email: string): Promise<UserRecord | null> {
   try {
-    await pb
-      .collection(collections.profiles)
+    return await pb
+      .collection<UserRecord>(collections.users)
       .getFirstListItem(pb.filter('email = {:email}', { email }));
-    return true;
   } catch (error: unknown) {
-    if (isNotFound(error)) return false;
+    if (isNotFound(error)) return null;
     throw error;
   }
 }
@@ -521,7 +468,7 @@ interface LinkProfileResponse {
   userId: string;
 }
 
-/** Attach a ballots profile to an auth user the SPA cannot look up (users view rule). */
+/** Fill club fields on a sign-in that does not have a role yet. */
 async function linkProfileToExistingAuth(input: CreateAccountInput): Promise<CreateAccountResult> {
   const email = normalizeEmail(input.email);
   const name = input.name.trim();
@@ -532,7 +479,7 @@ async function linkProfileToExistingAuth(input: CreateAccountInput): Promise<Cre
       body: { email, name, role },
     });
     if (linked.status === 'exists') {
-      return { status: 'skipped', email, name, reason: 'Already has a ballots profile' };
+      return { status: 'skipped', email, name, reason: 'Already has an account' };
     }
     return {
       status: 'linked',
@@ -546,7 +493,7 @@ async function linkProfileToExistingAuth(input: CreateAccountInput): Promise<Cre
       status: 'invalid',
       email,
       name,
-      reason: error instanceof Error ? error.message : 'Could not link profile to existing account',
+      reason: error instanceof Error ? error.message : 'Could not update the existing account',
     };
   }
 }
@@ -561,56 +508,41 @@ async function createOneAccount(input: CreateAccountInput): Promise<CreateAccoun
     return { status: 'invalid', email: input.email, name, reason: 'Invalid email' };
   }
 
-  if (await profileExistsForEmail(email)) {
-    return { status: 'skipped', email, name, reason: 'Already has a ballots profile' };
+  const existing = await findUserByEmail(email);
+  if (existing && (existing.role || existing.approved)) {
+    return { status: 'skipped', email, name, reason: 'Already has an account' };
+  }
+  if (existing) {
+    return await linkProfileToExistingAuth({ email, name, role });
   }
 
   const password = randomPassword();
-  let authUserId: string;
   try {
-    const authUser = await pb.collection(collections.authUsers).create({
+    const authUser = await pb.collection<UserRecord>(collections.users).create({
       email,
+      emailVisibility: true,
       password,
       passwordConfirm: password,
+      name,
+      role,
+      archived: false,
+      approved: true,
     });
-    authUserId = authUser.id;
+    return { status: 'created', email, name, role, userId: authUser.id };
   } catch (error: unknown) {
     if (isEmailTakenError(error)) {
-      // Auth account already exists (often from another app on the shared users
-      // collection). Link a ballots profile to that record instead of skipping.
       return await linkProfileToExistingAuth({ email, name, role });
     }
     return {
       status: 'invalid',
       email,
       name,
-      reason: error instanceof Error ? error.message : 'Could not create auth user',
-    };
-  }
-
-  try {
-    const profile = await pb.collection<ProfileRecord>(collections.profiles).create({
-      user: authUserId,
-      name,
-      email,
-      role,
-      archived: false,
-      approved: true,
-      email_verified: true,
-    });
-    return { status: 'created', email, name, role, userId: profile.id };
-  } catch (error: unknown) {
-    // Auth user was created; leave it so a retry can attach a profile, but surface the failure.
-    return {
-      status: 'invalid',
-      email,
-      name,
-      reason: error instanceof Error ? error.message : 'Could not create profile',
+      reason: error instanceof Error ? error.message : 'Could not create account',
     };
   }
 }
 
-/** Create auth users + ballots profiles. Does not send email. Continues after skips. */
+/** Create club accounts. Does not send email. Continues after skips. */
 export async function createAccounts(inputs: CreateAccountInput[]): Promise<CreateAccountResult[]> {
   const results: CreateAccountResult[] = [];
   for (const input of inputs) {
