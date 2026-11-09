@@ -153,7 +153,6 @@ export function AdminUsers(): React.JSX.Element {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
-  const [partnerStudentId, setPartnerStudentId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   // Active and archived load together so tab switches filter without a refetch.
   const allUsers = allUsersLive.read();
@@ -299,9 +298,6 @@ export function AdminUsers(): React.JSX.Element {
                       busy={busy}
                       name={u.name ?? u.email ?? 'user'}
                       onEdit={() => setEditUserId(u.id)}
-                      {...(u.role === 'student' && u.approved
-                        ? { onSetPartner: () => setPartnerStudentId(u.id) }
-                        : {})}
                       onToggleArchived={() => void toggleArchived(u.id, !u.archived)}
                     />
                   )}
@@ -315,15 +311,9 @@ export function AdminUsers(): React.JSX.Element {
       <CreateAccountsDialog open={createOpen} onOpenChange={setCreateOpen} />
       <EditUserDialog
         user={allUsers.find((user) => user.id === editUserId) ?? null}
+        users={allUsers}
         onOpenChange={(open) => {
           if (!open) setEditUserId(null);
-        }}
-      />
-      <SetPartnerDialog
-        student={allUsers.find((user) => user.id === partnerStudentId) ?? null}
-        students={allUsers}
-        onOpenChange={(open) => {
-          if (!open) setPartnerStudentId(null);
         }}
       />
     </PageLayout>
@@ -664,35 +654,78 @@ function CreateAccountsDialog({
 function EditUserDialog({
   onOpenChange,
   user,
+  users,
 }: {
   onOpenChange: (open: boolean) => void;
   user: User | null;
+  users: User[];
 }): React.JSX.Element {
   return (
     <Dialog.Root open={user !== null} onOpenChange={onOpenChange}>
-      {user && <EditUserForm key={user.id} user={user} onClose={() => onOpenChange(false)} />}
+      {user && (
+        <EditUserForm key={user.id} user={user} users={users} onClose={() => onOpenChange(false)} />
+      )}
     </Dialog.Root>
   );
 }
 
-function EditUserForm({ onClose, user }: { onClose: () => void; user: User }): React.JSX.Element {
+function EditUserForm({
+  onClose,
+  user,
+  users,
+}: {
+  onClose: () => void;
+  user: User;
+  users: User[];
+}): React.JSX.Element {
   const [name, setName] = useState(user.name ?? '');
   const [role, setRole] = useState<Role | ''>(user.role ?? '');
   const [category, setCategory] = useState<StudentCategory>(user.category ?? 'speech');
+  const [partnerId, setPartnerId] = useState(user.partnerId ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const canSave = Boolean(name.trim() && role);
+  // Partner is only meaningful once the student is in the club; pending accounts skip it.
+  const showPartner = role === 'student' && user.approved;
+  const partnerChoices = users.filter(
+    (candidate) =>
+      candidate.role === 'student' &&
+      candidate.id !== user.id &&
+      (!candidate.archived || candidate.id === user.partnerId),
+  );
+  const partnerOptions = partnerChoices.map((choice) => {
+    const label = choice.name ?? choice.email ?? 'Unnamed';
+    return {
+      id: choice.id,
+      name: choice.archived ? `${label} (archived)` : label,
+    };
+  });
+  const partnerAvatarURLs = Object.fromEntries(
+    partnerChoices
+      .filter((choice): choice is typeof choice & { avatarUrl: string } => choice.avatarUrl != null)
+      .map((choice) => [choice.id, choice.avatarUrl]),
+  );
 
   async function save(): Promise<void> {
     if (!role) return;
     setBusy(true);
     setError('');
     try {
+      const nextPartnerId = showPartner ? partnerId : '';
+      const partnerChanged = nextPartnerId !== (user.partnerId ?? '');
+      // Partner writes only see students, so clear the link before a role change away.
+      const leavingStudent = user.role === 'student' && role !== 'student';
+      if (partnerChanged && leavingStudent) {
+        await setDebatePartner(user.id, '');
+      }
       await updateMember(user.id, {
         name,
         role,
         ...(role === 'student' ? { category } : {}),
       });
+      if (partnerChanged && !leavingStudent) {
+        await setDebatePartner(user.id, nextPartnerId);
+      }
       onClose();
     } catch (cause: unknown) {
       setError(errorMessage(cause, 'Could not save user'));
@@ -704,7 +737,7 @@ function EditUserForm({ onClose, user }: { onClose: () => void; user: User }): R
   return (
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className={dialogClass()}>
+      <Dialog.Content className={dialogClass(showPartner ? 'overflow-visible' : undefined)}>
         <div>
           <Dialog.Title className={headingClass('card')}>Edit user</Dialog.Title>
           <Dialog.Description className={mutedClass('sm', 'mt-1')}>
@@ -765,6 +798,23 @@ function EditUserForm({ onClose, user }: { onClose: () => void; user: User }): R
             </Select>
           </div>
         )}
+        {showPartner && (
+          <div>
+            <label htmlFor="edit-user-partner">Debate partner</label>
+            <p className={mutedClass('sm', 'mb-2')}>
+              They become each other&apos;s regular partner. A debate can still use a different
+              teammate.
+            </p>
+            <StudentPicker
+              id="edit-user-partner"
+              value={partnerId}
+              onChange={setPartnerId}
+              students={partnerOptions}
+              avatarURLs={partnerAvatarURLs}
+              disabled={busy}
+            />
+          </div>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Dialog.Close
@@ -787,131 +837,17 @@ function EditUserForm({ onClose, user }: { onClose: () => void; user: User }): R
   );
 }
 
-function SetPartnerDialog({
-  onOpenChange,
-  student,
-  students,
-}: {
-  onOpenChange: (open: boolean) => void;
-  student: User | null;
-  students: User[];
-}): React.JSX.Element {
-  return (
-    <Dialog.Root open={student !== null} onOpenChange={onOpenChange}>
-      {student && (
-        <SetPartnerForm
-          key={student.id}
-          student={student}
-          students={students}
-          onClose={() => onOpenChange(false)}
-        />
-      )}
-    </Dialog.Root>
-  );
-}
-
-function SetPartnerForm({
-  onClose,
-  student,
-  students,
-}: {
-  onClose: () => void;
-  student: User;
-  students: User[];
-}): React.JSX.Element {
-  const [partnerId, setPartnerId] = useState(student.partnerId ?? '');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const name = student.name ?? student.email ?? 'This student';
-  const choices = students.filter(
-    (user) =>
-      user.role === 'student' &&
-      user.id !== student.id &&
-      (!user.archived || user.id === student.partnerId),
-  );
-  const partnerOptions = choices.map((choice) => {
-    const label = choice.name ?? choice.email ?? 'Unnamed';
-    return {
-      id: choice.id,
-      name: choice.archived ? `${label} (archived)` : label,
-    };
-  });
-  const partnerAvatarURLs = Object.fromEntries(
-    choices
-      .filter((choice): choice is typeof choice & { avatarUrl: string } => choice.avatarUrl != null)
-      .map((choice) => [choice.id, choice.avatarUrl]),
-  );
-
-  async function save(): Promise<void> {
-    setBusy(true);
-    setError('');
-    try {
-      await setDebatePartner(student.id, partnerId);
-      onClose();
-    } catch (cause: unknown) {
-      setError(errorMessage(cause, 'Could not save debate partner'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Dialog.Portal>
-      <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50" />
-      <Dialog.Content className={dialogClass('overflow-visible')}>
-        <div>
-          <Dialog.Title className={headingClass('card')}>Debate partner</Dialog.Title>
-          <Dialog.Description className={mutedClass('sm', 'mt-1')}>
-            {name} and the student you pick become each other's regular partner. A debate can still
-            use a different teammate.
-          </Dialog.Description>
-        </div>
-        <div>
-          <label htmlFor="debate-partner">Partner</label>
-          <StudentPicker
-            id="debate-partner"
-            value={partnerId}
-            onChange={setPartnerId}
-            students={partnerOptions}
-            avatarURLs={partnerAvatarURLs}
-            disabled={busy}
-          />
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <Dialog.Close
-            className="px-3 py-2 text-sm font-semibold rounded-lg text-slate-600 dark:text-slate-300 enabled:hover:bg-slate-100 enabled:dark:hover:bg-slate-700"
-            type="button"
-          >
-            Cancel
-          </Dialog.Close>
-          <button
-            className="px-3 py-2 text-sm font-semibold rounded-lg bg-nf-blue dark:bg-nf-blue-d text-white enabled:hover:bg-nf-blue-mid disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={busy}
-            onClick={() => void save()}
-            type="button"
-          >
-            {busy ? 'Saving…' : 'Save partner'}
-          </button>
-        </div>
-      </Dialog.Content>
-    </Dialog.Portal>
-  );
-}
-
 function UserRowMenu({
   archived,
   busy,
   name,
   onEdit,
-  onSetPartner,
   onToggleArchived,
 }: {
   archived: boolean;
   busy: boolean;
   name: string;
   onEdit: () => void;
-  onSetPartner?: () => void;
   onToggleArchived: () => void;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
@@ -948,20 +884,6 @@ function UserRowMenu({
           >
             Edit
           </button>
-          {onSetPartner && (
-            <button
-              className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={busy}
-              onClick={() => {
-                setOpen(false);
-                onSetPartner();
-              }}
-              role="menuitem"
-              type="button"
-            >
-              Set partner
-            </button>
-          )}
           <button
             className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 enabled:hover:bg-slate-50 enabled:dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={busy}
