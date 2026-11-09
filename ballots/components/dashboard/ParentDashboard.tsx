@@ -43,7 +43,7 @@ export function ParentDashboard({ userId }: { userId: string }): React.JSX.Eleme
 
       {submittedBallots.length > 0 && (
         <section>
-          <Heading>Submitted Ballots</Heading>
+          <Heading>Your Submitted Ballots</Heading>
           <div className="flex flex-col gap-3">
             {submittedBallots.map((b) => {
               if (b.debate) {
