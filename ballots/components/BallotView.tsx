@@ -27,7 +27,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
 
   if (!ballot) {
     return (
-      <PageLayout>
+      <PageLayout title="Ballot">
         <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Ballot not found.</p>
       </PageLayout>
@@ -35,7 +35,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
   }
   if (!ballot.submittedAt) {
     return (
-      <PageLayout>
+      <PageLayout title="Ballot">
         <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Ballot not yet submitted.</p>
       </PageLayout>
@@ -67,7 +67,7 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
     )
   ) {
     return (
-      <PageLayout>
+      <PageLayout title="Ballot">
         <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">
           You don't have access to this ballot.
@@ -84,14 +84,14 @@ export function BallotView({ ballotId, currentUserId }: Props): React.JSX.Elemen
     return seats.filter((pos) => pos.startsWith(side));
   }
 
+  const title = debate?.date
+    ? `Ballot — ${debate.date}${debate.room ? `, ${debate.room}` : ''}`
+    : 'Ballot';
+
   return (
-    <PageLayout>
+    <PageLayout title={title}>
       <BackLink to="dashboard" label="Dashboard" />
-      <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
-        {debate?.date
-          ? `Ballot — ${debate.date}${debate.room ? `, ${debate.room}` : ''}`
-          : 'Ballot'}
-      </h1>
+      <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">{title}</h1>
 
       {/* Compact metadata line */}
       <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3 flex-wrap">

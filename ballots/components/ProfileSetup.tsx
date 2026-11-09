@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { updateProfile } from '../data/api.ts';
 import { errorMessage } from '../data/pocketbase.ts';
 import { useAppUser } from '../hooks/auth.tsx';
@@ -10,6 +10,7 @@ import { FieldError } from './ui/FieldError.tsx';
 import { Heading } from './ui/Heading.tsx';
 import { Input } from './ui/Input.tsx';
 import { Muted } from './ui/Muted.tsx';
+import { clubPageTitle } from '@/site/PageLayout.tsx';
 
 const SELECTABLE_ROLES: { value: Role; label: string; description: string }[] = [
   { value: 'student', label: 'Student', description: 'I compete as a debater' },
@@ -31,6 +32,10 @@ export function ProfileSetup(): React.JSX.Element {
   );
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    document.title = clubPageTitle('Welcome');
+  }, []);
 
   const needsCategory = role === 'student';
   const canSave = Boolean(name.trim() && role && (!needsCategory || category));

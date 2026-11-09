@@ -170,7 +170,7 @@ function AdminDebateFormEditor({
   );
 
   return (
-    <PageLayout>
+    <PageLayout title={debateId ? 'Edit debate' : 'New debate'}>
       <BackLink to="admin" label="Manage Debates" />
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 shadow-sm flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

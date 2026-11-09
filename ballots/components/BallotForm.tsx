@@ -73,9 +73,11 @@ function BallotFormEditor({
     return seats.filter((pos) => pos.startsWith(side));
   }
 
+  const title = draft.debate ? `Judge — ${draft.debate.date}, Room ${draft.debate.room}` : 'Judge';
+
   return (
     <>
-      <PageLayout>
+      <PageLayout title={title}>
         <div className="mb-0 flex items-center justify-between gap-3">
           <BackLink to="dashboard" label="Dashboard" />
           <button

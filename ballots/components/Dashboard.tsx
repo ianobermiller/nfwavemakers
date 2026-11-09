@@ -14,7 +14,7 @@ interface Props {
 export function Dashboard({ userId, role }: Props): React.JSX.Element {
   preloadDashboard(role);
   return (
-    <PageLayout>
+    <PageLayout title="Ballots">
       <div className="flex flex-col gap-6">
         {role !== 'parent' && <UpcomingDebates role={role} />}
         {role === 'parent' && <ParentDashboard userId={userId} />}

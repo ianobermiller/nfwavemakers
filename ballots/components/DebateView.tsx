@@ -20,7 +20,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   const debate = data?.debate;
   if (!debate) {
     return (
-      <PageLayout>
+      <PageLayout title="Debate">
         <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">Debate not found.</p>
       </PageLayout>
@@ -32,7 +32,7 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
   const isMember = affIds.includes(currentUserId) || negIds.includes(currentUserId);
   if (!isMember) {
     return (
-      <PageLayout>
+      <PageLayout title="Debate">
         <BackLink to="dashboard" label="Dashboard" />
         <p className="text-slate-500 dark:text-slate-400 text-sm">
           You don't have access to this debate.
@@ -48,12 +48,12 @@ export function DebateView({ debateId, currentUserId }: Props): React.JSX.Elemen
     return seats.filter((pos) => pos.startsWith(side));
   }
 
+  const title = debate.date ? `Debate — ${debate.date}, Room ${debate.room}` : 'Debate';
+
   return (
-    <PageLayout>
+    <PageLayout title={title}>
       <BackLink to="dashboard" label="Dashboard" />
-      <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">
-        {debate.date ? `Debate — ${debate.date}, Room ${debate.room}` : 'Debate'}
-      </h1>
+      <h1 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-3">{title}</h1>
 
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-6 flex flex-col gap-1 text-sm">
         <div>

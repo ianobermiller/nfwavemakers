@@ -192,7 +192,7 @@ export function AdminUsers(): React.JSX.Element {
   }
 
   return (
-    <PageLayout>
+    <PageLayout title="Manage Users">
       <BackLink to="dashboard" label="Dashboard" />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Users</h1>

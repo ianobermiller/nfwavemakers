@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { refreshSession, resendVerificationEmail, signOut } from '../data/auth.ts';
 import type { User } from '../data/model.ts';
 import { errorMessage } from '../data/pocketbase.ts';
+import { clubPageTitle } from '@/site/PageLayout.tsx';
 
 interface Props {
   user: User;
@@ -14,7 +15,7 @@ export function PendingAccess({ user }: Props): React.JSX.Element {
   const email = user.email ?? '';
 
   useEffect(() => {
-    document.title = 'Almost there — North Florida Wavemakers';
+    document.title = clubPageTitle('Almost there');
   }, []);
 
   useEffect(() => {

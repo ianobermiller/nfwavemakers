@@ -88,7 +88,7 @@ export function ProfileEdit({ currentName, currentRole }: Props): React.JSX.Elem
   const canSave = Boolean(name.trim() && changed && (currentRole !== 'student' || category));
 
   return (
-    <PageLayout>
+    <PageLayout title="Profile">
       <BackLink to="dashboard" label="Dashboard" />
       <div className="max-w-sm mx-auto flex flex-col gap-4">
         <div className="flex flex-col items-center gap-2">

@@ -20,6 +20,7 @@ import { CenteredPanel } from './ui/Panel.tsx';
 import { FieldError, StatusNote } from './ui/FieldError.tsx';
 import { Input } from './ui/Input.tsx';
 import { Muted } from './ui/Muted.tsx';
+import { clubPageTitle } from '@/site/PageLayout.tsx';
 
 type Panel = 'code' | 'password' | 'verify';
 
@@ -32,9 +33,7 @@ interface Props {
 export function Auth({ purpose = 'ballots' }: Props): React.JSX.Element {
   useEffect(() => {
     document.title =
-      purpose === 'lessons'
-        ? 'Sign in for lessons — North Florida Wavemakers'
-        : 'Ballots — North Florida Wavemakers';
+      purpose === 'lessons' ? clubPageTitle('Sign in for lessons') : clubPageTitle('Sign in');
   }, [purpose]);
 
   const [email, setEmail] = useState('');

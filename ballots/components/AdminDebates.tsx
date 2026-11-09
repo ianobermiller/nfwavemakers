@@ -29,7 +29,7 @@ export function AdminDebates(): React.JSX.Element {
   const pendingList = [...pendingDeletes.values()];
 
   return (
-    <PageLayout>
+    <PageLayout title="Manage Debates">
       <BackLink to="dashboard" label="Dashboard" />
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Manage Debates</h1>

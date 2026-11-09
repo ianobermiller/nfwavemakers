@@ -19,11 +19,17 @@ import { SpeakerNotes } from './SpeakerNotes.tsx';
 
 type TabView = 'debate' | 'student' | 'stranded';
 
+const TAB_TITLE: Record<TabView, string> = {
+  debate: 'All Ballots',
+  student: 'All Ballots — By Student',
+  stranded: 'All Ballots — Stranded',
+};
+
 export function AdminBallots(): React.JSX.Element {
   const [view, setView] = useState<TabView>('debate');
 
   return (
-    <PageLayout>
+    <PageLayout title={TAB_TITLE[view]}>
       <BackLink to="dashboard" label="Dashboard" />
       <h1 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">All Ballots</h1>
       <div className="flex gap-2 mb-5">
