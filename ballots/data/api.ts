@@ -65,6 +65,7 @@ interface BallotRecord extends RecordModel {
   deleted_at: string;
   judge: string;
   reason_for_decision: string;
+  speaker_order_confirmed?: Winner[];
   submitted_at: string;
   winner: Winner | '';
   expand?: {
@@ -120,6 +121,7 @@ export interface SaveBallotInput {
   debateId: string;
   evals: SaveEvalInput[];
   reasonForDecision: string;
+  orderConfirmed?: Winner[];
   submittedAt?: number;
   winner?: Winner;
 }
@@ -263,6 +265,7 @@ function ballotFromParts(
     judge: record.expand?.judge ? mapUser(record.expand.judge) : null,
     reasonForDecision: optionalText(record.reason_for_decision),
     speakerEvals,
+    orderConfirmed: record.speaker_order_confirmed ?? [],
     submittedAt: record.submitted_at
       ? new Date(record.submitted_at.replace(' ', 'T')).getTime()
       : undefined,
@@ -758,6 +761,7 @@ export async function saveBallot(input: SaveBallotInput): Promise<SavedBallotIds
     debate: input.debateId,
     judge: currentUserId(),
     reason_for_decision: input.reasonForDecision.trim(),
+    ...(input.orderConfirmed ? { speaker_order_confirmed: input.orderConfirmed } : {}),
     submitted_at: input.submittedAt ? new Date(input.submittedAt).toISOString() : '',
     winner: input.winner ?? '',
   };

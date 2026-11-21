@@ -11,6 +11,7 @@ export interface LocalBallotDraft {
   ballotId?: string;
   evalIds: Partial<Record<Position, string>>;
   speakers: Record<Position, SpeakerFormState>;
+  orderConfirmed?: Winner[];
   rankOrder: Position[];
   winner?: Winner;
   rfd: string;
@@ -136,6 +137,9 @@ export function parseLocalDraft(raw: string | null): LocalBallotDraft | null {
       ...(typeof ballotId === 'string' && ballotId ? { ballotId } : {}),
       evalIds,
       speakers,
+      orderConfirmed: Array.isArray(data['orderConfirmed'])
+        ? data['orderConfirmed'].filter(isWinner)
+        : [],
       rankOrder,
       ...(isWinner(winner) ? { winner } : {}),
       rfd: typeof data['rfd'] === 'string' ? data['rfd'] : '',
@@ -170,6 +174,7 @@ export function buildLocalDraft(input: {
   debateId?: string | undefined;
   ids: BallotIds;
   speakers: Record<Position, SpeakerFormState>;
+  orderConfirmed?: Winner[];
   rankOrder: Position[];
   winner: Winner | undefined;
   rfd: string;
@@ -183,6 +188,7 @@ export function buildLocalDraft(input: {
     ...(input.ids.ballotId ? { ballotId: input.ids.ballotId } : {}),
     evalIds: { ...input.ids.evalIds },
     speakers: structuredClone(input.speakers),
+    orderConfirmed: [...(input.orderConfirmed ?? [])],
     rankOrder: [...input.rankOrder],
     ...(input.winner ? { winner: input.winner } : {}),
     rfd: input.rfd,
@@ -203,6 +209,13 @@ export function feedbackWeight(speakers: Record<Position, SpeakerFormState>, rfd
  * Scores and ranks ride along so a restored draft matches what the judge last typed.
  */
 export function shouldRestoreLocalDraft(server: BallotFormInit, local: LocalBallotDraft): boolean {
+  const hasUnsyncedOrder = local.orderConfirmed?.some(
+    (side) =>
+      !server.orderConfirmed.includes(side) ||
+      local.speakers[side === 'aff' ? 'aff1' : 'neg1'].userId !==
+        server.speakers[side === 'aff' ? 'aff1' : 'neg1'].userId,
+  );
+  if (hasUnsyncedOrder) return true;
   const localWeight = feedbackWeight(local.speakers, local.rfd);
   if (localWeight === 0) return false;
   return localWeight > feedbackWeight(server.speakers, server.rfd);
@@ -244,6 +257,7 @@ export function applyLocalDraft(server: BallotFormInit, local: LocalBallotDraft)
 
   const ballotId = local.ballotId ?? server.ids.ballotId;
   return {
+    orderConfirmed: local.orderConfirmed ?? [],
     speakers: preserveNotes(local.speakers, local.speakers),
     rankOrder: local.rankOrder,
     winner: local.winner ?? server.winner,

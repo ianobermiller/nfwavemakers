@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { alignSpeakersToDebate, initBallotFormState, type DebateTeams } from './ballot.ts';
+import {
+  alignSpeakersToDebate,
+  chooseFirstSpeaker,
+  initBallotFormState,
+  type DebateTeams,
+} from './ballot.ts';
 import type { Position, SpeakerFormState } from '../types.ts';
 
 function speaker(userId: string, notes = ''): SpeakerFormState {
@@ -25,29 +30,21 @@ function speakers(map: Partial<Record<Position, SpeakerFormState>>) {
   };
 }
 
-void test('alignSpeakersToDebate swaps affirmative order and keeps scores with each speaker', () => {
+void test('choosing a first speaker keeps scores, notes and rank with each student', () => {
   const before = speakers({
     aff1: speaker('alice', 'alice notes'),
     aff2: speaker('bob', 'bob notes'),
     neg1: speaker('cara'),
     neg2: speaker('dan'),
   });
-  const evalIds = { aff1: 'e-aff1', aff2: 'e-aff2', neg1: 'e-neg1', neg2: 'e-neg2' };
-  const debate: DebateTeams = {
-    affTeam: [{ id: 'bob' }, { id: 'alice' }],
-    negTeam: [{ id: 'cara' }, { id: 'dan' }],
-  };
+  const aligned = chooseFirstSpeaker(before, ['aff1', 'aff2', 'neg1', 'neg2'], 'aff', 'bob');
 
-  const aligned = alignSpeakersToDebate(before, evalIds, ['aff1', 'aff2', 'neg1', 'neg2'], debate);
-
-  assert.equal(aligned.changed, true);
   assert.equal(aligned.speakers.aff1.userId, 'bob');
   assert.equal(aligned.speakers.aff1.notes, 'bob notes');
   assert.equal(aligned.speakers.aff1.delivery, 3);
   assert.equal(aligned.speakers.aff2.userId, 'alice');
   assert.equal(aligned.speakers.aff2.notes, 'alice notes');
   assert.equal(aligned.speakers.aff2.delivery, 4);
-  assert.deepEqual(aligned.evalIds, evalIds);
   assert.deepEqual(aligned.rankOrder, ['aff2', 'aff1', 'neg1', 'neg2']);
 });
 
@@ -69,10 +66,11 @@ void test('alignSpeakersToDebate is a no-op when slots already match the debate'
   assert.deepEqual(aligned.rankOrder, ['aff1', 'aff2']);
 });
 
-void test('initBallotFormState rematches an existing draft to the debate and marks needsPersist', () => {
+void test('reopening a ballot preserves judge order even when setup lists the team differently', () => {
   const init = initBallotFormState(
     {
       id: 'ballot-1',
+      orderConfirmed: ['aff'],
       speakerEvals: [
         {
           id: 'e1',
@@ -98,13 +96,45 @@ void test('initBallotFormState rematches an existing draft to the debate and mar
     },
   );
 
-  assert.equal(init.needsPersist, true);
-  assert.equal(init.speakers.aff1.userId, 'bob');
-  assert.equal(init.speakers.aff1.notes, 'bob notes');
-  assert.equal(init.speakers.aff1.delivery, 2);
-  assert.equal(init.speakers.aff2.userId, 'alice');
-  assert.equal(init.speakers.aff2.notes, 'alice notes');
-  assert.equal(init.speakers.aff2.delivery, 5);
+  assert.equal(init.needsPersist, false);
+  assert.deepEqual(init.orderConfirmed, ['aff']);
+  assert.equal(init.speakers.aff1.userId, 'alice');
+  assert.equal(init.speakers.aff1.notes, 'alice notes');
+  assert.equal(init.speakers.aff1.delivery, 5);
+  assert.equal(init.speakers.aff2.userId, 'bob');
+  assert.equal(init.speakers.aff2.notes, 'bob notes');
+  assert.equal(init.speakers.aff2.delivery, 2);
   assert.deepEqual(init.ids.evalIds, { aff1: 'e1', aff2: 'e2' });
-  assert.deepEqual(init.rankOrder, ['aff2', 'aff1']);
+  assert.deepEqual(init.rankOrder, ['aff1', 'aff2']);
+});
+
+void test('new ballots leave speaking order unconfirmed', () => {
+  const init = initBallotFormState(null, {
+    affTeam: [{ id: 'alice' }, { id: 'bob' }],
+    negTeam: [],
+  });
+  assert.deepEqual(init.orderConfirmed, []);
+});
+
+void test('replacing a teammate resets that team choice and preserves remaining feedback', () => {
+  const init = initBallotFormState(
+    {
+      id: 'b',
+      orderConfirmed: ['aff', 'neg'],
+      speakerEvals: [
+        { id: 'e1', position: 'aff1', speaker: { id: 'alice' }, notes: 'Alice feedback' },
+        { id: 'e2', position: 'aff2', speaker: { id: 'bob' }, notes: 'Bob feedback' },
+        { id: 'e3', position: 'neg1', speaker: { id: 'cara' } },
+        { id: 'e4', position: 'neg2', speaker: { id: 'dan' } },
+      ],
+    },
+    {
+      affTeam: [{ id: 'alice' }, { id: 'erin' }],
+      negTeam: [{ id: 'cara' }, { id: 'dan' }],
+    },
+  );
+  assert.deepEqual(init.orderConfirmed, ['neg']);
+  assert.equal(init.speakers.aff1.notes, 'Alice feedback');
+  assert.equal(init.speakers.aff2.userId, 'erin');
+  assert.equal(init.speakers.aff2.notes, '');
 });

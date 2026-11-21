@@ -56,6 +56,7 @@ export interface ExistingBallot {
   winner?: Winner | undefined;
   reasonForDecision?: string | undefined;
   speakerEvals: ExistingSpeakerEval[];
+  orderConfirmed?: Winner[];
 }
 
 export interface DebateTeams {
@@ -64,6 +65,7 @@ export interface DebateTeams {
 }
 
 export interface BallotFormInit {
+  orderConfirmed: Winner[];
   speakers: Record<Position, SpeakerFormState>;
   rankOrder: Position[];
   winner: Winner | undefined;
@@ -82,7 +84,7 @@ function desiredSpeakersFromDebate(debate: DebateTeams): Record<Position, string
 }
 
 /**
- * Re-seat speakers to match the debate's current speaking order. Eval records stay
+ * Reconcile team membership while preserving the judge's speaking order. Eval records stay
  * on their positions (ballot+position is unique); scores, notes, and ranks follow
  * each speaker to their new slot.
  */
@@ -98,6 +100,15 @@ export function alignSpeakersToDebate(
   changed: boolean;
 } {
   const desired = desiredSpeakersFromDebate(debate);
+  for (const side of ['aff', 'neg'] as const) {
+    const first = side === 'aff' ? 'aff1' : 'neg1';
+    const second = side === 'aff' ? 'aff2' : 'neg2';
+    const team = [desired[first], desired[second]];
+    if (team.includes(speakers[first].userId) && team.includes(speakers[second].userId)) {
+      desired[first] = speakers[first].userId;
+      desired[second] = speakers[second].userId;
+    }
+  }
   const stateBySpeaker = new Map<string, SpeakerFormState>();
   for (const pos of POSITIONS) {
     const sp = speakers[pos];
@@ -167,6 +178,11 @@ export function initBallotFormState(
     if (debate) {
       const aligned = alignSpeakersToDebate(speakers, ids.evalIds, rankOrder, debate);
       return {
+        orderConfirmed: (existing.orderConfirmed ?? []).filter((side) =>
+          POSITIONS.filter((pos) => pos.startsWith(side)).every(
+            (pos) => speakers[pos].userId === aligned.speakers[pos].userId,
+          ),
+        ),
         speakers: aligned.speakers,
         rankOrder: aligned.rankOrder,
         winner: existing.winner,
@@ -177,6 +193,7 @@ export function initBallotFormState(
     }
 
     return {
+      orderConfirmed: existing.orderConfirmed ?? [],
       speakers,
       rankOrder,
       winner: existing.winner,
@@ -197,6 +214,7 @@ export function initBallotFormState(
   }
 
   return {
+    orderConfirmed: [],
     speakers,
     rankOrder: [],
     winner: undefined,
@@ -254,4 +272,22 @@ export function canSubmitBallot(
   rankOrder: Position[],
 ): boolean {
   return winner !== undefined && isAllScored(speakers) && isAllRanked(speakers, rankOrder);
+}
+
+/** Move all student feedback and their rank together; eval record ids stay on seats. */
+export function chooseFirstSpeaker(
+  speakers: Record<Position, SpeakerFormState>,
+  rankOrder: Position[],
+  side: Winner,
+  userId: string,
+): { speakers: Record<Position, SpeakerFormState>; rankOrder: Position[] } {
+  const first = side === 'aff' ? 'aff1' : 'neg1';
+  const second = side === 'aff' ? 'aff2' : 'neg2';
+  if (speakers[second].userId !== userId || speakers[first].userId === userId) {
+    return { speakers, rankOrder };
+  }
+  return {
+    speakers: { ...speakers, [first]: speakers[second], [second]: speakers[first] },
+    rankOrder: rankOrder.map((pos) => (pos === first ? second : pos === second ? first : pos)),
+  };
 }

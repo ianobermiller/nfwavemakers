@@ -19,6 +19,7 @@ import {
   alignSpeakersToDebate,
   buildEvalPayload,
   canSubmitBallot,
+  chooseFirstSpeaker,
   getActivePositions,
   initBallotFormState,
   isAllScored,
@@ -52,6 +53,9 @@ export function useBallotDraft({
   const [boot] = useState(() => restoreBallotFormState(serverInitial, judgeId, debateId, storage));
   const initial = boot.initial;
   const startedFromLocal = boot.restoredFromLocal;
+
+  const [orderConfirmed, setOrderConfirmed] = useState(initial.orderConfirmed);
+  const orderConfirmedRef = useRef(orderConfirmed);
 
   const [winner, setWinner] = useState(initial.winner);
   const [rfd, setRfd] = useState(initial.rfd);
@@ -100,6 +104,7 @@ export function useBallotDraft({
         buildLocalDraft({
           judgeId,
           debateId,
+          orderConfirmed: orderConfirmedRef.current,
           ids: next.ids,
           speakers: next.speakers,
           rankOrder: next.rankOrder,
@@ -136,6 +141,7 @@ export function useBallotDraft({
       const result = await saveBallot({
         ...(idsToSave.ballotId ? { ballotId: idsToSave.ballotId } : {}),
         debateId,
+        orderConfirmed: orderConfirmedRef.current,
         evals: buildEvalPayload(speakersToSave, idsToSave, rankOrderToSave),
         reasonForDecision: rfdToSave,
         ...(winnerToSave ? { winner: winnerToSave } : {}),
@@ -152,11 +158,11 @@ export function useBallotDraft({
       idsRef.current = nextIds;
       setIds(nextIds);
       persistLocal({
-        speakers: speakersToSave,
+        speakers: speakersRef.current,
         ids: nextIds,
-        rankOrder: rankOrderToSave,
-        winner: winnerToSave,
-        rfd: rfdToSave,
+        rankOrder: rankOrderRef.current,
+        winner: winnerRef.current,
+        rfd: rfdRef.current,
       });
       retryAttemptRef.current = 0;
       setSyncError(undefined);
@@ -257,6 +263,13 @@ export function useBallotDraft({
       currentDebate,
     );
     if (!aligned.changed) return;
+    const nextConfirmed = orderConfirmedRef.current.filter((side) =>
+      POSITIONS.filter((pos) => pos.startsWith(side)).every(
+        (pos) => speakersRef.current[pos].userId === aligned.speakers[pos].userId,
+      ),
+    );
+    orderConfirmedRef.current = nextConfirmed;
+    setOrderConfirmed(nextConfirmed);
     const nextSpeakers = preserveNotes(speakersRef.current, aligned.speakers);
     const nextIds = { ...idsRef.current, evalIds: aligned.evalIds };
     setSpeakers(nextSpeakers);
@@ -273,6 +286,29 @@ export function useBallotDraft({
       rfd: rfdRef.current,
     });
   }, [debateSpeakerKey, markDirtyAndSave]);
+
+  function selectFirstSpeaker(side: Winner, userId: string): void {
+    const next = chooseFirstSpeaker(speakersRef.current, rankOrderRef.current, side, userId);
+    const confirmed = [...new Set([...orderConfirmedRef.current, side])];
+    orderConfirmedRef.current = confirmed;
+    setOrderConfirmed(confirmed);
+    speakersRef.current = next.speakers;
+    rankOrderRef.current = next.rankOrder;
+    setSpeakers(next.speakers);
+    setRankOrder(next.rankOrder);
+    markDirtyAndSave({
+      ...next,
+      ids: idsRef.current,
+      winner: winnerRef.current,
+      rfd: rfdRef.current,
+    });
+  }
+
+  const orderComplete =
+    debate?.event === 'ld' ||
+    (['aff', 'neg'] as const).every(
+      (side) => !speakers[side === 'aff' ? 'aff2' : 'neg2'].userId || orderConfirmed.includes(side),
+    );
 
   function updateWinner(w: Winner): void {
     setWinner(w);
@@ -354,7 +390,7 @@ export function useBallotDraft({
   }
 
   async function submit(): Promise<void> {
-    if (!canSubmitBallot(speakers, winner, rankOrder) || !winner) return;
+    if (!orderComplete || !canSubmitBallot(speakers, winner, rankOrder) || !winner) return;
     setSubmitting(true);
     cancelDebouncedSave();
     clearRetry();
@@ -362,6 +398,7 @@ export function useBallotDraft({
       await saveBallot({
         ...(ids.ballotId ? { ballotId: ids.ballotId } : {}),
         debateId,
+        orderConfirmed: orderConfirmedRef.current,
         evals: buildEvalPayload(speakers, ids, rankOrder),
         reasonForDecision: rfd,
         submittedAt: Date.now(),
@@ -391,7 +428,10 @@ export function useBallotDraft({
     activePositions: getActivePositions(speakers),
     allScored: isAllScored(speakers),
     speakersLocked,
-    canSubmit: canSubmitBallot(speakers, winner, rankOrder),
+    orderConfirmed,
+    orderComplete,
+    selectFirstSpeaker,
+    canSubmit: orderComplete && canSubmitBallot(speakers, winner, rankOrder),
     submitting,
     syncStatus,
     syncError,

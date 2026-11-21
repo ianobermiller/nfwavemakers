@@ -45,6 +45,7 @@ function serverInit(
   partial: Partial<BallotFormInit> & { speakers: Record<Position, SpeakerFormState> },
 ): BallotFormInit {
   return {
+    orderConfirmed: [],
     rankOrder: [],
     winner: undefined,
     rfd: '',
@@ -101,6 +102,7 @@ void test('shouldRestoreLocalDraft keeps the richer written feedback', () => {
       neg1: speaker('andrew', 'short'),
       neg2: speaker('abe', 'abe notes'),
     }),
+    orderConfirmed: [],
     rankOrder: [],
     winner: undefined,
     rfd: '',
@@ -194,6 +196,7 @@ void test('restoreBallotFormState reloads the local draft after a failed save le
       neg1: speaker('andrew', 'andrew feedback'),
       neg2: speaker('abe', 'abe feedback'),
     }),
+    orderConfirmed: [],
     rankOrder: [],
     winner: undefined,
     rfd: '',
@@ -234,4 +237,28 @@ void test('clearLocalDraft removes the stored copy after submit', () => {
   );
   clearLocalDraft('j', 'd', storage);
   assert.equal(readLocalDraft('j', 'd', storage), null);
+});
+
+void test('restore an unsynced speaker choice even before notes are entered', () => {
+  const storage = memoryDraftStorage();
+  const server = serverInit({
+    speakers: speakers({ aff1: speaker('alice'), aff2: speaker('bob') }),
+  });
+  writeLocalDraft(
+    buildLocalDraft({
+      judgeId: 'j',
+      debateId: 'd',
+      ids: { evalIds: {} },
+      speakers: speakers({ aff1: speaker('bob'), aff2: speaker('alice') }),
+      rankOrder: [],
+      orderConfirmed: ['aff'],
+      winner: undefined,
+      rfd: '',
+    }),
+    storage,
+  );
+  const restored = restoreBallotFormState(server, 'j', 'd', storage);
+  assert.equal(restored.restoredFromLocal, true);
+  assert.deepEqual(restored.initial.orderConfirmed, ['aff']);
+  assert.equal(restored.initial.speakers.aff1.userId, 'bob');
 });

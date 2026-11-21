@@ -131,7 +131,7 @@ function collectDefinitions() {
     runInContext(readFileSync(join(migrationsDir, file), 'utf8'), context, { filename: file });
   }
 
-  return { definitions, referenced };
+  return { definitions, referenced, batch: settings.batch };
 }
 
 function resolveReferences(definition, idsByName) {
@@ -231,7 +231,8 @@ export async function applyCollections({ url, email, password }) {
   const pb = new PocketBase(url);
   await pb.collection('_superusers').authWithPassword(email, password);
 
-  const { definitions, referenced } = collectDefinitions();
+  const { definitions, referenced, batch } = collectDefinitions();
+  await pb.settings.update({ batch });
   const idsByName = new Map();
   const created = [];
   const existingByName = new Map();

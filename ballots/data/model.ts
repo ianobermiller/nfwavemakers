@@ -44,6 +44,7 @@ export interface SpeakerEval {
 }
 
 export interface Ballot {
+  orderConfirmed?: Winner[];
   id: string;
   debate: Debate | null;
   judge: User | null;

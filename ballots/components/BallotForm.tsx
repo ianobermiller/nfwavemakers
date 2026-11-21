@@ -186,11 +186,59 @@ function BallotFormEditor({
           {(['aff', 'neg'] as const).map((side) => (
             <div key={side}>
               <SideLabel side={side}>{side === 'aff' ? 'Affirmative' : 'Negative'}</SideLabel>
+              {event === 'tp' && seatsForSide(side).every((pos) => draft.speakers[pos].userId) && (
+                <fieldset
+                  className="mb-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800"
+                  aria-label={`${side === 'aff' ? 'Affirmative' : 'Negative'} speaking order`}
+                >
+                  <legend className="sr-only">Who speaks first?</legend>
+                  <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Who speaks first?
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(side === 'aff' ? draft.debate?.affTeam : draft.debate?.negTeam)?.map(
+                      (student) => {
+                        const selected =
+                          draft.orderConfirmed.includes(side) &&
+                          draft.speakers[side === 'aff' ? 'aff1' : 'neg1'].userId === student.id;
+                        return (
+                          <label
+                            key={student.id}
+                            className={cn(
+                              'relative flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold transition-colors focus-within:ring-2 focus-within:ring-nf-accent focus-within:ring-offset-2',
+                              selected
+                                ? 'border-nf-blue bg-blue-50 text-nf-blue dark:border-nf-blue-d dark:bg-slate-700 dark:text-white'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300',
+                            )}
+                          >
+                            <input
+                              className="sr-only"
+                              type="radio"
+                              name={`${side}-first-speaker`}
+                              value={student.id}
+                              checked={selected}
+                              onChange={() => draft.selectFirstSpeaker(side, student.id)}
+                            />
+                            {student.name ?? 'Student'}
+                          </label>
+                        );
+                      },
+                    )}
+                  </div>
+                </fieldset>
+              )}
               {seatsForSide(side).map((pos) => (
                 <SpeakerEvalCard
                   key={pos}
                   pos={pos}
-                  label={event === 'ld' ? 'Debater' : positionLabel(event, pos)}
+                  label={
+                    event === 'ld'
+                      ? 'Debater'
+                      : draft.orderConfirmed.includes(side) ||
+                          !draft.speakers[side === 'aff' ? 'aff2' : 'neg2'].userId
+                        ? positionLabel(event, pos)
+                        : 'Speaker'
+                  }
                   speaker={draft.speakers[pos]}
                   students={draft.students}
                   avatarURLs={avatarURLs}
@@ -244,11 +292,13 @@ function BallotFormEditor({
           </button>
           {!draft.canSubmit && (
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              {draft.winner === undefined
-                ? 'Select a winner to submit.'
-                : !draft.allScored
-                  ? 'Score all 6 areas for each speaker to submit.'
-                  : 'Assign a rank to each speaker to submit.'}
+              {!draft.orderComplete
+                ? 'Choose who speaks first for each team to submit.'
+                : draft.winner === undefined
+                  ? 'Select a winner to submit.'
+                  : !draft.allScored
+                    ? 'Score all 6 areas for each speaker to submit.'
+                    : 'Assign a rank to each speaker to submit.'}
             </p>
           )}
         </div>

@@ -243,7 +243,8 @@ function AdminDebateFormEditor({
         ) : (
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Choosing a student fills an open seat on that team with their debate partner. Either
-            speaker can still be changed. Searches list Team Policy students only.
+            student can still be changed. Judges choose speaking order on their ballots. Searches
+            list Team Policy students only.
           </p>
         )}
 
@@ -254,7 +255,7 @@ function AdminDebateFormEditor({
             </SideLabel>
             <div className="flex flex-col gap-2">
               <div>
-                <label htmlFor="aff1">{isLd ? 'Debater' : '1st Speaker'}</label>
+                <label htmlFor="aff1">{isLd ? 'Debater' : 'Student'}</label>
                 <StudentPicker
                   id="aff1"
                   value={form.aff1}
@@ -265,7 +266,7 @@ function AdminDebateFormEditor({
               </div>
               {!isLd && (
                 <div>
-                  <label htmlFor="aff2">2nd Speaker</label>
+                  <label htmlFor="aff2">Partner</label>
                   <StudentPicker
                     id="aff2"
                     value={form.aff2}
@@ -284,7 +285,7 @@ function AdminDebateFormEditor({
             </SideLabel>
             <div className="flex flex-col gap-2">
               <div>
-                <label htmlFor="neg1">{isLd ? 'Debater' : '1st Speaker'}</label>
+                <label htmlFor="neg1">{isLd ? 'Debater' : 'Student'}</label>
                 <StudentPicker
                   id="neg1"
                   value={form.neg1}
@@ -295,7 +296,7 @@ function AdminDebateFormEditor({
               </div>
               {!isLd && (
                 <div>
-                  <label htmlFor="neg2">2nd Speaker</label>
+                  <label htmlFor="neg2">Partner</label>
                   <StudentPicker
                     id="neg2"
                     value={form.neg2}
