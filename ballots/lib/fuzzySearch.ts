@@ -1,7 +1,7 @@
 import { search } from 'fast-fuzzy';
 
-/** fast-fuzzy's default cutoff. Scores are 0–1, higher is closer. */
-const MATCH_THRESHOLD = 0.6;
+/** Scores are 0–1; reject weak matches below 80% similarity. */
+const MATCH_THRESHOLD = 0.8;
 
 interface Row<T> {
   fields: readonly string[];

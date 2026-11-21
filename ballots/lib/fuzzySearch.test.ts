@@ -23,13 +23,21 @@ void test('an empty query keeps the original order', () => {
   );
 });
 
-void test('a dropped letter still matches', () => {
-  assert.equal(names('jhn')[0], 'John Smith');
-  assert.ok(names('jhn').includes('Jonathan Miles'));
+void test('weak short-query matches fall below the cutoff', () => {
+  assert.deepEqual(names('jhn'), []);
+  assert.deepEqual(names('Jhon'), []);
+});
+
+void test('a dropped letter in a longer name still matches', () => {
+  assert.deepEqual(names('Jonathn'), ['Jonathan Miles']);
+});
+
+void test('exact short names and partial names still match', () => {
+  assert.deepEqual(names('John'), ['John Smith']);
+  assert.deepEqual(names('jo'), ['John Smith', 'Jonathan Miles', 'Mary Jones']);
 });
 
 void test('a swapped letter still matches', () => {
-  assert.equal(names('Jhon')[0], 'John Smith');
   assert.equal(names('Smtih')[0], 'John Smith');
 });
 
@@ -45,6 +53,7 @@ void test('tighter matches rank ahead of longer ones', () => {
 void test('every word must match some field', () => {
   assert.equal(names('miles example')[0], 'Jonathan Miles');
   assert.deepEqual(names('miles zzz'), []);
+  assert.deepEqual(names('jhn example'), []);
 });
 
 void test('matching is case insensitive', () => {
