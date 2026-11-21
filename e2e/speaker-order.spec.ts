@@ -23,6 +23,20 @@ async function testDatabase() {
   return pb;
 }
 
+async function createStudent(pb: PocketBase, name: string) {
+  const password = process.env['E2E_PASSWORD'];
+  return await pb.collection('users').create({
+    email: `order-${crypto.randomUUID()}@example.com`,
+    name,
+    role: 'student',
+    category: 'tp',
+    approved: true,
+    verified: true,
+    password,
+    passwordConfirm: password,
+  });
+}
+
 test('setup leaves speaker positions to the judge', async ({ page }, testInfo) => {
   await signIn(page, process.env['E2E_ADMIN_EMAIL'] ?? '');
   await page.goto('/admin/new');
@@ -41,45 +55,19 @@ test('judges choose and change order without moving feedback between students', 
   page,
 }, testInfo) => {
   const pb = await testDatabase();
-  const alice = await pb.collection('users').getFirstListItem('email = "student@example.com"');
-  const dana = await pb.collection('users').getFirstListItem('email = "partner@example.com"');
+  const alice = await createStudent(pb, 'Alice Student');
+  const dana = await createStudent(pb, 'Dana Partner');
   const judge = await pb.collection('users').getFirstListItem('email = "judge@example.com"');
-  const password = process.env['E2E_PASSWORD'];
-  const suffix = `${testInfo.project.name}-${Date.now()}`;
-  const cara = await pb
-    .collection('users')
-    .create({
-      email: `cara-${suffix}@example.com`,
-      name: 'Cara Debater',
-      role: 'student',
-      category: 'tp',
-      approved: true,
-      verified: true,
-      password,
-      passwordConfirm: password,
-    });
-  const eli = await pb
-    .collection('users')
-    .create({
-      email: `eli-${suffix}@example.com`,
-      name: 'Eli Debater',
-      role: 'student',
-      category: 'tp',
-      approved: true,
-      verified: true,
-      password,
-      passwordConfirm: password,
-    });
-  const debate = await pb
-    .collection('debates')
-    .create({
-      date: '2026-11-24',
-      room: `Order ${testInfo.project.name}`,
-      event: 'tp',
-      aff_team: [alice.id, dana.id],
-      neg_team: [cara.id, eli.id],
-      judges: [judge.id],
-    });
+  const cara = await createStudent(pb, 'Cara Debater');
+  const eli = await createStudent(pb, 'Eli Debater');
+  const debate = await pb.collection('debates').create({
+    date: '2026-11-24',
+    room: `Order ${testInfo.project.name}`,
+    event: 'tp',
+    aff_team: [alice.id, dana.id],
+    neg_team: [cara.id, eli.id],
+    judges: [judge.id],
+  });
 
   await signIn(page, process.env['E2E_JUDGE_EMAIL'] ?? '');
   await page.goto(`/judge/${debate.id}`);
@@ -122,7 +110,7 @@ test('judges choose and change order without moving feedback between students', 
   await expect(page.getByRole('button', { name: 'Submit Ballot' })).toBeDisabled();
   await neg.getByText('Eli Debater', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Submit Ballot' })).toBeEnabled();
-  await expect(page.getByRole('status')).toHaveText('Saved');
+  await expect(page.getByRole('status', { name: 'Ballot save status' })).toHaveText('Saved');
 
   await page.reload();
   await expect(aff.getByRole('radio', { name: 'Dana Partner' })).toBeChecked();
@@ -138,7 +126,7 @@ test('judges choose and change order without moving feedback between students', 
   await expect(page.locator('#speaker-aff1')).toHaveValue('Alice Student');
   await expect(aliceCard.getByPlaceholder('Notes…')).toHaveValue('Alice: clear evidence');
   await expect(aliceCard.getByRole('combobox').last()).toHaveValue('1');
-  await expect(page.getByRole('status')).toHaveText('Saved');
+  await expect(page.getByRole('status', { name: 'Ballot save status' })).toHaveText('Saved');
   await page.reload();
   await expect(aff.getByRole('radio', { name: 'Alice Student' })).toBeChecked();
   await expect(aliceCard.getByPlaceholder('Notes…')).toHaveValue('Alice: clear evidence');
@@ -164,19 +152,17 @@ test('judges choose and change order without moving feedback between students', 
 
 test('Lincoln-Douglas needs no speaking-order choices', async ({ page }, testInfo) => {
   const pb = await testDatabase();
-  const alice = await pb.collection('users').getFirstListItem('email = "student@example.com"');
-  const dana = await pb.collection('users').getFirstListItem('email = "partner@example.com"');
+  const alice = await createStudent(pb, 'Alice Student');
+  const dana = await createStudent(pb, 'Dana Partner');
   const judge = await pb.collection('users').getFirstListItem('email = "judge@example.com"');
-  const debate = await pb
-    .collection('debates')
-    .create({
-      date: '2026-11-24',
-      room: `LD ${testInfo.project.name}`,
-      event: 'ld',
-      aff_team: [alice.id],
-      neg_team: [dana.id],
-      judges: [judge.id],
-    });
+  const debate = await pb.collection('debates').create({
+    date: '2026-11-24',
+    room: `LD ${testInfo.project.name}`,
+    event: 'ld',
+    aff_team: [alice.id],
+    neg_team: [dana.id],
+    judges: [judge.id],
+  });
   await signIn(page, process.env['E2E_JUDGE_EMAIL'] ?? '');
   await page.goto(`/judge/${debate.id}`);
   await expect(page.getByRole('heading', { name: 'Debater', exact: true })).toHaveCount(2);

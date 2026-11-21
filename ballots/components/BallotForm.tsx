@@ -124,6 +124,7 @@ function BallotFormEditor({
                   : 'ml-auto bg-emerald-100 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-100',
             )}
             role="status"
+            aria-label="Ballot save status"
             aria-live="polite"
           >
             <span>{syncStatusMessage(draft.syncStatus)}</span>

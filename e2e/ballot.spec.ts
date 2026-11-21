@@ -180,7 +180,9 @@ test.describe('Student ballot view', () => {
 
     await waitForLoaded(page, async () => {
       await expect(page.getByText('My Feedback')).toBeVisible({ timeout: 2_000 });
-      await expect(page.getByText('Judge: Bob Judge')).toBeVisible({ timeout: 2_000 });
+      await expect(page.getByRole('button').filter({ hasText: 'Judge: Bob Judge' })).toBeVisible({
+        timeout: 2_000,
+      });
     });
   });
 
