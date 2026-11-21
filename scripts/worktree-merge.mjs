@@ -1,29 +1,10 @@
 #!/usr/bin/env node
 /**
- * `npm run worktree:merge -- <bean-id> [-m "subject"] [--commit-only]`: land a
- * bean branch on main as a single squash commit — but only after the merged
- * tree builds — then remove the workspace and branch. Run from the main checkout.
- *
- *   1. rebase the workspace onto current main (skip when it already contains main)
- *   2. git merge --squash bean/<bean-id>
- *   3. npm run build
- *   4. npm run check
- *   5. only then git commit
- *   6. remove the workspace and branch (same checks as worktree:done)
- *
- * Land beans one at a time. Each rebase replays that workspace onto whatever
- * main is now, so a later bean sees earlier lands. A rebase conflict leaves
- * main untouched and the workspace mid-rebase: resolve it there, `git rebase
- * --continue`, then run this command again.
- *
- * If verification fails, or the squash stops on conflicts, the workspace stays.
- * Fix the staged tree, then finish with
- * `npm run worktree:merge -- <bean-id> --commit-only` (re-runs the same gates,
- * commits, then removes the workspace), or abandon the staged merge with
- * `git reset --hard HEAD`. `--commit-only` does not rebase; it finishes a
- * squash that is already staged.
- *
- * `worktree:done` on its own is for a workspace you are not landing.
+ * Rebase and verify a bean in its workspace, fast-forward main, then clean up.
+ * Run from the main checkout: npm run worktree:merge -- <bean-id>
+ * Conflicts and failed checks leave main untouched. Fix in the workspace,
+ * commit any changes, and retry. If main advances during verification, retry
+ * to rebase and verify against its new tip. Landing preserves branch commits.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -34,21 +15,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const args = process.argv.slice(2);
 let bean;
-let message;
-let commitOnly = false;
-for (let i = 0; i < args.length; i++) {
-  const a = args[i];
-  if (a === "--commit-only") commitOnly = true;
-  else if (a === "-m" || a === "--message") message = args[++i];
-  else if (!a.startsWith("-") && !bean) bean = a;
+for (const arg of args) {
+  if (!arg.startsWith("-") && !bean) bean = arg;
   else {
-    console.error(`unknown argument: ${a}`);
+    console.error(`unknown argument: ${arg}`);
     process.exit(1);
   }
 }
 
 if (!bean || !/^[a-z0-9][a-z0-9-]*$/.test(bean)) {
-  console.error('usage: npm run worktree:merge -- <bean-id> [-m "subject"] [--commit-only]');
+  console.error("usage: npm run worktree:merge -- <bean-id>");
   process.exit(1);
 }
 
@@ -107,14 +83,8 @@ function displayPath(dir) {
   return rel && !rel.startsWith("..") ? rel : dir;
 }
 
-// Replay the workspace onto current main before the squash. Later lands then
-// see earlier ones. Conflicts stay in the workspace; main is not touched.
-function rebaseWorkspaceOntoMain() {
-  const wt = workspaceDir();
-  if (!wt) {
-    console.log(`No workspace for ${branch}; squashing it as it is.`);
-    return;
-  }
+// Conflicts and verification stay in the workspace; main is not touched.
+function rebaseWorkspaceOntoMain(wt, base) {
   const where = displayPath(wt);
   if (rebaseInProgress(wt)) {
     fail(
@@ -129,10 +99,6 @@ function rebaseWorkspaceOntoMain() {
   if (current !== branch) {
     fail(`Workspace ${where} is on ${current}, expected ${branch}.`);
   }
-  if (git(["merge-base", "--is-ancestor", "HEAD", branch]).status === 0) {
-    console.log(`${branch} is already based on main.`);
-    return;
-  }
   const dirty = git(["status", "--porcelain"], { cwd: wt }).stdout.trim();
   if (dirty) {
     fail(
@@ -141,7 +107,7 @@ function rebaseWorkspaceOntoMain() {
     );
   }
   console.log(`Rebasing ${branch} onto main…`);
-  const rebased = git(["rebase", "main"], { cwd: wt, stdio: "inherit" });
+  const rebased = git(["rebase", base], { cwd: wt, stdio: "inherit" });
   if (rebased.status !== 0) {
     fail(
       `\nRebase onto main stopped in ${where}. Main is unchanged.\n` +
@@ -178,7 +144,7 @@ if (branchName !== "main") {
   fail(`Main checkout must be on main (currently on ${branchName}).`);
 }
 const dirty = git(["status", "--porcelain", "--untracked-files=no"]).stdout.trim();
-if (dirty && !commitOnly) {
+if (dirty) {
   fail(`Working tree has uncommitted changes:\n${dirty}\nCommit or stash first.`);
 }
 
@@ -188,70 +154,49 @@ const beanCheck = spawnSync("beans", ["show", "--json", bean], {
   encoding: "utf8",
 });
 if (beanCheck.status !== 0) fail(`Bean ${bean} not found.`);
-let beanTitle = bean;
-try {
-  beanTitle = JSON.parse(beanCheck.stdout).bean?.title ?? JSON.parse(beanCheck.stdout).title ?? bean;
-} catch {
-  /* fall back to the id */
-}
-
 const branch = `bean/${bean}`;
-if (!commitOnly) {
-  if (git(["rev-parse", "--verify", "--quiet", branch]).status !== 0) {
-    fail(`No branch ${branch}. Create it with: npm run worktree:new -- ${bean}`);
-  }
-  if (branchAlreadyLanded()) {
-    console.log(`${branch} is already on main.`);
-    removeWorkspace();
-    process.exit(0);
-  }
-
-  rebaseWorkspaceOntoMain();
-
-  console.log(`Squash-merging ${branch}…`);
-  const merged = git(["merge", "--squash", branch], { stdio: "inherit" });
-  if (merged.status !== 0) {
-    fail(
-      "\nSquash stopped on conflicts in the main checkout.\n" +
-        "Resolve them here, then finish with:\n" +
-        `  npm run worktree:merge -- ${bean} --commit-only${message ? ` -m ${JSON.stringify(message)}` : ""}\n` +
-        "(the same build gates run before the commit, which then removes the workspace)",
-    );
-  }
-  const pending = git(["status", "--porcelain", "--untracked-files=no"]).stdout.trim();
-  if (!pending) {
-    console.log(`${branch} is already on main.`);
-    removeWorkspace();
-    process.exit(0);
-  }
-} else if (!dirty) {
-  fail("--commit-only given but there are no staged/unstaged changes to commit.");
+if (git(["rev-parse", "--verify", "--quiet", branch]).status !== 0) {
+  fail(`No branch ${branch}. Create it with: npm run worktree:new -- ${bean}`);
+}
+if (branchAlreadyLanded()) {
+  console.log(`${branch} is already on main.`);
+  removeWorkspace();
+  process.exit(0);
 }
 
-// --- Verify the merged tree before committing ------------------------------
-console.log("\nVerifying merged tree before committing (npm run build)…");
-const siteCheck = spawnSync("npm", ["run", "build"], { cwd: root, stdio: "inherit" });
+const wt = workspaceDir();
+if (!wt) fail(`No workspace for ${branch}. Restore it before landing.`);
+const base = git(["rev-parse", "HEAD"]).stdout.trim();
+rebaseWorkspaceOntoMain(wt, base);
+const tip = git(["rev-parse", "HEAD"], { cwd: wt }).stdout.trim();
 
-console.log("\nVerifying types and lint (npm run check)…");
-const check = spawnSync("npm", ["run", "check"], { cwd: root, stdio: "inherit" });
-
-if (siteCheck.status !== 0 || check.status !== 0) {
-  fail(
-    "\nVerification FAILED — the merge is staged but NOT committed, and the workspace is still there.\n" +
-      "Fix the tree, then finish with:\n" +
-      `  npm run worktree:merge -- ${bean} --commit-only${message ? ` -m ${JSON.stringify(message)}` : ""}\n` +
-      "or abandon the staged merge with:\n" +
-      "  git reset --hard HEAD",
-  );
+console.log("\nVerifying workspace (npm run build)…");
+const build = spawnSync("npm", ["run", "build"], { cwd: wt, stdio: "inherit" });
+console.log("\nVerifying workspace types and lint (npm run check)…");
+const check = spawnSync("npm", ["run", "check"], { cwd: wt, stdio: "inherit" });
+if (build.status !== 0 || check.status !== 0) {
+  fail(`Verification failed in ${displayPath(wt)}. Main is unchanged. Fix and commit there, then retry.`);
 }
 
-// --- Commit ----------------------------------------------------------------
-const subject = message ?? `bean ${bean}: ${beanTitle}`;
-const commit = git(
-  ["commit", "-m", subject, "-m", "Co-authored-by: Cursor <cursoragent@cursor.com>"],
-  { stdio: "inherit" },
-);
-if (commit.status !== 0) process.exit(commit.status ?? 1);
+if (
+  git(["rev-parse", "HEAD"], { cwd: wt }).stdout.trim() !== tip ||
+  git(["rev-parse", branch]).stdout.trim() !== tip ||
+  git(["status", "--porcelain"], { cwd: wt }).stdout.trim()
+) {
+  fail("Workspace changed during verification. Commit any changes there, then retry.");
+}
+if (
+  git(["rev-parse", "HEAD"]).stdout.trim() !== base ||
+  git(["symbolic-ref", "--short", "HEAD"]).stdout.trim() !== "main" ||
+  git(["status", "--porcelain", "--untracked-files=no"]).stdout.trim()
+) {
+  fail("Main changed during verification. Retry to rebase and verify against current main.");
+}
 
-console.log(`\nLanded on main: ${subject}`);
+console.log(`Fast-forwarding main to ${branch}…`);
+const merged = git(["-c", "merge.autostash=false", "merge", "--ff-only", "--no-edit", tip], { stdio: "inherit" });
+if (merged.status !== 0) {
+  fail("Fast-forward refused. The workspace is still available; retry against current main.");
+}
+console.log(`\nLanded on main: ${branch}`);
 removeWorkspace();

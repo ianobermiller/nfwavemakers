@@ -5,19 +5,19 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-11-04T16:31:50Z
-updated_at: 2026-11-04T16:37:13Z
+updated_at: 2026-11-21T22:58:54Z
 ---
 
-Parallel agents each branch from the same main. Landing the second bean squash-merges a stale diff and conflicts in the main checkout.
+Landing must rebase and verify in the bean workspace, then allow only a fast-forward onto main. Other workspaces can land while verification runs.
 
-`npm run worktree:merge` should rebase that workspace onto current main first, stop in the workspace if the rebase conflicts, and squash only after the rebase is clean. Land beans one at a time so each rebase sees the previous land.
-
-- [x] Rebase the workspace onto main before the squash
-- [x] Stop in the workspace on rebase conflicts without touching main
-- [x] Land-bean, dispatch, and AGENTS.md describe one-at-a-time rebase-then-squash
+- [x] Rebase and verify entirely in the workspace, then fast-forward main only
+- [x] Update landing instructions and remove staged-merge recovery
+- [x] Exercise successful lands, conflicts, failed checks, and concurrent main updates
 
 ## Summary of Changes
 
-`npm run worktree:merge` rebases the workspace onto current main before the squash. A conflict stops in that workspace and leaves main untouched; finish the rebase and run the same command again. Disjoint edits rebase cleanly, then land as one squash commit. Land beans one at a time so each rebase sees the previous land.
+The landing script rebases onto a captured main commit, runs build and check in the workspace, checks that the workspace and main did not change, then lands the verified commit with --ff-only. It preserves branch commits. Conflicts, failed checks, and concurrent main updates keep the workspace available for retry without staging a merge on main. Removed --commit-only and the landing commit-message options.
 
-The land-bean skill, the dispatch skill, and AGENTS.md describe that sequence.
+AGENTS.md, land-bean, and dispatch describe workspace verification and fast-forward landing. The landing instructions also preserve the user's request to archive the chat after a successful requested land.
+
+Verification: npm run build and npm run check passed. All 10 Git integration tests passed, including concurrent main updates during checks and immediately before the fast-forward. No app UI states changed.

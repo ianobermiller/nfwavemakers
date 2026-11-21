@@ -8,24 +8,25 @@ description: >-
 
 # Land a bean
 
-From the main checkout on `main`, one command rebases the workspace onto current main, squash-merges the bean, verifies the build, commits, and removes the workspace and branch:
+From the main checkout on `main`, run:
 
 ```bash
 npm run worktree:merge -- <bean-id>
 ```
 
-Do that when the user asks to merge or land a bean. Cleanup is part of the command. Do not run `worktree:done` afterward, and do not ask them to say "cleanup".
+The command rebases the workspace onto current main, runs build and check in the workspace, then fast-forwards main with `--ff-only`. It preserves branch commits and removes the workspace and branch after landing.
 
-Never `git merge` or `git commit` the land yourself. If they name several beans, run the command once per bean and wait for each to finish. Each run rebases that workspace onto main, so a later bean sees what already landed.
+Use this command when the user asks to merge or land. Never merge or commit the land manually. If they name several beans, run the command once per bean and wait for each to finish. Cleanup is part of the command.
+
+After a requested land succeeds, archive the current Codex chat with the app archive tool. Keep it open if landing fails.
 
 ## When it stops
 
-A rebase conflict leaves main untouched and the workspace mid-rebase. Resolve it in `.agents/worktrees/<bean-id>`, run `git rebase --continue` there, then run `npm run worktree:merge -- <bean-id>` again. Abort that rebase with `git rebase --abort` in the workspace.
+Rebase conflicts leave main untouched. Resolve them in `.agents/worktrees/<bean-id>`, run `git rebase --continue` there, then retry the landing command. To abort the rebase, run `git rebase --abort` in the workspace.
 
-A failed `npm run build` or `npm run check`, or a squash that still conflicts, leaves the merge staged and the workspace in place.
+Failed checks leave main untouched. Fix and commit changes in the workspace, then retry the same landing command.
 
-- Fix the staged tree, then `npm run worktree:merge -- <bean-id> --commit-only`. That commits and then removes the workspace. It does not rebase.
-- Abandon the staged merge with `git reset --hard HEAD` in the main checkout. The workspace stays until it is torn down.
+If main advances during verification, retry so the workspace rebases and verifies against the new tip. A fast-forward refusal leaves the workspace available. There is no staged merge or `--commit-only` recovery.
 
 ## Abandoning without landing
 
