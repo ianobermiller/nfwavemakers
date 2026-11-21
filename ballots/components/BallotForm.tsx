@@ -14,6 +14,7 @@ import { PageLayout } from '@/site/PageLayout.tsx';
 import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
 import { SideLabel } from './ui/SideLabel.tsx';
+import { scoringTotal } from '../utils/format.ts';
 
 interface Props {
   debateId: string;
@@ -72,6 +73,15 @@ function BallotFormEditor({
   function seatsForSide(side: 'aff' | 'neg'): Position[] {
     return seats.filter((pos) => pos.startsWith(side));
   }
+
+  const rankedSpeakers = draft.rankOrder.filter((pos) => draft.speakers[pos].userId !== '');
+  const ranksDifferFromPoints =
+    draft.allScored &&
+    rankedSpeakers.some((pos, index) =>
+      rankedSpeakers
+        .slice(index + 1)
+        .some((later) => scoringTotal(draft.speakers[pos]) < scoringTotal(draft.speakers[later])),
+    );
 
   const title = draft.debate ? `Judge — ${draft.debate.date}, Room ${draft.debate.room}` : 'Judge';
 
@@ -210,6 +220,19 @@ function BallotFormEditor({
             </button>
           </div>
         )}
+        <div role="status" aria-live="polite">
+          {ranksDifferFromPoints && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
+              <span aria-hidden="true" className="shrink-0">
+                ⓘ
+              </span>
+              <p>
+                Your speaker rankings differ from the point totals. That’s OK, but please
+                double-check that this reflects your intended order.
+              </p>
+            </div>
+          )}
+        </div>
         {/* Submit */}
         <div className="mt-6 flex flex-col items-center gap-1.5">
           <button
