@@ -52,7 +52,9 @@ test.describe('Auth flow', () => {
     const menuButton = page.getByRole('button', { name: 'Toggle navigation' });
     if (await menuButton.isVisible()) await menuButton.click();
     await expect(page.getByRole('navigation').getByRole('link', { name: 'About' })).toBeVisible();
-    await expect(page.getByRole('navigation').getByRole('link', { name: 'Schedule' })).toBeVisible();
+    await expect(
+      page.getByRole('navigation').getByRole('link', { name: 'Schedule' }),
+    ).toBeVisible();
     await expect(page.getByRole('navigation').getByRole('link', { name: 'Lessons' })).toBeVisible();
     await expect(page.getByRole('navigation').getByRole('link', { name: 'Ballots' })).toBeVisible();
     await expect(page.getByRole('navigation').getByRole('link', { name: 'Join Us' })).toBeVisible();
@@ -229,4 +231,45 @@ test.describe('Mobile layout', () => {
     await page.goto('/ballots');
     await expect(page.locator('#email')).toBeVisible();
   });
+});
+
+test.describe('Search clear button', () => {
+  for (const target of ['users', 'judges']) {
+    test(`clears ${target} from the edge of its touch target and with the keyboard`, async ({
+      page,
+    }, testInfo) => {
+      const adminEmail = process.env['E2E_ADMIN_EMAIL'];
+      if (!adminEmail) throw new Error('Missing E2E_ADMIN_EMAIL');
+      await signIn(page, adminEmail);
+      await page.goto(target === 'users' ? '/admin-users' : '/admin/new');
+      if (target === 'judges') {
+        await page.getByRole('button', { name: 'Select judges…', exact: true }).click();
+      }
+      const search = page.getByRole('searchbox', { name: `Search ${target}` });
+      const clear = page.getByRole('button', { name: 'Clear search', exact: true });
+      await expect(clear).toBeHidden();
+      await search.fill('zzzzzzzz');
+      await expect(clear).toBeVisible();
+      const box = await clear.boundingBox();
+      if (!box) throw new Error('Clear button has no bounds');
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      await page.screenshot({
+        path: `/tmp/nfw-s5he-${target}-${testInfo.project.name}-search.png`,
+      });
+      await clear.click({ position: { x: 2, y: 2 } });
+      await expect(search).toHaveValue('');
+      await expect(search).toBeFocused();
+      await expect(clear).toBeHidden();
+      await page.screenshot({
+        path: `/tmp/nfw-s5he-${target}-${testInfo.project.name}-cleared.png`,
+      });
+      await search.fill('zzzzzzzz');
+      await search.press('Tab');
+      await expect(clear).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(search).toHaveValue('');
+      await expect(search).toBeFocused();
+    });
+  }
 });

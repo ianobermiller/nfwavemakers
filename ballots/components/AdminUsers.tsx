@@ -31,6 +31,7 @@ import { PageLayout } from '@/site/PageLayout.tsx';
 import { Avatar } from './Avatar.tsx';
 import { StudentPicker } from './StudentPicker.tsx';
 import { Input } from './ui/Input.tsx';
+import { SearchInput } from './ui/SearchInput.tsx';
 import { Select } from './ui/Select.tsx';
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
@@ -207,12 +208,11 @@ export function AdminUsers(): React.JSX.Element {
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <UserListToggle value={view} onChange={setView} />
         <div className="min-w-0 w-full flex-1 sm:min-w-48">
-          <Input
+          <SearchInput
             aria-label="Search users"
             className="h-11"
-            onChange={(event) => setQuery(event.target.value)}
+            onValueChange={setQuery}
             placeholder="Search name or email"
-            type="search"
             value={query}
           />
         </div>

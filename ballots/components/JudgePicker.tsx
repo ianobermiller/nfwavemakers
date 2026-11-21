@@ -2,7 +2,7 @@ import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { cn } from 'cnfast';
 import { Avatar } from './Avatar.tsx';
-import { Input } from './ui/Input.tsx';
+import { SearchInput } from './ui/SearchInput.tsx';
 import { useAvatarURLs } from '../hooks/useAvatarURLs.ts';
 import { fuzzyRank } from '../lib/fuzzySearch.ts';
 import { compareByLastName } from '../utils/format.ts';
@@ -84,10 +84,9 @@ export function JudgePicker({ value, onChange, judges }: Props): React.JSX.Eleme
           }}
         >
           <div className="p-2 border-b border-slate-200 dark:border-slate-700">
-            <Input
-              type="search"
+            <SearchInput
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onValueChange={setQuery}
               placeholder="Search judges…"
               aria-label="Search judges"
               autoComplete="off"
