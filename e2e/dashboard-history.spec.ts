@@ -328,6 +328,7 @@ test('same-user relogin abandons pending preloaded history', async ({ page }, in
   try {
     await signIn(page, student.email);
     await expect(page.getByText('Loading history…')).toBeVisible();
+    await page.getByText('Loading history…').scrollIntoViewIfNeeded();
     await shot(page, `student-loading-${info.project.name}`);
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Sign Out', exact: true }).click();
@@ -340,6 +341,7 @@ test('same-user relogin abandons pending preloaded history', async ({ page }, in
     release();
     await oldDelivered;
     await expect(target).toContainText('Fresh relogin history');
+    await target.scrollIntoViewIfNeeded();
     await shot(page, `student-relogin-${info.project.name}`);
   } finally {
     release();
@@ -358,16 +360,19 @@ test('history initial errors retry and empty state renders in dark mode', async 
     );
     await signIn(page, data.student.email);
     await expect(page.getByRole('alert')).toContainText('History unavailable.');
+    await page.getByRole('alert').scrollIntoViewIfNeeded();
     await shot(page, `student-error-${info.project.name}`);
     await page.unroute('**/api/collections/student_feedback_summaries/records*');
     await page.getByRole('button', { name: 'Try again', exact: true }).click();
     await expect(page.locator('[id^="feedback-"]')).toHaveCount(2);
+    await page.locator('[id^="feedback-"]').first().scrollIntoViewIfNeeded();
     await shot(page, `student-${info.project.name}`);
     await page.route('**/api/collections/student_feedback_summaries/records*', (route) =>
       route.fulfill({ json: { page: 1, perPage: 21, totalItems: -1, totalPages: -1, items: [] } }),
     );
     await page.reload();
     await expect(page.getByText('No submitted ballots yet.', { exact: true })).toBeVisible();
+    await page.getByText('No submitted ballots yet.', { exact: true }).scrollIntoViewIfNeeded();
     await shot(page, `student-empty-${info.project.name}`);
   } finally {
     await data.cleanup();

@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-11-22T01:16:17Z
-updated_at: 2026-11-22T02:02:55Z
+updated_at: 2026-11-22T02:03:46Z
 blocked_by:
     - nfw-u466
     - nfw-0i7n
@@ -36,3 +36,5 @@ Reproduced the final integration failure deterministically by creating a second 
 The relogin and initial-error tests now reuse a configurable private fixture with two debate groups and independent student/judges, rather than reading or changing shared seeded accounts. The relogin freshness assertion targets its exact student/debate group; both tests explicitly cover two records. Cleanup removes their records. No product source changed.
 
 The revised history and competing admin-ballot suites pass concurrently with four workers: 12 passed, 6 intentional skips. Focused desktop/mobile session/error checks pass after fixture-helper consolidation. Build/check pass. Existing dark screenshot paths now show the private two-group session/error states.
+
+Screenshot follow-up: focused session/error screenshots scroll the affected state into view before capture, even when unrelated upcoming club debates precede feedback. Focused desktop/mobile checks pass again (4 tests).
