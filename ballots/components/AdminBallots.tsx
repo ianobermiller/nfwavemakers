@@ -6,7 +6,6 @@ import {
   listAdminBallotDetails,
   restoreBallot,
   softDeleteBallot,
-  type DebateDateRange,
 } from '../data/api.ts';
 import type { Ballot, ResultPage, SpeakerEval } from '../data/model.ts';
 import { useAdminBallotQuery } from '../hooks/useAdminBallotQuery.ts';
@@ -19,7 +18,6 @@ import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
 import { DebateCard } from './DebateCard.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
-import { Input } from './ui/Input.tsx';
 import { Button } from './ui/Button.tsx';
 
 type TabView = 'debate' | 'student' | 'stranded';
@@ -111,73 +109,57 @@ function Empty({ children }: { children: ReactNode }): React.JSX.Element {
   return <p className="py-8 text-sm text-slate-500 dark:text-slate-400">{children}</p>;
 }
 
-function ByDebate(): React.JSX.Element {
-  const [range, setRange] = useState<DebateDateRange>({ from: '', to: '' });
-  const [page, setPage] = useState(1);
+function SummaryPages({
+  children,
+}: {
+  children: (page: number, loadMore: (() => void) | undefined) => ReactNode;
+}): React.JSX.Element {
+  const [pages, setPages] = useState(1);
   return (
-    <>
-      <form
-        className="mb-5 grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const values = new FormData(event.currentTarget);
-          const from = values.get('from');
-          const to = values.get('to');
-          setRange({
-            from: typeof from === 'string' ? from : '',
-            to: typeof to === 'string' ? to : '',
-          });
-          setPage(1);
-        }}
-        onReset={() => {
-          setRange({ from: '', to: '' });
-          setPage(1);
-        }}
-      >
-        <label className="min-w-0 text-xs text-slate-600 dark:text-slate-300">
-          From
-          <Input
-            name="from"
-            type="date"
-            className="mt-1 min-w-0 [color-scheme:light] dark:[color-scheme:dark]"
-          />
-        </label>
-        <label className="min-w-0 text-xs text-slate-600 dark:text-slate-300">
-          Through
-          <Input
-            name="to"
-            type="date"
-            className="mt-1 min-w-0 [color-scheme:light] dark:[color-scheme:dark]"
-          />
-        </label>
-        <Button type="submit" size="md">
-          Apply
-        </Button>
-        <Button type="reset" variant="ghost" size="md">
-          Clear
-        </Button>
-      </form>
-      <DebatePage
-        key={`${page}:${range.from}:${range.to}`}
-        page={page}
-        range={range}
-        setPage={setPage}
-      />
-    </>
+    <div className="flex flex-col gap-3">
+      {Array.from({ length: pages }, (_, index) => (
+        <div key={index}>
+          {children(index + 1, index === pages - 1 ? () => setPages(pages + 1) : undefined)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LoadMore({
+  hasMore,
+  onClick,
+}: {
+  hasMore: boolean;
+  onClick: (() => void) | undefined;
+}): React.JSX.Element | null {
+  if (!hasMore || !onClick) return null;
+  return (
+    <div className="py-3">
+      <Button variant="link" onClick={onClick}>
+        Load more
+      </Button>
+    </div>
+  );
+}
+
+function ByDebate(): React.JSX.Element {
+  return (
+    <SummaryPages>
+      {(page, loadMore) => <DebatePage page={page} loadMore={loadMore} />}
+    </SummaryPages>
   );
 }
 
 function DebatePage({
   page,
-  range,
-  setPage,
+  loadMore,
 }: {
   page: number;
-  range: DebateDateRange;
-  setPage: (page: number) => void;
+  loadMore: (() => void) | undefined;
 }): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const load = useCallback(() => listAdminBallotDebates(page, range), [page, range]);
+  const load = useCallback(() => listAdminBallotDebates(page), [page]);
   const query = useAdminBallotQuery(load, (collection, record, data, action) => {
     if (collection === 'debates') return true;
     if (collection === 'users')
@@ -199,7 +181,7 @@ function DebatePage({
     <QueryContent query={query}>
       {(data) => (
         <>
-          {data.items.length === 0 && <Empty>No debates in this date range.</Empty>}
+          {page === 1 && data.items.length === 0 && <Empty>No debates yet.</Empty>}
           <div className="flex flex-col gap-3">
             {data.items.map(({ debate, ballotCount }) => {
               const isOpen = expanded === debate.id;
@@ -232,7 +214,7 @@ function DebatePage({
               );
             })}
           </div>
-          <Pagination page={page} hasMore={data.hasMore} setPage={setPage} label="Debate pages" />
+          <LoadMore hasMore={data.hasMore} onClick={loadMore} />
         </>
       )}
     </QueryContent>
@@ -240,16 +222,19 @@ function DebatePage({
 }
 
 function ByStudent(): React.JSX.Element {
-  const [page, setPage] = useState(1);
-  return <StudentPage key={page} page={page} setPage={setPage} />;
+  return (
+    <SummaryPages>
+      {(page, loadMore) => <StudentPage page={page} loadMore={loadMore} />}
+    </SummaryPages>
+  );
 }
 
 function StudentPage({
   page,
-  setPage,
+  loadMore,
 }: {
   page: number;
-  setPage: (page: number) => void;
+  loadMore: (() => void) | undefined;
 }): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
   const load = useCallback(() => listAdminBallotStudents(page), [page]);
@@ -258,7 +243,7 @@ function StudentPage({
     <QueryContent query={query}>
       {(data) => (
         <>
-          {data.items.length === 0 && <Empty>No submitted ballots yet.</Empty>}
+          {page === 1 && data.items.length === 0 && <Empty>No submitted ballots yet.</Empty>}
           <div className="flex flex-col gap-3">
             {data.items.map(({ student, debateCount }) => {
               const isOpen = expanded === student.id;
@@ -305,7 +290,7 @@ function StudentPage({
               );
             })}
           </div>
-          <Pagination page={page} hasMore={data.hasMore} setPage={setPage} label="Student pages" />
+          <LoadMore hasMore={data.hasMore} onClick={loadMore} />
         </>
       )}
     </QueryContent>

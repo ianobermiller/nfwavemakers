@@ -29,12 +29,6 @@ async function signIn(page: Page) {
   await expect(page.getByRole('heading', { name: 'All Ballots', exact: true })).toBeVisible();
 }
 
-async function filterDates(page: Page, from: string, to: string) {
-  await page.getByLabel('From', { exact: true }).fill(from);
-  await page.getByLabel('Through', { exact: true }).fill(to);
-  await page.getByRole('button', { name: 'Apply', exact: true }).click();
-}
-
 test('admin summaries paginate without fetching feedback until expanded', async ({
   page,
 }, info) => {
@@ -93,7 +87,7 @@ test('admin summaries paginate without fetching feedback until expanded', async 
       if (/\/collections\/(ballots|speaker_evals)\/records/.test(request.url()))
         detailRequests.push(request.url());
     });
-    await filterDates(page, '2040-01-01', '2040-01-31');
+    await expect(page.locator('input[type=date]')).toHaveCount(0);
     const cards = page.locator('[id^="debate-btn-"]');
     await expect(cards).toHaveCount(20);
     await expect(
@@ -106,23 +100,43 @@ test('admin summaries paginate without fetching feedback until expanded', async 
       fullPage: false,
       scale: 'css',
     });
-    await page
-      .getByRole('navigation', { name: 'Debate pages' })
-      .getByRole('button', { name: 'Next' })
-      .click();
-    await expect(cards).toHaveCount(3);
+    await page.getByRole('button', { name: 'Load more', exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: `/tmp/nfw-ru86-page-two-${info.project.name}.png`,
-      fullPage: true,
+      path: '/tmp/nfw-ru86-load-more-link.png',
+      fullPage: false,
       scale: 'css',
+      animations: 'disabled',
     });
-    await expect(page.getByText('Page 2', { exact: true })).toBeVisible();
-    expect(detailRequests).toHaveLength(0);
-    await page
-      .getByRole('navigation', { name: 'Debate pages' })
-      .getByRole('button', { name: 'Previous' })
-      .click();
+    let release = (): void => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/api/collections/admin_ballot_debates/records*', async (route) => {
+      if (new URL(route.request().url()).searchParams.get('page') === '2') await gate;
+      await route.continue();
+    });
+    await page.getByRole('button', { name: 'Load more', exact: true }).click();
+    await expect(page.getByText('Loading ballots…')).toBeVisible();
     await expect(cards).toHaveCount(20);
+    await page.screenshot({
+      path: '/tmp/nfw-ru86-load-more-loading.png',
+      fullPage: false,
+      scale: 'css',
+      animations: 'disabled',
+    });
+    release();
+    await expect(page.locator(`#debate-btn-${debates[0]}`)).toBeVisible();
+    await page.unroute('**/api/collections/admin_ballot_debates/records*');
+    await expect(cards).not.toHaveCount(20);
+    await expect(page.locator(`#debate-btn-${debates[22]}`)).toBeAttached();
+    expect(detailRequests).toHaveLength(0);
+    await page.locator(`#debate-btn-${debates[0]}`).scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: '/tmp/nfw-ru86-load-more-debates.png',
+      fullPage: false,
+      scale: 'css',
+      animations: 'disabled',
+    });
     const first = page.getByRole('button', { name: new RegExp(`Summary ${suffix} 22`) });
     await first.click();
     await expect(page.getByText(`Private feedback ${suffix} 22`)).toBeVisible();
@@ -175,24 +189,38 @@ test('admin summaries paginate without fetching feedback until expanded', async 
       fullPage: true,
       scale: 'css',
     });
-    await page
-      .getByRole('navigation', { name: 'Student pages' })
-      .getByRole('button', { name: 'Next' })
-      .click();
-    await expect(page.getByText('Page 2', { exact: true })).toBeVisible();
-    await expect(page.locator(`#student-btn-${students[22]}`)).toBeVisible();
-
-    await page.getByRole('button', { name: 'By Debate', exact: true }).click();
-    await filterDates(page, '2050-01-01', '2050-01-31');
-    await expect(page.getByText('No debates in this date range.')).toBeVisible();
-    await page.screenshot({
-      path: `/tmp/nfw-ru86-empty-${info.project.name}.png`,
-      fullPage: true,
-      scale: 'css',
+    await page.route('**/api/collections/admin_ballot_students/records*', (route) => {
+      if (new URL(route.request().url()).searchParams.get('page') === '2')
+        return route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Could not load more students' }),
+        });
+      return route.continue();
     });
-    await page.getByRole('button', { name: 'Clear', exact: true }).click();
-    await expect(cards).toHaveCount(20);
-    await expect(page.getByLabel('From', { exact: true })).toHaveValue('');
+    await page.getByRole('button', { name: 'Load more', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('Could not load more students');
+    await expect(studentCards).toHaveCount(20);
+    await expect(page.getByText(`Speaker notes ${suffix} 0`)).toBeVisible();
+    await page.getByRole('alert').scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: '/tmp/nfw-ru86-load-more-error.png',
+      fullPage: false,
+      scale: 'css',
+      animations: 'disabled',
+    });
+    await page.unroute('**/api/collections/admin_ballot_students/records*');
+    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(page.locator(`#student-btn-${students[22]}`)).toBeVisible();
+    await expect(page.getByText(`Speaker notes ${suffix} 0`)).toBeVisible();
+    await page.locator(`#student-btn-${students[22]}`).scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: '/tmp/nfw-ru86-load-more-students.png',
+      fullPage: false,
+      scale: 'css',
+      animations: 'disabled',
+    });
+    await page.getByRole('button', { name: 'By Debate', exact: true }).click();
 
     await page.route('**/api/collections/admin_ballot_students/records*', (route) =>
       route.fulfill({
@@ -249,8 +277,13 @@ test('admin ballot views fit a phone and keep feedback inside the selected row',
 }, info) => {
   test.skip(info.project.name !== 'mobile', 'Responsive check uses a phone.');
   await signIn(page);
-  await filterDates(page, '2024-01-15', '2024-01-15');
+
   const row = page.locator(`#debate-btn-${process.env['E2E_DEBATE_ID']}`);
+  await expect(page.locator('[id^="debate-btn-"]').first()).toBeVisible();
+  while ((await row.count()) === 0) {
+    await page.getByRole('button', { name: 'Load more', exact: true }).click();
+    await expect(page.getByText('Loading ballots…')).toHaveCount(0);
+  }
   await expect(row).toBeVisible();
   await page.screenshot({ path: '/tmp/nfw-ru86-debates-mobile.png', fullPage: true, scale: 'css' });
   await row.click();
@@ -268,10 +301,7 @@ test('admin ballot views fit a phone and keep feedback inside the selected row',
   const student = page.locator(`#student-btn-${seededStudent.id}`);
   await expect(page.locator('[id^="student-btn-"]').first()).toBeVisible();
   while ((await student.count()) === 0) {
-    await page
-      .getByRole('navigation', { name: 'Student pages' })
-      .getByRole('button', { name: 'Next' })
-      .click();
+    await page.getByRole('button', { name: 'Load more', exact: true }).click();
     await expect(page.getByText('Loading ballots…')).toHaveCount(0);
   }
   await expect(student).toBeVisible();
@@ -342,7 +372,7 @@ test('expanded feedback paginates and stranded ballot deletion can be undone', a
       });
     }
     await signIn(page);
-    await filterDates(page, '2045-03-10', '2045-03-10');
+
     const row = page.locator(`#debate-btn-${debate.id}`);
     await expect(row).toContainText('21 ballots');
     await row.click();

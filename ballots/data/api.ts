@@ -718,11 +718,6 @@ export async function getDebateDetail(debateId: string): Promise<DebateWithBallo
 
 const ADMIN_BALLOT_PAGE_SIZE = 20;
 
-export interface DebateDateRange {
-  from: string;
-  to: string;
-}
-
 interface DebateSummaryRecord extends RecordModel {
   ballot_count: number;
   expand?: { debate?: DebateRecord };
@@ -735,15 +730,10 @@ interface StudentSummaryRecord extends RecordModel {
 
 export async function listAdminBallotDebates(
   page: number,
-  range: DebateDateRange,
 ): Promise<ResultPage<DebateBallotSummary>> {
-  const filters: string[] = [];
-  if (range.from) filters.push(pb.filter('date >= {:from}', { from: range.from }));
-  if (range.to) filters.push(pb.filter('date <= {:to}', { to: range.to }));
   const result = await pb
     .collection<DebateSummaryRecord>('admin_ballot_debates')
     .getList(page, ADMIN_BALLOT_PAGE_SIZE, {
-      filter: filters.join(' && '),
       expand: 'debate.aff_team,debate.neg_team,debate.judges',
       sort: '-date,-id',
       skipTotal: true,
