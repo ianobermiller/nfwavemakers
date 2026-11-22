@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { RecordModel } from 'pocketbase';
 import {
   getBallot,
   getDebate,
@@ -13,8 +14,9 @@ import {
   listUsers,
 } from '../data/api.ts';
 import { getLesson, getLessonBySlug, listLessons } from '../data/lessons.ts';
+import { affectsBallots, debateHasUser } from '../lib/liveEvents.ts';
 import { formatLocalYmd } from '../lib/dates.ts';
-import { consumeFresh, ensureLive, readLive, writeLive } from '../lib/liveQuery.ts';
+import { ensureLive, readLive, subscribeLive } from '../lib/liveQuery.ts';
 import { collections, pb } from '../data/pocketbase.ts';
 import type { Role } from '../types.ts';
 
@@ -37,54 +39,57 @@ function useLiveData<T>(
   key: string,
   load: () => Promise<T>,
   watchCollections: readonly string[],
+  affects?: (collection: string, record: RecordModel, data: T, action: string) => boolean,
 ): LiveQuery<T> {
   ensureLive(key, load);
   const [, setTick] = useState(0);
+  const affectsRef = useRef(affects);
+  useEffect(() => {
+    affectsRef.current = affects;
+  }, [affects]);
+
+  const read = useCallback((): T => {
+    // The loader owns this key and writes T; the cache stores heterogeneous queries.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    return readLive(key) as T;
+  }, [key]);
 
   useEffect(() => {
-    let active = true;
-
-    const refresh = (): void => {
-      // Without a login PocketBase list rules return empty 200s; publishing
-      // those would blank the page before auth can push back to sign-in.
-      if (!pb.authStore.isValid) return;
-      void load()
-        .then((next) => {
-          if (!active || !pb.authStore.isValid) return;
-          writeLive(key, next);
-          setTick((tick) => tick + 1);
-        })
-        .catch((error: unknown) => {
-          if (active) console.error('PocketBase query failed', error);
-        });
-    };
-
-    // The suspending read just filled the cache. Later mounts refresh in place.
-    if (!consumeFresh(key)) refresh();
-
-    const unsubscribes = watchCollections.map((collection) =>
-      pb
-        .collection(collection)
-        .subscribe('*', refresh)
-        .catch((error: unknown) => {
-          console.error(`PocketBase subscription failed for ${collection}`, error);
-          return (): void => {};
-        }),
+    const authId = pb.authStore.record?.id;
+    return subscribeLive(
+      key,
+      {
+        load,
+        canLoad: () => pb.authStore.isValid && pb.authStore.record?.id === authId,
+        watch: (invalidate) => {
+          let active = true;
+          const unsubscribes = watchCollections.map((collection) =>
+            pb
+              .collection(collection)
+              .subscribe('*', (event) => {
+                if (!active || !pb.authStore.isValid || pb.authStore.record?.id !== authId) return;
+                if (
+                  !affectsRef.current ||
+                  affectsRef.current(collection, event.record, read(), event.action)
+                )
+                  invalidate();
+              })
+              .catch((error: unknown) => {
+                console.error(`PocketBase subscription failed for ${collection}`, error);
+                return (): void => {};
+              }),
+          );
+          return () => {
+            active = false;
+            for (const unsubscribe of unsubscribes) void unsubscribe.then((stop) => stop());
+          };
+        },
+      },
+      () => setTick((tick) => tick + 1),
     );
+  }, [key, load, read, watchCollections]);
 
-    return () => {
-      active = false;
-      for (const unsubscribe of unsubscribes) void unsubscribe.then((stop) => stop());
-    };
-  }, [key, load, watchCollections]);
-
-  return {
-    read: (): T => {
-      // One map holds every query, so the stored value is untyped. This hook wrote T under `key`.
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-      return readLive(key) as T;
-    },
-  };
+  return { read };
 }
 
 /** Start the dashboard's queries together so sections don't fetch one after another. */
@@ -107,7 +112,15 @@ export function useUsers(includeArchived = false) {
 
 export function useDebate(debateId?: string) {
   const load = useCallback(async () => (debateId ? await getDebate(debateId) : null), [debateId]);
-  return useLiveData(`debate:${debateId ?? ''}`, load, debateCollections);
+  return useLiveData(
+    `debate:${debateId ?? ''}`,
+    load,
+    debateCollections,
+    (collection, record, debate) =>
+      collection === collections.debates
+        ? record.id === debateId
+        : debateHasUser(debate, record.id),
+  );
 }
 
 export function useUpcomingDebates(today: string) {
@@ -132,12 +145,20 @@ export function useDebateCard(debateId: string, judgeId?: string) {
 
 export function useBallot(ballotId: string) {
   const load = useCallback(async () => await getBallot(ballotId), [ballotId]);
-  return useLiveData(`ballot:${ballotId}`, load, ballotCollections);
+  return useLiveData(`ballot:${ballotId}`, load, ballotCollections, (collection, record, ballot) =>
+    affectsBallots(collection, record, ballot ? [ballot] : [], { kind: 'ballot', id: ballotId }),
+  );
 }
 
 export function useBallotDraft(debateId: string) {
   const load = useCallback(async () => await getDraftForJudge(debateId), [debateId]);
-  return useLiveData(`ballot-draft:${debateId}`, load, ballotCollections);
+  return useLiveData(
+    `ballot-draft:${debateId}`,
+    load,
+    ballotCollections,
+    (collection, record, ballot) =>
+      affectsBallots(collection, record, ballot ? [ballot] : [], { kind: 'debate', id: debateId }),
+  );
 }
 
 export function useSubmittedBallots() {
@@ -152,7 +173,14 @@ export function useSpeakerBallots() {
 
 export function useDebateDetail(debateId: string) {
   const load = useCallback(async () => await getDebateDetail(debateId), [debateId]);
-  return useLiveData(`debate-detail:${debateId}`, load, ballotCollections);
+  return useLiveData(
+    `debate-detail:${debateId}`,
+    load,
+    ballotCollections,
+    (collection, record, detail) =>
+      (collection === collections.users && debateHasUser(detail?.debate, record.id)) ||
+      affectsBallots(collection, record, detail?.ballots ?? [], { kind: 'debate', id: debateId }),
+  );
 }
 
 const lessonCollections = [collections.lessons];
@@ -164,10 +192,22 @@ export function useLessons() {
 
 export function useLessonBySlug(year: string, number: string) {
   const load = useCallback(async () => await getLessonBySlug(year, number), [year, number]);
-  return useLiveData(`lesson:${year}/${number}`, load, lessonCollections);
+  return useLiveData(
+    `lesson:${year}/${number}`,
+    load,
+    lessonCollections,
+    (_collection, record, lesson) =>
+      record.id === lesson?.id ||
+      (record['year'] === Number(year) && record['number'] === Number(number)),
+  );
 }
 
 export function useLesson(id?: string) {
   const load = useCallback(async () => (id ? await getLesson(id) : null), [id]);
-  return useLiveData(`lesson-id:${id ?? ''}`, load, lessonCollections);
+  return useLiveData(
+    `lesson-id:${id ?? ''}`,
+    load,
+    lessonCollections,
+    (_collection, record) => record.id === id,
+  );
 }
