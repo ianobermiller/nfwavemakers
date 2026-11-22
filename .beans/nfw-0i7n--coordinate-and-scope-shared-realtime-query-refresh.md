@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-11-22T01:16:15Z
-updated_at: 2026-11-22T01:25:31Z
+updated_at: 2026-11-22T01:41:53Z
 ---
 
 Use one per-key refresh coordinator and shared subscriptions. Coalesce bursts, deduplicate or serialize loads, reject stale and previous-auth completions, safely filter events. Preserve Suspense, freshness, background errors and recovery. Prove concurrent consumers, burst events, in-flight invalidation, auth transitions and error retry.
@@ -22,3 +22,10 @@ Use one per-key refresh coordinator and shared subscriptions. Coalesce bursts, d
 Generic live queries now share one subscription lifecycle and refresh loop per cache key. Realtime bursts coalesce for 100ms; invalidations during a request queue one follow-up and prevent publishing the invalidated result. Every mounted consumer is notified from shared cache writes. Last-unmount and auth cache clearing stop watchers and invalidate pending refreshes. Initial Suspense requests check exact entry identity, so a previous login cannot overwrite a new same-key request. Preload failures remain available to the route retry boundary without unhandled promise rejections. Detail/debate/draft/individual lesson queries filter events to their records and expanded members, including records moved out of the loaded scope.
 
 Validation: npm run build and npm run check pass; all 85 unit tests pass, including 15 live-query/event tests. A real local PocketBase fixture and desktop/mobile browser check prove a five-update batch triggers one ballot reload, updated feedback renders, related updates remain live, persisted auth survives reload, lessons navigation and return work, logout followed by another edit produces no browser error. Six dark screenshots cover initial/updated ballot and sign-out on desktop/mobile at /private/tmp/nfw-0i7n-{ballot,updated,signout}-{chromium,mobile}.png. Browser servers stopped after checks. No production services changed.
+
+
+### Browser verification stabilization
+
+The realtime browser check now installs a paused debounce clock before the ballot detail mounts and drains StrictMode startup revalidation with an acknowledged sentinel update. A second listener on the same SDK EventSource provides an explicit delivery barrier; all five burst events must arrive before the test advances the 100ms debounce and asserts exactly one request. An unrelated evaluation is delivered and its own debounce window advanced before any related event is sent, so coalescing cannot mask a bad invalidation. The fixture uses its own student to avoid adding cards to the shared seeded student's concurrent dashboard tests. Product code is unchanged.
+
+Validation: build/check pass. Concurrent run of live-query.spec.ts and ballot.spec.ts on desktop/mobile with four workers passes 25 tests, with one intentional mobile passkey skip. Existing deterministic unit burst coverage remains unchanged. The delivery probe imports the app's PocketBase singleton through the Vite test server used by playwright.config.ts.

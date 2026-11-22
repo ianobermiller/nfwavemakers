@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
 import PocketBase from 'pocketbase';
 
+declare global {
+  interface Window {
+    reportRealtimeRecord: (id: string, notes: string) => Promise<void>;
+  }
+}
+
 test('ballot realtime updates coalesce, ignore unrelated records, and survive navigation and logout', async ({
   page,
 }, testInfo) => {
@@ -17,9 +23,16 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
   const judge = await pb
     .collection('users')
     .getFirstListItem(`email = "${process.env['E2E_JUDGE_EMAIL']}"`);
-  const student = await pb
-    .collection('users')
-    .getFirstListItem(`email = "${process.env['E2E_STUDENT_EMAIL']}"`);
+  const student = await pb.collection('users').create({
+    email: `live-query-${crypto.randomUUID()}@example.com`,
+    name: 'Realtime Student',
+    role: 'student',
+    category: 'tp',
+    approved: true,
+    verified: true,
+    password: 'test-password',
+    passwordConfirm: 'test-password',
+  });
   const debate = await pb.collection('debates').create({
     date: '2026-11-21',
     room: `Live ${testInfo.project.name}`,
@@ -68,12 +81,41 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     await expect(page.locator('#email')).toBeHidden();
     const dismiss = page.getByRole('button', { name: 'Not now' });
     if (await dismiss.isVisible()) await dismiss.click();
+    const now = Date.now();
+    await page.clock.install({ time: now });
+    await page.clock.pauseAt(now + 1000);
     await page.goto(`/ballot/${ballot.id}`);
     await expect(page.getByText('Original decision', { exact: true })).toBeVisible();
     await page.screenshot({
       path: `/tmp/nfw-0i7n-ballot-${testInfo.project.name}.png`,
       fullPage: true,
     });
+    const delivered: { id: string; notes: string }[] = [];
+    await page.exposeFunction('reportRealtimeRecord', (id: string, notes: string) => {
+      delivered.push({ id, notes });
+    });
+    await page.evaluate(async () => {
+      const modulePath = '/ballots/data/pocketbase.ts';
+      const client: { pb: PocketBase } = await import(modulePath);
+      // Registered after the app's listener, these callbacks acknowledge delivery on
+      // the same EventSource; a server commit alone does not establish that barrier.
+      await Promise.all(
+        ['ballots', 'speaker_evals'].map((collection) =>
+          client.pb.collection(collection).subscribe('*', (event) => {
+            void window.reportRealtimeRecord(event.record.id, String(event.record['notes'] ?? ''));
+          }),
+        ),
+      );
+    });
+    // A visible acknowledged update drains StrictMode's startup revalidation
+    // through the same paused debounce, rather than guessing when startup is idle.
+    await pb
+      .collection('ballots')
+      .update(ballot.id, { reason_for_decision: 'Ready for realtime test' });
+    await expect.poll(() => delivered.some((event) => event.id === ballot.id)).toBe(true);
+    await page.clock.runFor(100);
+    await expect(page.getByText('Ready for realtime test', { exact: true })).toBeVisible();
+    const beforeBurst = delivered.length;
     let reloads = 0;
     page.on('request', (request) => {
       if (new URL(request.url()).pathname === `/api/collections/ballots/records/${ballot.id}`)
@@ -84,6 +126,16 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     for (let i = 0; i < 4; i++)
       batch.collection('speaker_evals').update(evaluation.id, { notes: `Burst feedback ${i}` });
     await batch.send();
+    await expect
+      .poll(
+        () =>
+          delivered
+            .slice(beforeBurst)
+            .filter((event) => event.id === ballot.id || event.id === evaluation.id).length,
+      )
+      .toBe(5);
+    // Only advance the debounce after all five actual SSE events have arrived.
+    await page.clock.runFor(100);
     await expect(page.getByText('Updated decision', { exact: true })).toBeVisible();
     await expect(page.getByText('Burst feedback 3', { exact: true })).toBeVisible();
     expect(reloads).toBe(1);
@@ -93,12 +145,29 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     });
     const beforeUnrelated = reloads;
     await pb.collection('speaker_evals').update(otherEvaluation.id, { notes: 'Unrelated edit' });
-    // A following relevant event establishes that the realtime stream has delivered this burst.
+    await expect
+      .poll(() =>
+        delivered.some(
+          (event) => event.id === otherEvaluation.id && event.notes === 'Unrelated edit',
+        ),
+      )
+      .toBe(true);
+    await page.clock.runFor(100);
+    expect(reloads).toBe(beforeUnrelated);
     await pb
       .collection('speaker_evals')
       .update(evaluation.id, { notes: 'Latest related feedback' });
+    await expect
+      .poll(() =>
+        delivered.some(
+          (event) => event.id === evaluation.id && event.notes === 'Latest related feedback',
+        ),
+      )
+      .toBe(true);
+    await page.clock.runFor(100);
     await expect(page.getByText('Latest related feedback', { exact: true })).toBeVisible();
     expect(reloads - beforeUnrelated).toBe(1);
+    await page.clock.resume();
     await page.reload();
     await expect(page.getByText('Latest related feedback', { exact: true })).toBeVisible();
     await page.goto('/lessons');
@@ -122,5 +191,6 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     await pb.collection('ballots').delete(otherBallot.id);
     await pb.collection('debates').delete(debate.id);
     await pb.collection('debates').delete(otherDebate.id);
+    await pb.collection('users').delete(student.id);
   }
 });
