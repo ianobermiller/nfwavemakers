@@ -1,11 +1,10 @@
 import { test, expect } from '@playwright/test';
 import PocketBase from 'pocketbase';
+import { z } from 'zod';
 
-declare global {
-  interface Window {
-    reportRealtimeRecord: (id: string, notes: string) => Promise<void>;
-  }
-}
+const realtimeRecordSchema = z.object({
+  record: z.object({ id: z.string(), notes: z.string().optional() }),
+});
 
 test('ballot realtime updates coalesce, ignore unrelated records, and survive navigation and logout', async ({
   page,
@@ -81,6 +80,19 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     await expect(page.locator('#email')).toBeHidden();
     const dismiss = page.getByRole('button', { name: 'Not now' });
     if (await dismiss.isVisible()) await dismiss.click();
+    const delivered: { id: string; notes: string }[] = [];
+    const connection = await page.context().newCDPSession(page);
+    await connection.send('Network.enable');
+    connection.on('Network.eventSourceMessageReceived', (event) => {
+      // Observe the app's real SSE connection in both dev and built-preview runs.
+      // Connection handshakes have no record and are ignored by the schema.
+      const parsed = realtimeRecordSchema.safeParse(JSON.parse(event.data));
+      if (parsed.success)
+        delivered.push({
+          id: parsed.data.record.id,
+          notes: parsed.data.record.notes ?? '',
+        });
+    });
     const now = Date.now();
     await page.clock.install({ time: now });
     await page.clock.pauseAt(now + 1000);
@@ -89,23 +101,6 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     await page.screenshot({
       path: `/tmp/nfw-0i7n-ballot-${testInfo.project.name}.png`,
       fullPage: true,
-    });
-    const delivered: { id: string; notes: string }[] = [];
-    await page.exposeFunction('reportRealtimeRecord', (id: string, notes: string) => {
-      delivered.push({ id, notes });
-    });
-    await page.evaluate(async () => {
-      const modulePath = '/ballots/data/pocketbase.ts';
-      const client: { pb: PocketBase } = await import(modulePath);
-      // Registered after the app's listener, these callbacks acknowledge delivery on
-      // the same EventSource; a server commit alone does not establish that barrier.
-      await Promise.all(
-        ['ballots', 'speaker_evals'].map((collection) =>
-          client.pb.collection(collection).subscribe('*', (event) => {
-            void window.reportRealtimeRecord(event.record.id, String(event.record['notes'] ?? ''));
-          }),
-        ),
-      );
     });
     // A visible acknowledged update drains StrictMode's startup revalidation
     // through the same paused debounce, rather than guessing when startup is idle.

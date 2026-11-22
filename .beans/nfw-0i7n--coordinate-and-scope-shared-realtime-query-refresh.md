@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-11-22T01:16:15Z
-updated_at: 2026-11-22T01:41:53Z
+updated_at: 2026-11-22T01:44:21Z
 ---
 
 Use one per-key refresh coordinator and shared subscriptions. Coalesce bursts, deduplicate or serialize loads, reject stale and previous-auth completions, safely filter events. Preserve Suspense, freshness, background errors and recovery. Prove concurrent consumers, burst events, in-flight invalidation, auth transitions and error retry.
@@ -26,6 +26,6 @@ Validation: npm run build and npm run check pass; all 85 unit tests pass, includ
 
 ### Browser verification stabilization
 
-The realtime browser check now installs a paused debounce clock before the ballot detail mounts and drains StrictMode startup revalidation with an acknowledged sentinel update. A second listener on the same SDK EventSource provides an explicit delivery barrier; all five burst events must arrive before the test advances the 100ms debounce and asserts exactly one request. An unrelated evaluation is delivered and its own debounce window advanced before any related event is sent, so coalescing cannot mask a bad invalidation. The fixture uses its own student to avoid adding cards to the shared seeded student's concurrent dashboard tests. Product code is unchanged.
+The realtime browser check installs a paused debounce clock before the ballot detail mounts and drains StrictMode startup revalidation with an acknowledged sentinel update. CDP Network.eventSourceMessageReceived observes messages on the actual app EventSource in both development and built production preview; no app-source imports or product debug globals are required. All five burst events must arrive before the test advances the 100ms debounce and asserts exactly one request. An unrelated evaluation is delivered and its own debounce window advanced before any related event is sent, so coalescing cannot mask a bad invalidation. The fixture uses its own student to avoid adding cards to the shared seeded student's concurrent dashboard tests. Product code is unchanged.
 
-Validation: build/check pass. Concurrent run of live-query.spec.ts and ballot.spec.ts on desktop/mobile with four workers passes 25 tests, with one intentional mobile passkey skip. Existing deterministic unit burst coverage remains unchanged. The delivery probe imports the app's PocketBase singleton through the Vite test server used by playwright.config.ts.
+Validation: build/check pass. Concurrent runs of live-query.spec.ts and ballot.spec.ts on desktop/mobile with four workers pass 25 tests with one intentional mobile passkey skip in development, and independently pass 25 tests with the same skip under PLAYWRIGHT_PREVIEW=1. Existing deterministic unit burst coverage remains unchanged. The route-splitting commit was inherited only to run its production-preview configuration; this follow-up commit contains only the realtime browser spec and bean summary.
