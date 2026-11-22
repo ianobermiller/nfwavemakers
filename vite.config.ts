@@ -76,5 +76,6 @@ export default defineConfig({
   envDir: '.',
   build: {
     outDir: '_site',
+    manifest: true,
   },
 });

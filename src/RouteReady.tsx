@@ -2,6 +2,7 @@ import { Component, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { clearLiveErrors } from '../ballots/lib/liveQuery.ts';
 import { RouteSkeleton } from './RouteSkeleton.tsx';
 import { SiteLayout } from './site/SiteLayout.tsx';
+import { RouteModuleError } from './lazyRoute.ts';
 
 type NavPage = 'home' | 'about' | 'schedule' | 'lessons' | 'ballots' | 'join';
 
@@ -75,6 +76,10 @@ class RouteErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 
   private retry = (): void => {
+    if (this.state.error instanceof RouteModuleError) {
+      window.location.reload();
+      return;
+    }
     clearLiveErrors();
     this.setState({ error: undefined });
   };

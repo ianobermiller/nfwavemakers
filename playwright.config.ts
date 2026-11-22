@@ -59,7 +59,10 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: `vite --port ${port}`,
+      command:
+        process.env['PLAYWRIGHT_PREVIEW'] === '1'
+          ? `vite build --mode test && vite preview --port ${port}`
+          : `vite --port ${port}`,
       env: { VITE_POCKETBASE_URL: pocketbaseURL },
       url: baseURL,
       reuseExistingServer: false,

@@ -1,33 +1,97 @@
-import { useEffect } from 'react';
+import { lazy, useEffect } from 'react';
 import { usePathRoute, redirect } from './hooks/useHashRoute.ts';
 import { RouteReady } from './RouteReady.tsx';
 import { RouteSkeleton } from './RouteSkeleton.tsx';
 import { AuthProvider, useAppUser, useAuthState } from '../ballots/hooks/auth.tsx';
-import { Auth } from '../ballots/components/Auth.tsx';
-import { PendingAccess } from '../ballots/components/PendingAccess.tsx';
-import { ProfileSetup } from '../ballots/components/ProfileSetup.tsx';
-import { Dashboard } from '../ballots/components/Dashboard.tsx';
-import { BallotForm } from '../ballots/components/BallotForm.tsx';
-import { BallotView } from '../ballots/components/BallotView.tsx';
-import { DebateView } from '../ballots/components/DebateView.tsx';
-import { AdminDebates } from '../ballots/components/AdminDebates.tsx';
-import { AdminDebateForm } from '../ballots/components/AdminDebateForm.tsx';
-import { AdminBallots } from '../ballots/components/AdminBallots.tsx';
-import { AdminLessonForm } from '../ballots/components/AdminLessonForm.tsx';
-import { AdminUsers } from '../ballots/components/AdminUsers.tsx';
-import { ProfileEdit } from '../ballots/components/ProfileEdit.tsx';
 import { isFullMember } from '../ballots/data/api.ts';
 import type { User } from '../ballots/data/model.ts';
 import { FieldError } from '../ballots/components/ui/FieldError.tsx';
 import { Muted } from '../ballots/components/ui/Muted.tsx';
 import { SiteLayout } from './site/SiteLayout.tsx';
 import { HomePage } from './site/HomePage.tsx';
-import { AboutPage } from './site/AboutPage.tsx';
-import { JoinPage } from './site/JoinPage.tsx';
-import { LessonsIndex } from './site/LessonsIndex.tsx';
-import { SchedulePage } from './site/SchedulePage.tsx';
-import { LessonPage } from './site/LessonPage.tsx';
 import type { Role } from '../ballots/types.ts';
+import { loadRoute } from './lazyRoute.ts';
+
+const Auth = lazy(() =>
+  loadRoute(import('../ballots/components/Auth.tsx').then((m) => ({ default: m.Auth }))),
+);
+const PendingAccess = lazy(() =>
+  loadRoute(
+    import('../ballots/components/PendingAccess.tsx').then((m) => ({ default: m.PendingAccess })),
+  ),
+);
+const ProfileSetup = lazy(() =>
+  loadRoute(
+    import('../ballots/components/ProfileSetup.tsx').then((m) => ({ default: m.ProfileSetup })),
+  ),
+);
+const Dashboard = lazy(() =>
+  loadRoute(import('../ballots/components/Dashboard.tsx').then((m) => ({ default: m.Dashboard }))),
+);
+const BallotForm = lazy(() =>
+  loadRoute(
+    import('../ballots/components/BallotForm.tsx').then((m) => ({ default: m.BallotForm })),
+  ),
+);
+const BallotView = lazy(() =>
+  loadRoute(
+    import('../ballots/components/BallotView.tsx').then((m) => ({ default: m.BallotView })),
+  ),
+);
+const DebateView = lazy(() =>
+  loadRoute(
+    import('../ballots/components/DebateView.tsx').then((m) => ({ default: m.DebateView })),
+  ),
+);
+const AdminDebates = lazy(() =>
+  loadRoute(
+    import('../ballots/components/AdminDebates.tsx').then((m) => ({ default: m.AdminDebates })),
+  ),
+);
+const AdminDebateForm = lazy(() =>
+  loadRoute(
+    import('../ballots/components/AdminDebateForm.tsx').then((m) => ({
+      default: m.AdminDebateForm,
+    })),
+  ),
+);
+const AdminBallots = lazy(() =>
+  loadRoute(
+    import('../ballots/components/AdminBallots.tsx').then((m) => ({ default: m.AdminBallots })),
+  ),
+);
+const AdminLessonForm = lazy(() =>
+  loadRoute(
+    import('../ballots/components/AdminLessonForm.tsx').then((m) => ({
+      default: m.AdminLessonForm,
+    })),
+  ),
+);
+const AdminUsers = lazy(() =>
+  loadRoute(
+    import('../ballots/components/AdminUsers.tsx').then((m) => ({ default: m.AdminUsers })),
+  ),
+);
+const ProfileEdit = lazy(() =>
+  loadRoute(
+    import('../ballots/components/ProfileEdit.tsx').then((m) => ({ default: m.ProfileEdit })),
+  ),
+);
+const AboutPage = lazy(() =>
+  loadRoute(import('./site/AboutPage.tsx').then((m) => ({ default: m.AboutPage }))),
+);
+const JoinPage = lazy(() =>
+  loadRoute(import('./site/JoinPage.tsx').then((m) => ({ default: m.JoinPage }))),
+);
+const LessonsIndex = lazy(() =>
+  loadRoute(import('./site/LessonsIndex.tsx').then((m) => ({ default: m.LessonsIndex }))),
+);
+const SchedulePage = lazy(() =>
+  loadRoute(import('./site/SchedulePage.tsx').then((m) => ({ default: m.SchedulePage }))),
+);
+const LessonPage = lazy(() =>
+  loadRoute(import('./site/LessonPage.tsx').then((m) => ({ default: m.LessonPage }))),
+);
 
 interface RouteCtx {
   param: string;
