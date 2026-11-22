@@ -30,7 +30,7 @@ async function signIn(page: Page, email: string, navigate = true) {
 const shot = (page: Page, name: string) =>
   page.screenshot({ path: `/tmp/nfw-wl3x-${name}.png`, scale: 'css', animations: 'disabled' });
 
-async function fixture(pb: PocketBase) {
+async function fixture(pb: PocketBase, debateCount = 23) {
   const suffix = crypto.randomUUID().slice(0, 8);
   const users: string[] = [];
   const debates: string[] = [];
@@ -38,18 +38,16 @@ async function fixture(pb: PocketBase) {
   const evals: string[] = [];
   const createUser = async (name: string, role: string) => {
     const email = `history-${suffix}-${users.length}@example.com`;
-    const user = await pb
-      .collection('users')
-      .create({
-        email,
-        name,
-        role,
-        category: role === 'student' ? 'tp' : '',
-        approved: true,
-        verified: true,
-        password: process.env['E2E_PASSWORD'],
-        passwordConfirm: process.env['E2E_PASSWORD'],
-      });
+    const user = await pb.collection('users').create({
+      email,
+      name,
+      role,
+      category: role === 'student' ? 'tp' : '',
+      approved: true,
+      verified: true,
+      password: process.env['E2E_PASSWORD'],
+      passwordConfirm: process.env['E2E_PASSWORD'],
+    });
     users.push(user.id);
     return { id: user.id, email };
   };
@@ -57,52 +55,44 @@ async function fixture(pb: PocketBase) {
   const otherStudent = await createUser('Other History Student', 'student');
   const judge = await createUser('History Judge Alpha', 'parent');
   const secondJudge = await createUser('History Judge Beta', 'parent');
-  for (let index = 0; index < 23; index += 1) {
-    const debate = await pb
-      .collection('debates')
-      .create({
-        date: '2020-01-01',
-        room: `History ${suffix} ${index}`,
-        event: 'tp',
-        aff_team: [student.id],
-        neg_team: [],
-        judges: [judge.id, secondJudge.id],
-      });
+  for (let index = 0; index < debateCount; index += 1) {
+    const debate = await pb.collection('debates').create({
+      date: '2020-01-01',
+      room: `History ${suffix} ${index}`,
+      event: 'tp',
+      aff_team: [student.id],
+      neg_team: [],
+      judges: [judge.id, secondJudge.id],
+    });
     debates.push(debate.id);
     for (const user of [judge, secondJudge]) {
-      const ballot = await pb
-        .collection('ballots')
-        .create({
-          debate: debate.id,
-          judge: user.id,
-          submitted_at: '2043-01-01 12:00:00.000Z',
-          winner: 'aff',
-          reason_for_decision: 'History private decision',
-        });
+      const ballot = await pb.collection('ballots').create({
+        debate: debate.id,
+        judge: user.id,
+        submitted_at: '2043-01-01 12:00:00.000Z',
+        winner: 'aff',
+        reason_for_decision: 'History private decision',
+      });
       ballots.push(ballot.id);
-      const evaluation = await pb
-        .collection('speaker_evals')
-        .create({
-          ballot: ballot.id,
-          speaker: student.id,
-          position: 'aff1',
-          notes: 'History private evaluation',
-          delivery: 4,
-          rank: 1,
-        });
+      const evaluation = await pb.collection('speaker_evals').create({
+        ballot: ballot.id,
+        speaker: student.id,
+        position: 'aff1',
+        notes: 'History private evaluation',
+        delivery: 4,
+        rank: 1,
+      });
       evals.push(evaluation.id);
     }
   }
-  const open = await pb
-    .collection('debates')
-    .create({
-      date: '2020-01-02',
-      room: `Open ${suffix}`,
-      event: 'tp',
-      judges: [judge.id],
-      aff_team: [],
-      neg_team: [],
-    });
+  const open = await pb.collection('debates').create({
+    date: '2020-01-02',
+    room: `Open ${suffix}`,
+    event: 'tp',
+    judges: [judge.id],
+    aff_team: [],
+    neg_team: [],
+  });
   debates.push(open.id);
   return {
     student,
@@ -312,8 +302,11 @@ test('judge history is bounded and old submitted assignments never reopen', asyn
 
 test('same-user relogin abandons pending preloaded history', async ({ page }, info) => {
   const pb = await database();
-  const student = await pb.collection('users').getFirstListItem('email = "student@example.com"');
-  const debate = await pb.collection('debates').getOne(process.env['E2E_DEBATE_ID'] ?? '');
+  const data = await fixture(pb, 2);
+  const { student } = data;
+  const debateId = data.debates[0];
+  if (!debateId) throw new Error('Missing session debate fixture');
+  const target = page.locator(`[id="feedback-${student.id}:${debateId}"]`);
   let release = (): void => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -333,43 +326,50 @@ test('same-user relogin abandons pending preloaded history', async ({ page }, in
     } else await route.continue();
   });
   try {
-    await signIn(page, student['email']);
+    await signIn(page, student.email);
     await expect(page.getByText('Loading history…')).toBeVisible();
     await shot(page, `student-loading-${info.project.name}`);
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Sign Out', exact: true }).click();
     await page.locator('#email').waitFor({ state: 'visible' });
-    await pb.collection('debates').update(debate.id, { room: 'Fresh relogin history' });
-    await signIn(page, student['email'], false);
-    await expect(page.locator('[id^="feedback-"]')).toContainText('Fresh relogin history');
+    await pb.collection('debates').update(debateId, { room: 'Fresh relogin history' });
+    await signIn(page, student.email, false);
+    await expect(target).toContainText('Fresh relogin history');
+    await expect(page.locator('[id^="feedback-"]')).toHaveCount(2);
     expect(requests).toBeGreaterThanOrEqual(2);
     release();
     await oldDelivered;
-    await expect(page.locator('[id^="feedback-"]')).toContainText('Fresh relogin history');
+    await expect(target).toContainText('Fresh relogin history');
     await shot(page, `student-relogin-${info.project.name}`);
   } finally {
     release();
-    await pb.collection('debates').update(debate.id, { room: debate['room'] });
+    await data.cleanup();
   }
 });
 
 test('history initial errors retry and empty state renders in dark mode', async ({
   page,
 }, info) => {
-  await page.route('**/api/collections/student_feedback_summaries/records*', (route) =>
-    route.fulfill({ status: 503, json: { message: 'History unavailable.' } }),
-  );
-  await signIn(page, process.env['E2E_STUDENT_EMAIL'] ?? '');
-  await expect(page.getByRole('alert')).toContainText('History unavailable.');
-  await shot(page, `student-error-${info.project.name}`);
-  await page.unroute('**/api/collections/student_feedback_summaries/records*');
-  await page.getByRole('button', { name: 'Try again', exact: true }).click();
-  await expect(page.locator('[id^="feedback-"]')).toHaveCount(1);
-  await shot(page, `student-${info.project.name}`);
-  await page.route('**/api/collections/student_feedback_summaries/records*', (route) =>
-    route.fulfill({ json: { page: 1, perPage: 21, totalItems: -1, totalPages: -1, items: [] } }),
-  );
-  await page.reload();
-  await expect(page.getByText('No submitted ballots yet.', { exact: true })).toBeVisible();
-  await shot(page, `student-empty-${info.project.name}`);
+  const pb = await database();
+  const data = await fixture(pb, 2);
+  try {
+    await page.route('**/api/collections/student_feedback_summaries/records*', (route) =>
+      route.fulfill({ status: 503, json: { message: 'History unavailable.' } }),
+    );
+    await signIn(page, data.student.email);
+    await expect(page.getByRole('alert')).toContainText('History unavailable.');
+    await shot(page, `student-error-${info.project.name}`);
+    await page.unroute('**/api/collections/student_feedback_summaries/records*');
+    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(page.locator('[id^="feedback-"]')).toHaveCount(2);
+    await shot(page, `student-${info.project.name}`);
+    await page.route('**/api/collections/student_feedback_summaries/records*', (route) =>
+      route.fulfill({ json: { page: 1, perPage: 21, totalItems: -1, totalPages: -1, items: [] } }),
+    );
+    await page.reload();
+    await expect(page.getByText('No submitted ballots yet.', { exact: true })).toBeVisible();
+    await shot(page, `student-empty-${info.project.name}`);
+  } finally {
+    await data.cleanup();
+  }
 });

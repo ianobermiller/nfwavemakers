@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-11-22T01:16:17Z
-updated_at: 2026-11-22T01:38:57Z
+updated_at: 2026-11-22T02:02:55Z
 blocked_by:
     - nfw-u466
     - nfw-0i7n
@@ -28,3 +28,11 @@ Validation: npm run build and npm run check pass. All 87 unit tests pass; full b
 The initial full-suite run caught and corrected an inherited test assuming all old submissions were on page one. A separate inherited realtime exact-count assertion observed two loads once under concurrent suite load; its production source/test was left unchanged and the subsequent full suite passes. Unit exact-burst behavior remains covered.
 
 Dark CSS-pixel screenshots: /private/tmp/nfw-wl3x-student-populated.png, -student-more.png, -student-append-error.png, -student-append-loading.png, -judge-populated.png, -judge-more.png; /private/tmp/nfw-wl3x-student-{loading,relogin,error,empty}-{chromium,mobile}.png; /private/tmp/nfw-wl3x-{student,judge,admin}-{chromium,mobile}.png. No dev server left running. Review /ballots or /dashboard as student/parent/admin. Not landed.
+
+## Integration follow-up: isolate session browser fixtures
+
+Reproduced the final integration failure deterministically by creating a second legitimate feedback group for the shared seeded student. The old same-user relogin assertion used a string expectation against every feedback card, causing Playwright strict-mode failure with two distinct valid groups. Repro captured at /private/tmp/nfw-wl3x-shared-fixture-repro.md. Product grouping and auth behavior were correct.
+
+The relogin and initial-error tests now reuse a configurable private fixture with two debate groups and independent student/judges, rather than reading or changing shared seeded accounts. The relogin freshness assertion targets its exact student/debate group; both tests explicitly cover two records. Cleanup removes their records. No product source changed.
+
+The revised history and competing admin-ballot suites pass concurrently with four workers: 12 passed, 6 intentional skips. Focused desktop/mobile session/error checks pass after fixture-helper consolidation. Build/check pass. Existing dark screenshot paths now show the private two-group session/error states.
