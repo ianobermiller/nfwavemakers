@@ -61,7 +61,6 @@ export interface DebateWithBallots {
 
 export interface AdminDebate extends Debate {
   ballotCount: number;
-  ballotIds: string[];
 }
 
 export interface ResultPage<T> {

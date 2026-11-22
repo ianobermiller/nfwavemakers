@@ -15,15 +15,23 @@ export function AdminDebateItem({
   debateId,
   debate,
   onDelete,
+  ballotCount,
 }: {
   debateId: string;
   debate?: Debate | undefined;
   onDelete: () => void;
+  ballotCount?: number;
 }): React.JSX.Element {
   return (
     <DebateCard
+      id={`manage-debate-${debateId}`}
       debateId={debateId}
       debate={debate}
+      badge={
+        ballotCount === undefined
+          ? undefined
+          : `${ballotCount} ballot${ballotCount === 1 ? '' : 's'}`
+      }
       onClick={() => navigate(`admin/${debateId}`)}
       actions={
         <DebateActionsMenu onEdit={() => navigate(`admin/${debateId}`)} onDelete={onDelete} />

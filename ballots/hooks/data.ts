@@ -6,7 +6,6 @@ import {
   getDebateCard,
   getDebateDetail,
   getDraftForJudge,
-  listAdminDebates,
   listAssignedDebates,
   listForSpeaker,
   listSubmittedByMe,
@@ -28,7 +27,6 @@ const ballotCollections = [
 ];
 const debateCollections = [collections.debates, collections.users];
 const userCollections = [collections.users];
-const adminDebateCollections = [collections.debates, collections.ballots, collections.users];
 
 export interface LiveQuery<T> {
   /** Call after the component's other hooks. Suspends until this query has a value. */
@@ -131,11 +129,6 @@ export function useUpcomingDebates(today: string) {
 export function useAssignedDebates() {
   const load = useCallback(async () => await listAssignedDebates(), []);
   return useLiveData('assigned-debates', load, debateCollections);
-}
-
-export function useAdminDebates() {
-  const load = useCallback(async () => await listAdminDebates(), []);
-  return useLiveData('admin-debates', load, adminDebateCollections);
 }
 
 export function useDebateCard(debateId: string, judgeId?: string) {

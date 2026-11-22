@@ -583,21 +583,31 @@ export async function listAssignedDebates(): Promise<Debate[]> {
   return records.map(mapDebate);
 }
 
-export async function listAdminDebates(): Promise<AdminDebate[]> {
-  const [debates, ballots] = await Promise.all([
-    pb.collection<DebateRecord>(collections.debates).getFullList({
-      filter: activeFilter(),
-      expand: debateExpand,
-      sort: '-date,-id',
-    }),
-    pb.collection<BallotRecord>(collections.ballots).getFullList({
-      filter: activeFilter(),
-    }),
-  ]);
-  return debates.map((record) => {
-    const ids = ballots.filter((ballot) => ballot.debate === record.id).map((ballot) => ballot.id);
-    return { ...mapDebate(record), ballotCount: ids.length, ballotIds: ids };
+export async function listAdminDebates({
+  after,
+  through,
+}: CursorRange<DebateBallotCursor>): Promise<CursorPage<AdminDebate, DebateBallotCursor>> {
+  const filters = [];
+  if (after) filters.push(pb.filter('(date < {:date} || (date = {:date} && id < {:id}))', after));
+  if (through)
+    filters.push(pb.filter('(date > {:date} || (date = {:date} && id >= {:id}))', through));
+  const result = await pb.collection<DebateSummaryRecord>('admin_debate_summaries').getList(1, 21, {
+    filter: filters.join(' && '),
+    expand: 'debate.aff_team,debate.neg_team,debate.judges',
+    sort: '-date,-id',
+    skipTotal: true,
   });
+  const records = result.items.slice(0, 20);
+  const last = records.at(-1);
+  return {
+    items: records.flatMap((record) =>
+      record.expand?.debate
+        ? [{ ...mapDebate(record.expand.debate), ballotCount: record.ballot_count }]
+        : [],
+    ),
+    cursor: last ? { date: last.date, id: last.id } : null,
+    hasMore: result.items.length > 20,
+  };
 }
 
 export async function getDebateCard(
@@ -635,12 +645,12 @@ export async function saveDebate(input: SaveDebateInput): Promise<string> {
 export async function listActiveBallotIdsForDebate(debateId: string): Promise<string[]> {
   const ballots = await pb.collection<BallotRecord>(collections.ballots).getFullList({
     filter: activeFilter(pb.filter('debate = {:debate}', { debate: debateId })),
+    fields: 'id',
   });
   return ballots.map((ballot) => ballot.id);
 }
 
-export async function softDeleteDebate(debateId: string): Promise<void> {
-  const ballotIds = await listActiveBallotIdsForDebate(debateId);
+export async function softDeleteDebate(debateId: string, ballotIds: string[]): Promise<void> {
   const deletedAt = new Date().toISOString();
   const batch = pb.createBatch();
   batch.collection(collections.debates).update(debateId, { deleted_at: deletedAt });

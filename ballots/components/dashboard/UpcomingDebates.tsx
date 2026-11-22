@@ -14,7 +14,7 @@ export function UpcomingDebates({ role }: { role: Role }): React.JSX.Element {
   const isAdmin = role === 'admin';
 
   const { pendingDeletes, softDelete, undo } = useUndoDelete<DebateDeletePayload>(
-    (payload) => softDeleteDebate(payload.id),
+    (payload) => softDeleteDebate(payload.id, payload.ballotIds),
     (payload) => {
       void restoreDebate(payload.id, payload.ballotIds);
     },
