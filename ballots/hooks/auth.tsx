@@ -3,6 +3,7 @@ import { clearCurrentUser, loadCurrentUser } from '../data/api.ts';
 import { refreshSession } from '../data/auth.ts';
 import type { User } from '../data/model.ts';
 import { clearLiveCache } from '../lib/liveQuery.ts';
+import { clearDashboardHistory } from './useDashboardHistory.ts';
 import { errorMessage, pb } from '../data/pocketbase.ts';
 
 interface AuthContextValue {
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextValue>(loggedOut);
 function clearLocalAuthState(): void {
   clearCurrentUser();
   clearLiveCache();
+  clearDashboardHistory();
 }
 
 function loginIsValid(): boolean {

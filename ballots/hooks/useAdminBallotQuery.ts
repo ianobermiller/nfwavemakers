@@ -35,6 +35,7 @@ export function useAdminBallotQuery<T>(
   }, [affects]);
 
   useEffect(() => {
+    const authId = pb.authStore.record?.id;
     let active = true;
     let running = false;
     let dirty = false;
@@ -45,7 +46,8 @@ export function useAdminBallotQuery<T>(
     let subscriptionError: string | undefined;
     dataRef.current = undefined;
 
-    const isActive = (): boolean => active && pb.authStore.isValid;
+    const isActive = (): boolean =>
+      active && pb.authStore.isValid && pb.authStore.record?.id === authId;
     const needsRefresh = (): boolean => dirty;
     const needsMore = (): boolean => moreRequested;
     const refresh = async (request: QueryRequest = 'refresh'): Promise<void> => {

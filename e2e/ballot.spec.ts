@@ -145,7 +145,11 @@ test.describe('Judge ballot view', () => {
 
     await waitForLoaded(page, async () => {
       await expect(page.getByText('Submitted Ballots')).toBeVisible({ timeout: 2_000 });
-      await expect(page.getByText('2024-01-15').first()).toBeVisible({ timeout: 2_000 });
+      const seeded = page.locator(`[id="history-ballot-${process.env['E2E_BALLOT_ID']}"]`);
+      const more = page.getByRole('button', { name: 'Load more', exact: true });
+      if (!(await seeded.isVisible()) && (await more.isVisible())) await more.click();
+      await expect(seeded).toBeVisible({ timeout: 2_000 });
+      await expect(seeded).toContainText('2024-01-15');
     });
   });
 

@@ -6,9 +6,7 @@ import {
   getDebateCard,
   getDebateDetail,
   getDraftForJudge,
-  listAssignedDebates,
-  listForSpeaker,
-  listSubmittedByMe,
+  listOpenAssignedDebates,
   listUpcomingDebates,
   listUsers,
 } from '../data/api.ts';
@@ -18,6 +16,7 @@ import { formatLocalYmd } from '../lib/dates.ts';
 import { ensureLive, readLive, subscribeLive } from '../lib/liveQuery.ts';
 import { collections, pb } from '../data/pocketbase.ts';
 import type { Role } from '../types.ts';
+import { preloadDashboardHistory } from './useDashboardHistory.ts';
 
 const ballotCollections = [
   collections.ballots,
@@ -94,12 +93,9 @@ function useLiveData<T>(
 export function preloadDashboard(role: Role): void {
   const today = formatLocalYmd(new Date());
   if (role !== 'parent') ensureLive(`upcoming:${today}`, () => listUpcomingDebates(today));
-  if (role === 'student') {
-    ensureLive('speaker-ballots', () => listForSpeaker());
-  }
+  preloadDashboardHistory(role);
   if (role === 'parent' || role === 'admin') {
-    ensureLive('assigned-debates', () => listAssignedDebates());
-    ensureLive('submitted-ballots', () => listSubmittedByMe());
+    ensureLive('open-assigned-debates', () => listOpenAssignedDebates());
   }
 }
 
@@ -126,9 +122,16 @@ export function useUpcomingDebates(today: string) {
   return useLiveData(`upcoming:${today}`, load, debateCollections);
 }
 
-export function useAssignedDebates() {
-  const load = useCallback(async () => await listAssignedDebates(), []);
-  return useLiveData('assigned-debates', load, debateCollections);
+export function useOpenAssignedDebates() {
+  const load = useCallback(async () => await listOpenAssignedDebates(), []);
+  return useLiveData(
+    'open-assigned-debates',
+    load,
+    ballotCollections,
+    (collection, record) =>
+      collection !== collections.speakerEvals &&
+      (collection !== collections.ballots || record['judge'] === pb.authStore.record?.id),
+  );
 }
 
 export function useDebateCard(debateId: string, judgeId?: string) {
@@ -152,16 +155,6 @@ export function useBallotDraft(debateId: string) {
     (collection, record, ballot) =>
       affectsBallots(collection, record, ballot ? [ballot] : [], { kind: 'debate', id: debateId }),
   );
-}
-
-export function useSubmittedBallots() {
-  const load = useCallback(async () => await listSubmittedByMe(), []);
-  return useLiveData('submitted-ballots', load, ballotCollections);
-}
-
-export function useSpeakerBallots() {
-  const load = useCallback(async () => await listForSpeaker(), []);
-  return useLiveData('speaker-ballots', load, ballotCollections);
 }
 
 export function useDebateDetail(debateId: string) {

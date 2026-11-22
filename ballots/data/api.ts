@@ -3,6 +3,9 @@ import type { DebateEvent, Position, Role, StudentCategory, Winner } from '../ty
 import { parseDebateEvent, parseStudentCategory } from '../types.ts';
 import type {
   AdminDebate,
+  HistoryCursor,
+  SubmittedBallotSummary,
+  StudentFeedbackSummary,
   Ballot,
   Debate,
   DebateWithBallots,
@@ -16,7 +19,7 @@ import type {
   StudentBallotSummary,
   User,
 } from './model.ts';
-import { fetchBallotRelations, orEqualFilter, uniqueIds } from '../lib/ballotHydrate.ts';
+import { fetchBallotRelations, orEqualFilter } from '../lib/ballotHydrate.ts';
 import { debatePartnerUpdates } from '../lib/debatePartners.ts';
 import { compareByLastName } from '../utils/format.ts';
 import { collections, createRecordId, pb } from './pocketbase.ts';
@@ -573,14 +576,19 @@ export async function listUpcomingDebates(today: string): Promise<Debate[]> {
   return records.map(mapDebate);
 }
 
-export async function listAssignedDebates(): Promise<Debate[]> {
-  const records = await pb.collection<DebateRecord>(collections.debates).getFullList({
-    // PocketBase needs the relation field: `judges ?= id` matches nothing.
-    filter: activeFilter(pb.filter('judges.id ?= {:judge}', { judge: currentUserId() })),
-    expand: debateExpand,
-    sort: 'date',
+export async function listOpenAssignedDebates(): Promise<Debate[]> {
+  const records = await pb.collection<OpenDebateRecord>('judge_open_debates').getFullList({
+    filter: pb.filter('judge = {:judge}', { judge: currentUserId() }),
+    expand: 'debate.aff_team,debate.neg_team,debate.judges',
+    sort: 'date,id',
   });
-  return records.map(mapDebate);
+  return records.flatMap((record) =>
+    record.expand?.debate ? [mapDebate(record.expand.debate)] : [],
+  );
+}
+
+interface OpenDebateRecord extends RecordModel {
+  expand?: { debate?: DebateRecord };
 }
 
 export async function listAdminDebates({
@@ -695,30 +703,96 @@ export async function getDraftForJudge(debateId: string): Promise<Ballot | null>
   return ballot ?? null;
 }
 
-export async function listSubmittedByMe(): Promise<Ballot[]> {
-  // Dashboard cards only need debate + winner; skip speaker scores.
-  return await listBallots(
-    activeFilter(`judge = "${currentUserId()}" && submitted_at != ""`),
-    '-submitted_at',
-    { includeEvals: false },
-  );
+function historyFilter({ after, through }: CursorRange<HistoryCursor>): string {
+  const filters = [];
+  if (after)
+    filters.push(
+      pb.filter(
+        '(submitted_at < {:submitted_at} || (submitted_at = {:submitted_at} && id < {:id}))',
+        after,
+      ),
+    );
+  if (through)
+    filters.push(
+      pb.filter(
+        '(submitted_at > {:submitted_at} || (submitted_at = {:submitted_at} && id >= {:id}))',
+        through,
+      ),
+    );
+  return filters.join(' && ');
 }
 
-export async function listForSpeaker(): Promise<Ballot[]> {
-  const evals = await pb.collection<SpeakerEvalRecord>(collections.speakerEvals).getFullList({
-    filter: pb.filter('speaker = {:speaker}', { speaker: currentUserId() }),
+export async function listSubmittedByMe(
+  range: CursorRange<HistoryCursor>,
+): Promise<CursorPage<SubmittedBallotSummary, HistoryCursor>> {
+  const filter = historyFilter(range);
+  const result = await pb.collection<BallotRecord>(collections.ballots).getList(1, 21, {
+    filter: activeFilter(
+      [pb.filter('judge = {:judge} && submitted_at != ""', { judge: currentUserId() }), filter]
+        .filter(Boolean)
+        .join(' && '),
+    ),
+    fields: 'id,debate,submitted_at,winner',
+    sort: '-submitted_at,-id',
+    skipTotal: true,
   });
-  const ballotIds = uniqueIds(evals.map((evaluation) => evaluation.ballot));
-  if (ballotIds.length === 0) return [];
-  const idFilter = orEqualFilter('id', ballotIds, (expr, params) => pb.filter(expr, params));
-  if (!idFilter) return [];
-  const records = await pb.collection<BallotRecord>(collections.ballots).getFullList({
-    filter: activeFilter(`(${idFilter}) && submitted_at != ""`),
-    expand: 'judge',
-    sort: '-submitted_at',
-  });
-  // Feedback list only shows debate + judge names.
-  return await hydrateBallotRecords(records, false);
+  const records = result.items.slice(0, 20);
+  const debates = await listDebatesByIds(records.map((record) => record.debate));
+  const last = records.at(-1);
+  return {
+    items: records.map((record) => ({
+      id: record.id,
+      debate: debates.get(record.debate) ?? null,
+      submittedAt: new Date(record.submitted_at.replace(' ', 'T')).getTime(),
+      winner: record.winner || undefined,
+    })),
+    cursor: last ? { submitted_at: last.submitted_at, id: last.id } : null,
+    hasMore: result.items.length > 20,
+  };
+}
+
+interface StudentFeedbackRecord extends RecordModel {
+  debate: string;
+  ballot: string;
+  submitted_at: string;
+  date: string;
+  room: string;
+  judge_names: (string | null)[];
+}
+
+export async function listStudentFeedback(
+  range: CursorRange<HistoryCursor>,
+): Promise<CursorPage<StudentFeedbackSummary, HistoryCursor>> {
+  const result = await pb
+    .collection<StudentFeedbackRecord>('student_feedback_summaries')
+    .getList(1, 21, {
+      filter: [
+        pb.filter('speaker = {:speaker}', { speaker: currentUserId() }),
+        historyFilter(range),
+      ]
+        .filter(Boolean)
+        .join(' && '),
+      fields: 'id,debate,ballot,submitted_at,date,room,judge_names',
+      sort: '-submitted_at,-id',
+      skipTotal: true,
+    });
+  const records = result.items.slice(0, 20);
+  const last = records.at(-1);
+  return {
+    items: records.map((record) => ({
+      id: record.id,
+      debateId: record.debate,
+      ballotId: record.ballot,
+      date: record.date,
+      room: record.room,
+      judgeNames: record.judge_names.filter(
+        (name): name is string => typeof name === 'string' && name !== '',
+      ),
+      submittedAt: new Date(record.submitted_at.replace(' ', 'T')).getTime(),
+    })),
+    cursor: last ? { submitted_at: last.submitted_at, id: last.id } : null,
+    hasMore: result.items.length > 20,
+  };
 }
 
 export async function getDebateDetail(debateId: string): Promise<DebateWithBallots | null> {

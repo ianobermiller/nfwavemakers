@@ -8,7 +8,9 @@ for (const role of ['admin', 'student', 'judge'] as const) {
       const url = new URL(request.url());
       if (
         request.method() === 'GET' &&
-        /\/api\/collections\/(ballots|speaker_evals|debates)\/records$/.test(url.pathname)
+        /\/api\/collections\/(ballots|speaker_evals|debates|student_feedback_summaries|judge_open_debates)\/records$/.test(
+          url.pathname,
+        )
       )
         requests.push(url);
     });
@@ -27,7 +29,10 @@ for (const role of ['admin', 'student', 'judge'] as const) {
     if (await notNow.isVisible()) await notNow.click();
     if (role === 'student') {
       await expect(page.getByRole('heading', { name: 'My Feedback', exact: true })).toBeVisible();
-      expect(requests.some((url) => url.pathname.includes('/speaker_evals/'))).toBe(true);
+      expect(requests.some((url) => url.pathname.includes('/student_feedback_summaries/'))).toBe(
+        true,
+      );
+      expect(requests.some((url) => url.pathname.includes('/speaker_evals/'))).toBe(false);
       expect(requests.some((url) => url.pathname.includes('/debates/'))).toBe(true);
     } else {
       await expect(
@@ -44,6 +49,7 @@ for (const role of ['admin', 'student', 'judge'] as const) {
           page.getByRole('heading', { name: 'Manage Debates', exact: true }),
         ).toBeVisible();
     }
+    await expect(page.getByText('Loading history…', { exact: true })).toHaveCount(0);
     await page.screenshot({
       path: `/tmp/nfw-bi7a-${role}-${info.project.name}.png`,
       animations: 'disabled',

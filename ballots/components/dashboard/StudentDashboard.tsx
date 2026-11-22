@@ -1,4 +1,5 @@
-import { useSpeakerBallots } from '../../hooks/data.ts';
+import { useStudentFeedback } from '../../hooks/useDashboardHistory.ts';
+import { HistoryControls } from './HistoryControls.tsx';
 import { navigate } from '@/hooks/useHashRoute.ts';
 import { compareByLastName } from '../../utils/format.ts';
 import { Card } from '../ui/Card.tsx';
@@ -7,36 +8,28 @@ import { Heading } from '../ui/Heading.tsx';
 import { Muted } from '../ui/Muted.tsx';
 
 export function StudentDashboard({ userId: _userId }: { userId: string }): React.JSX.Element {
-  const ballots = useSpeakerBallots().read();
-
-  const byGroup = new Map<string, typeof ballots>();
-  for (const b of ballots) {
-    const key = b.debate?.id ?? b.id;
-    const arr = byGroup.get(key) ?? [];
-    arr.push(b);
-    byGroup.set(key, arr);
-  }
+  const history = useStudentFeedback();
+  const groups = history.state.status === 'ready' ? history.state.data.items : [];
 
   return (
     <div>
       <Heading>My Feedback</Heading>
-      {byGroup.size === 0 && <EmptyState>No submitted ballots yet.</EmptyState>}
+      {history.state.status === 'ready' && groups.length === 0 && (
+        <EmptyState>No submitted ballots yet.</EmptyState>
+      )}
       <div className="flex flex-col gap-3">
-        {[...byGroup.entries()].map(([groupKey, evs]) => {
-          const ballot = evs[0];
-          const debate = ballot?.debate;
-          const displayDate =
-            debate?.date ??
-            (ballot?.submittedAt != null ? new Date(ballot.submittedAt).toLocaleDateString() : '—');
-          const viewRoute = debate?.id ? `debate/${debate.id}` : `ballot/${ballot?.id}`;
-          const judgeNames = [
-            ...new Set(
-              evs.map((ev) => ev.judge?.name).filter((name): name is string => name != null),
-            ),
-          ].sort((a, b) => compareByLastName({ name: a }, { name: b }));
+        {groups.map((group) => {
+          const displayDate = group.date || new Date(group.submittedAt).toLocaleDateString();
+          const viewRoute = group.debateId
+            ? `debate/${group.debateId}`
+            : `ballot/${group.ballotId}`;
+          const judgeNames = [...group.judgeNames].sort((a, b) =>
+            compareByLastName({ name: a }, { name: b }),
+          );
           return (
             <Card
-              key={groupKey}
+              key={group.id}
+              id={`feedback-${group.id}`}
               as="button"
               interactive
               padding="sm"
@@ -45,9 +38,9 @@ export function StudentDashboard({ userId: _userId }: { userId: string }): React
             >
               <strong className="text-sm text-slate-800 dark:text-slate-100">
                 {displayDate}
-                {debate?.room && (
+                {group.room && (
                   <Muted as="span" className="ml-2 font-normal">
-                    · {debate.room}
+                    · {group.room}
                   </Muted>
                 )}
               </strong>
@@ -60,6 +53,7 @@ export function StudentDashboard({ userId: _userId }: { userId: string }): React
           );
         })}
       </div>
+      <HistoryControls query={history} />
     </div>
   );
 }

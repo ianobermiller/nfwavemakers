@@ -103,3 +103,20 @@ export interface Lesson {
   body: string;
   slug: string;
 }
+
+export interface HistoryCursor {
+  submitted_at: string;
+  id: string;
+}
+
+export type SubmittedBallotSummary = Pick<Ballot, 'id' | 'debate' | 'submittedAt' | 'winner'>;
+
+export interface StudentFeedbackSummary {
+  id: string;
+  debateId: string;
+  ballotId: string;
+  date: string;
+  room: string;
+  judgeNames: string[];
+  submittedAt: number;
+}
