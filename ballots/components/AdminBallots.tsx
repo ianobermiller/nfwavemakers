@@ -170,7 +170,7 @@ function ByDebate(): React.JSX.Element {
     <QueryContent query={query} errorAfter>
       {(data) => (
         <>
-          {data.items.length === 0 && <Empty>No debates yet.</Empty>}
+          {data.items.length === 0 && !data.hasMore && <Empty>No debates yet.</Empty>}
           <div className="flex flex-col gap-3">
             {data.items.map(({ debate, ballotCount }) => {
               const isOpen = expanded === debate.id;
@@ -224,7 +224,7 @@ function ByStudent(): React.JSX.Element {
     <QueryContent query={query} errorAfter>
       {(data) => (
         <>
-          {data.items.length === 0 && <Empty>No submitted ballots yet.</Empty>}
+          {data.items.length === 0 && !data.hasMore && <Empty>No submitted ballots yet.</Empty>}
           <div className="flex flex-col gap-3">
             {data.items.map(({ student, debateCount }) => {
               const isOpen = expanded === student.id;

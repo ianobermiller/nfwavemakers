@@ -44,18 +44,40 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: '**/admin-refresh.spec.ts',
+      testIgnore: [
+        '**/admin-refresh.spec.ts',
+        '**/admin-ballots.spec.ts',
+        '**/admin-debates.spec.ts',
+      ],
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'mobile',
-      testIgnore: '**/admin-refresh.spec.ts',
+      testIgnore: [
+        '**/admin-refresh.spec.ts',
+        '**/admin-ballots.spec.ts',
+        '**/admin-debates.spec.ts',
+      ],
+      use: { ...devices['Pixel 7'], channel: 'chrome' },
+    },
+    {
+      name: 'admin-summaries-chromium',
+      testMatch: ['**/admin-ballots.spec.ts', '**/admin-debates.spec.ts'],
+      dependencies: ['chromium', 'mobile'],
+      workers: 1,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'admin-summaries-mobile',
+      testMatch: ['**/admin-ballots.spec.ts', '**/admin-debates.spec.ts'],
+      dependencies: ['admin-summaries-chromium'],
+      workers: 1,
       use: { ...devices['Pixel 7'], channel: 'chrome' },
     },
     {
       name: 'admin-refresh',
       testMatch: '**/admin-refresh.spec.ts',
-      dependencies: ['chromium', 'mobile'],
+      dependencies: ['admin-summaries-mobile'],
       use: { ...devices['Desktop Chrome'] },
     },
   ],

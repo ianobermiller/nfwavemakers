@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveBallot } from '../data/api.ts';
 import { createRecordId, errorMessage } from '../data/pocketbase.ts';
 import { prepareBallotSave, type PreparedBallotSave } from '../services/ballotSave.ts';
-import { isPickerEligible } from '../lib/pickerUsers.ts';
+import type { Debate } from '../data/model.ts';
 import {
   browserDraftStorage,
   buildLocalDraft,
@@ -28,12 +28,13 @@ import {
   type BallotIds,
   type DebateTeams,
 } from '../services/ballot.ts';
-import { useBallotDraft as useBallotDraftRecord, useDebate, useUsers } from './data.ts';
+import { useBallotDraft as useBallotDraftRecord, useDebate } from './data.ts';
 
 export type BallotSyncStatus = 'saved' | 'saving' | 'pending' | 'error';
 
 interface Props {
   initial: BallotFormInit;
+  debate: Debate;
   judgeId: string;
   debateId: string;
   storage?: DraftStorage;
@@ -43,14 +44,11 @@ const RETRY_DELAYS_MS = [2_000, 5_000, 15_000, 30_000];
 
 export function useBallotDraft({
   initial: serverInitial,
+  debate,
   judgeId,
   debateId,
   storage = browserDraftStorage(),
 }: Props) {
-  // The form loader suspends until these queries resolve, so reading here does not suspend.
-  const users = useUsers(true).read();
-  const debate = useDebate(debateId).read();
-
   const [boot] = useState(() => restoreBallotFormState(serverInitial, judgeId, debateId, storage));
   const initial = boot.initial;
   const startedFromLocal = boot.restoredFromLocal;
@@ -105,11 +103,7 @@ export function useBallotDraft({
   const scheduleAfterSaveRef = useRef<() => void>(() => {});
   const saveToServerRef = useRef<() => Promise<void>>(async () => {});
 
-  const selectedStudentIds = POSITIONS.map((pos) => speakers[pos].userId).filter(Boolean);
-  const students = users.filter(
-    (u) => u.role === 'student' && isPickerEligible(u, selectedStudentIds),
-  );
-  const speakersLocked = debate != null;
+  const students = [...debate.affTeam, ...debate.negTeam];
 
   useEffect(() => {
     storageRef.current = storage;
@@ -291,9 +285,7 @@ export function useBallotDraft({
     };
   }, [clearRetry]);
 
-  const debateSpeakerKey = debate
-    ? `${debate.affTeam.map((user) => user.id).join('|')}:${debate.negTeam.map((user) => user.id).join('|')}`
-    : '';
+  const debateSpeakerKey = `${debate.affTeam.map((user) => user.id).join('|')}:${debate.negTeam.map((user) => user.id).join('|')}`;
 
   useEffect(() => {
     const currentDebate = debateRef.current;
@@ -347,7 +339,7 @@ export function useBallotDraft({
   }
 
   const orderComplete =
-    debate?.event === 'ld' ||
+    debate.event === 'ld' ||
     (['aff', 'neg'] as const).every(
       (side) => !speakers[side === 'aff' ? 'aff2' : 'neg2'].userId || orderConfirmed.includes(side),
     );
@@ -475,7 +467,7 @@ export function useBallotDraft({
     rankOrder,
     activePositions: getActivePositions(speakers),
     allScored: isAllScored(speakers),
-    speakersLocked,
+    speakersLocked: true,
     orderConfirmed,
     orderComplete,
     selectFirstSpeaker,
@@ -496,11 +488,8 @@ export function useBallotDraft({
 export function useBallotDraftLoader(debateId: string) {
   const debateLive = useDebate(debateId);
   const existingLive = useBallotDraftRecord(debateId);
-  const usersLive = useUsers(true);
   const debate = debateLive.read();
   const existing = existingLive.read();
-  // The editor also reads users. Wait here so it can mount without suspending again.
-  usersLive.read();
 
   const initial = initBallotFormState(existing, debate);
 

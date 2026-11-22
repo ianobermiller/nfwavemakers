@@ -95,11 +95,14 @@ export function AdminDebates(): React.JSX.Element {
           Deleting debate…
         </p>
       )}
-      {query.state.status === 'ready' && debates.length === 0 && pendingList.length === 0 && (
-        <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
-          No debates yet.
-        </p>
-      )}
+      {query.state.status === 'ready' &&
+        debates.length === 0 &&
+        !query.state.data.hasMore &&
+        pendingList.length === 0 && (
+          <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
+            No debates yet.
+          </p>
+        )}
       <div className="flex flex-col gap-3">
         {pendingList.map((pd) => (
           <UndoDebateRow key={pd.id} payload={pd} onUndo={() => undo(pd.id)} />

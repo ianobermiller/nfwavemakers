@@ -15,6 +15,7 @@ import { SpeakerEvalCard } from './SpeakerEvalCard.tsx';
 import { SpeakerPointGuide } from './SpeakerPointGuide.tsx';
 import { SideLabel } from './ui/SideLabel.tsx';
 import { scoringTotal } from '../utils/format.ts';
+import type { Debate } from '../data/model.ts';
 
 interface Props {
   debateId: string;
@@ -23,10 +24,24 @@ interface Props {
 }
 
 export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props): React.JSX.Element {
-  const { initial } = useBallotDraftLoader(debateId);
+  const { initial, debate } = useBallotDraftLoader(debateId);
+  if (!debate) {
+    return (
+      <PageLayout title="Judge">
+        <BackLink to="dashboard" label="Dashboard" />
+        <p className="text-slate-500 dark:text-slate-400">Debate not found.</p>
+      </PageLayout>
+    );
+  }
 
   return (
-    <BallotFormEditor key={debateId} debateId={debateId} judgeId={judgeId} initial={initial} />
+    <BallotFormEditor
+      key={debateId}
+      debateId={debateId}
+      debate={debate}
+      judgeId={judgeId}
+      initial={initial}
+    />
   );
 }
 
@@ -46,18 +61,20 @@ function syncStatusMessage(status: ReturnType<typeof useBallotDraft>['syncStatus
 
 function BallotFormEditor({
   debateId,
+  debate,
   initial,
   judgeId,
 }: {
   debateId: string;
+  debate: Debate;
   judgeId: string;
   initial: NonNullable<ReturnType<typeof useBallotDraftLoader>['initial']>;
 }): React.JSX.Element {
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideCategory, setGuideCategory] = useState<string | undefined>(undefined);
 
-  const draft = useBallotDraft({ initial, debateId, judgeId });
-  const event: DebateEvent = draft.debate?.event ?? 'tp';
+  const draft = useBallotDraft({ initial, debate, debateId, judgeId });
+  const event: DebateEvent = draft.debate.event;
   const seats = positionsForEvent(event);
   const avatarURLs = Object.fromEntries(
     draft.students
@@ -78,7 +95,7 @@ function BallotFormEditor({
         .some((later) => scoringTotal(draft.speakers[pos]) < scoringTotal(draft.speakers[later])),
     );
 
-  const title = draft.debate ? `Judge — ${draft.debate.date}, Room ${draft.debate.room}` : 'Judge';
+  const title = `Judge — ${draft.debate.date}, Room ${draft.debate.room}`;
 
   return (
     <>
@@ -94,21 +111,19 @@ function BallotFormEditor({
           </button>
         </div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {draft.debate && (
-            <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-              <span>{DEBATE_EVENT_LABELS[event]}</span>
-              <span>·</span>
-              <span>{draft.debate.date}</span>
-              <span>·</span>
-              <span>{draft.debate.room}</span>
-              {draft.debate.caseTitle && (
-                <>
-                  <span>·</span>
-                  <span className="truncate">{draft.debate.caseTitle}</span>
-                </>
-              )}
-            </div>
-          )}
+          <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <span>{DEBATE_EVENT_LABELS[event]}</span>
+            <span>·</span>
+            <span>{draft.debate.date}</span>
+            <span>·</span>
+            <span>{draft.debate.room}</span>
+            {draft.debate.caseTitle && (
+              <>
+                <span>·</span>
+                <span className="truncate">{draft.debate.caseTitle}</span>
+              </>
+            )}
+          </div>
           <div
             className={cn(
               'inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 px-2.5 py-1 text-xs font-medium rounded-full',
@@ -194,7 +209,7 @@ function BallotFormEditor({
                         Who speaks first?
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {(side === 'aff' ? draft.debate?.affTeam : draft.debate?.negTeam)?.map(
+                        {(side === 'aff' ? draft.debate.affTeam : draft.debate.negTeam).map(
                           (student) => {
                             const selected =
                               draft.orderConfirmed.includes(side) &&

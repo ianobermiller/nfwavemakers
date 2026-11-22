@@ -310,19 +310,6 @@ async function hydrateBallotRecords(
   );
 }
 
-async function listBallots(
-  filter: string,
-  sort = '-submitted_at',
-  options: { includeEvals?: boolean } = {},
-): Promise<Ballot[]> {
-  const records = await pb.collection<BallotRecord>(collections.ballots).getFullList({
-    filter,
-    expand: 'judge',
-    sort,
-  });
-  return await hydrateBallotRecords(records, options.includeEvals ?? true);
-}
-
 function activeFilter(extra?: string): string {
   return ['deleted_at = ""', extra].filter(Boolean).join(' && ');
 }
@@ -772,12 +759,25 @@ export async function listStudentFeedback(
 }
 
 export async function getDebateDetail(debateId: string): Promise<DebateWithBallots | null> {
-  const debate = await getDebateOrNull(debateId);
+  const recordsRequest = pb.collection<BallotRecord>(collections.ballots).getFullList({
+    filter: activeFilter(
+      pb.filter('debate = {:debate} && submitted_at != ""', { debate: debateId }),
+    ),
+    expand: 'judge',
+    sort: '-submitted_at',
+  });
+  const [debate, records, evalsByBallot] = await Promise.all([
+    getDebateOrNull(debateId),
+    recordsRequest,
+    recordsRequest.then((records) => listEvalsByBallotIds(records.map((record) => record.id))),
+  ]);
   if (!debate) return null;
-  const ballots = await listBallots(
-    activeFilter(pb.filter('debate = {:debate} && submitted_at != ""', { debate: debateId })),
-  );
-  return { debate, ballots };
+  return {
+    debate,
+    ballots: records.map((record) =>
+      ballotFromParts(record, debate, evalsByBallot.get(record.id) ?? []),
+    ),
+  };
 }
 
 const ADMIN_BALLOT_PAGE_SIZE = 20;

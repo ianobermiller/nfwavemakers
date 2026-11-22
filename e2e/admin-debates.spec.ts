@@ -32,7 +32,10 @@ async function signIn(page: Page) {
 test('Manage Debates uses cursor summaries and fetches ballot IDs only for delete', async ({
   page,
 }, info) => {
-  test.skip(info.project.name !== 'chromium', 'Large fixture runs once; mobile has its own check.');
+  test.skip(
+    info.project.use.isMobile === true,
+    'Large fixture runs once; mobile has its own check.',
+  );
   const pb = await database();
   const judge = await pb.collection('users').getFirstListItem('email = "judge@example.com"');
   const admin = await pb.collection('users').getFirstListItem('email = "admin@example.com"');
@@ -185,9 +188,10 @@ test('Manage Debates uses cursor summaries and fetches ballot IDs only for delet
 });
 
 test('Manage Debates loading and retry retain dark mobile layout', async ({ page }, info) => {
+  const device = info.project.use.isMobile ? 'mobile' : 'chromium';
   await signIn(page);
   await page.screenshot({
-    path: `/tmp/nfw-u466-${info.project.name}.png`,
+    path: `/tmp/nfw-u466-${device}.png`,
     animations: 'disabled',
     scale: 'css',
   });
@@ -197,7 +201,7 @@ test('Manage Debates loading and retry retain dark mobile layout', async ({ page
   await page.reload();
   await expect(page.getByRole('alert')).toContainText('Debates are temporarily unavailable.');
   await page.screenshot({
-    path: `/tmp/nfw-u466-error-${info.project.name}.png`,
+    path: `/tmp/nfw-u466-error-${device}.png`,
     animations: 'disabled',
     scale: 'css',
   });
@@ -215,7 +219,7 @@ test('Manage Debates loading and retry retain dark mobile layout', async ({ page
   await page.reload();
   await expect(page.getByText('Loading debates…')).toBeVisible();
   await page.screenshot({
-    path: `/tmp/nfw-u466-loading-${info.project.name}.png`,
+    path: `/tmp/nfw-u466-loading-${device}.png`,
     animations: 'disabled',
     scale: 'css',
   });
@@ -228,7 +232,7 @@ test('Manage Debates loading and retry retain dark mobile layout', async ({ page
   await page.reload();
   await expect(page.getByText('No debates yet.', { exact: true })).toBeVisible();
   await page.screenshot({
-    path: `/tmp/nfw-u466-empty-${info.project.name}.png`,
+    path: `/tmp/nfw-u466-empty-${device}.png`,
     animations: 'disabled',
     scale: 'css',
   });

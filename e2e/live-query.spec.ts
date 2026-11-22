@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type CDPSession } from '@playwright/test';
 import PocketBase from 'pocketbase';
 import { z } from 'zod';
 
@@ -71,6 +71,7 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     position: 'aff1',
     notes: 'Other feedback',
   });
+  let connection: CDPSession | undefined;
   try {
     await page.goto('/ballots');
     await page.getByRole('button', { name: 'Use a password' }).click();
@@ -81,7 +82,7 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     const dismiss = page.getByRole('button', { name: 'Not now' });
     if (await dismiss.isVisible()) await dismiss.click();
     const delivered: { id: string; notes: string }[] = [];
-    const connection = await page.context().newCDPSession(page);
+    connection = await page.context().newCDPSession(page);
     await connection.send('Network.enable');
     connection.on('Network.eventSourceMessageReceived', (event) => {
       // Observe the app's real SSE connection in both dev and built-preview runs.
@@ -163,6 +164,8 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     await expect(page.getByText('Latest related feedback', { exact: true })).toBeVisible();
     expect(reloads - beforeUnrelated).toBe(1);
     await page.clock.resume();
+    await connection.detach();
+    connection = undefined;
     await page.reload();
     await expect(page.getByText('Latest related feedback', { exact: true })).toBeVisible();
     await page.goto('/lessons');
@@ -180,6 +183,8 @@ test('ballot realtime updates coalesce, ignore unrelated records, and survive na
     await expect(page.getByRole('heading', { name: 'Sign in or create account' })).toBeVisible();
     expect(pageErrors).toEqual([]);
   } finally {
+    await connection?.detach().catch(() => {});
+    await page.clock.resume().catch(() => {});
     await pb.collection('speaker_evals').delete(evaluation.id);
     await pb.collection('speaker_evals').delete(otherEvaluation.id);
     await pb.collection('ballots').delete(ballot.id);

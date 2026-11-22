@@ -32,8 +32,9 @@ async function signIn(page: Page) {
 test('admin summaries paginate without fetching feedback until expanded', async ({
   page,
 }, info) => {
+  const device = info.project.use.isMobile ? 'mobile' : 'chromium';
   test.skip(
-    info.project.name !== 'chromium',
+    info.project.use.isMobile === true,
     'Large pagination fixture runs once; mobile has its own UI check.',
   );
   const pb = await database();
@@ -96,7 +97,7 @@ test('admin summaries paginate without fetching feedback until expanded', async 
     expect(detailRequests).toHaveLength(0);
     await expect(page.getByText(`Private feedback ${suffix} 22`)).toHaveCount(0);
     await page.screenshot({
-      path: `/tmp/nfw-ru86-debates-${info.project.name}.png`,
+      path: `/tmp/nfw-ru86-debates-${device}.png`,
       fullPage: false,
       scale: 'css',
     });
@@ -143,7 +144,7 @@ test('admin summaries paginate without fetching feedback until expanded', async 
     await expect(page.getByText(`Speaker notes ${suffix} 22`)).toBeVisible();
     expect(detailRequests.length).toBeGreaterThan(0);
     await page.screenshot({
-      path: `/tmp/nfw-ru86-debate-open-${info.project.name}.png`,
+      path: `/tmp/nfw-ru86-debate-open-${device}.png`,
       fullPage: false,
       scale: 'css',
     });
@@ -178,14 +179,14 @@ test('admin summaries paginate without fetching feedback until expanded', async 
     await expect(studentCards).toHaveCount(20);
     expect(detailRequests).toHaveLength(0);
     await page.screenshot({
-      path: `/tmp/nfw-ru86-students-${info.project.name}.png`,
+      path: `/tmp/nfw-ru86-students-${device}.png`,
       fullPage: false,
       scale: 'css',
     });
     await studentCards.first().click();
     await expect(page.getByText(`Speaker notes ${suffix} 0`)).toBeVisible();
     await page.screenshot({
-      path: `/tmp/nfw-ru86-student-open-${info.project.name}.png`,
+      path: `/tmp/nfw-ru86-student-open-${device}.png`,
       fullPage: true,
       scale: 'css',
     });
@@ -240,7 +241,7 @@ test('admin summaries paginate without fetching feedback until expanded', async 
     await page.getByRole('button', { name: 'By Student', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Temporarily unavailable');
     await page.screenshot({
-      path: `/tmp/nfw-ru86-error-${info.project.name}.png`,
+      path: `/tmp/nfw-ru86-error-${device}.png`,
       fullPage: true,
       scale: 'css',
     });
@@ -283,7 +284,7 @@ test('ballot summary views enforce admin-only collection rules', async () => {
 test('admin ballot views fit a phone and keep feedback inside the selected row', async ({
   page,
 }, info) => {
-  test.skip(info.project.name !== 'mobile', 'Responsive check uses a phone.');
+  test.skip(info.project.use.isMobile !== true, 'Responsive check uses a phone.');
   await signIn(page);
 
   const row = page.locator(`#debate-btn-${process.env['E2E_DEBATE_ID']}`);
@@ -336,7 +337,7 @@ test('admin ballot views fit a phone and keep feedback inside the selected row',
 test('expanded feedback paginates and stranded ballot deletion can be undone', async ({
   page,
 }, info) => {
-  test.skip(info.project.name !== 'chromium', 'Fixture runs once.');
+  test.skip(info.project.use.isMobile === true, 'Fixture runs once.');
   const pb = await database();
   const student = await pb.collection('users').getFirstListItem('email = "student@example.com"');
   const suffix = crypto.randomUUID().slice(0, 8);
@@ -435,7 +436,7 @@ test('expanded feedback paginates and stranded ballot deletion can be undone', a
 test('summary cursors handle tied sort keys and live changes at the loaded boundary', async ({
   page,
 }, info) => {
-  test.skip(info.project.name !== 'chromium', 'Cursor fixture runs once.');
+  test.skip(info.project.use.isMobile === true, 'Cursor fixture runs once.');
   const pb = await database();
   const judge = await pb.collection('users').getFirstListItem('email = "judge@example.com"');
   const suffix = crypto.randomUUID().slice(0, 8);
