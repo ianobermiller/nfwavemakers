@@ -22,7 +22,8 @@ import type {
 import { fetchBallotRelations, orEqualFilter } from '../lib/ballotHydrate.ts';
 import { debatePartnerUpdates } from '../lib/debatePartners.ts';
 import { compareByLastName } from '../utils/format.ts';
-import { collections, createRecordId, pb } from './pocketbase.ts';
+import { collections, pb } from './pocketbase.ts';
+import { planBallotSave, type PreparedBallotSave } from '../services/ballotSave.ts';
 
 interface UserRecord extends RecordModel {
   approved?: boolean;
@@ -109,30 +110,6 @@ export interface SaveDebateInput {
   /** Affirmative case for this round. Omitted leaves an existing value unchanged. */
   caseTitle?: string;
   room: string;
-}
-
-interface SaveEvalInput {
-  conduct?: number;
-  crossExamination?: number;
-  delivery?: number;
-  evalId?: string;
-  evidenceAndSupport?: number;
-  notes: string;
-  organization?: number;
-  position: Position;
-  rank?: number;
-  refutation?: number;
-  speakerId?: string;
-}
-
-export interface SaveBallotInput {
-  ballotId?: string;
-  debateId: string;
-  evals: SaveEvalInput[];
-  reasonForDecision: string;
-  orderConfirmed?: Winner[];
-  submittedAt?: number;
-  winner?: Winner;
 }
 
 export interface SavedBallotIds {
@@ -907,50 +884,27 @@ export async function listAdminBallotDetails(
   };
 }
 
-export async function saveBallot(input: SaveBallotInput): Promise<SavedBallotIds> {
-  if (!input.debateId) {
-    throw new Error('A ballot must belong to a debate an admin already created');
-  }
-  const ballotId = input.ballotId ?? createRecordId();
+export async function saveBallot(
+  input: PreparedBallotSave,
+  acknowledged?: PreparedBallotSave,
+): Promise<SavedBallotIds> {
+  if (!input.debateId) throw new Error('A ballot must belong to a debate an admin already created');
+  const plan = planBallotSave(input, acknowledged);
   const evalIds: Partial<Record<Position, string>> = {};
-  const ballot = {
-    debate: input.debateId,
-    judge: currentUserId(),
-    reason_for_decision: input.reasonForDecision.trim(),
-    ...(input.orderConfirmed ? { speaker_order_confirmed: input.orderConfirmed } : {}),
-    submitted_at: input.submittedAt ? new Date(input.submittedAt).toISOString() : '',
-    winner: input.winner ?? '',
-  };
-  const batch = pb.createBatch();
-  if (input.ballotId) {
-    batch.collection(collections.ballots).update(ballotId, ballot);
-  } else {
-    batch.collection(collections.ballots).create({ id: ballotId, ...ballot });
-  }
-  for (const evaluation of input.evals) {
-    const evalId = evaluation.evalId ?? createRecordId();
-    evalIds[evaluation.position] = evalId;
-    const body = {
-      ballot: ballotId,
-      conduct: evaluation.conduct ?? null,
-      cross_examination: evaluation.crossExamination ?? null,
-      delivery: evaluation.delivery ?? null,
-      evidence_and_support: evaluation.evidenceAndSupport ?? null,
-      notes: evaluation.notes.trim(),
-      organization: evaluation.organization ?? null,
-      position: evaluation.position,
-      rank: evaluation.rank ?? null,
-      refutation: evaluation.refutation ?? null,
-      speaker: evaluation.speakerId ?? '',
-    };
-    if (evaluation.evalId) {
-      batch.collection(collections.speakerEvals).update(evalId, body);
-    } else {
-      batch.collection(collections.speakerEvals).create({ id: evalId, ...body });
+  for (const evaluation of input.evals) evalIds[evaluation.position] = evaluation.evalId;
+  if (plan.ballot || plan.evals.length) {
+    const batch = pb.createBatch();
+    if (plan.ballot) {
+      batch
+        .collection(collections.ballots)
+        .upsert({ id: input.ballotId, ...plan.ballot, judge: currentUserId() });
     }
+    for (const evaluation of plan.evals) {
+      batch.collection(collections.speakerEvals).upsert({ id: evaluation.id, ...evaluation.body });
+    }
+    await batch.send();
   }
-  await batch.send();
-  return { ballotId, evalIds };
+  return { ballotId: input.ballotId, evalIds };
 }
 
 export async function softDeleteBallot(ballotId: string): Promise<void> {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveBallot } from '../data/api.ts';
-import { errorMessage } from '../data/pocketbase.ts';
+import { createRecordId, errorMessage } from '../data/pocketbase.ts';
+import { prepareBallotSave, type PreparedBallotSave } from '../services/ballotSave.ts';
 import { isPickerEligible } from '../lib/pickerUsers.ts';
 import {
   browserDraftStorage,
@@ -75,7 +76,29 @@ export function useBallotDraft({
   const rfdRef = useRef(rfd);
   const debateRef = useRef<DebateTeams | null | undefined>(undefined);
   const dirtyGenerationRef = useRef(0);
-  const savingRef = useRef(false);
+  const savePromiseRef = useRef<Promise<void> | null>(null);
+  const submittingRef = useRef(false);
+  const mountedRef = useRef(true);
+  const [acknowledged] = useState(() =>
+    serverInitial.ids.ballotId && !serverInitial.needsPersist
+      ? prepareBallotSave(
+          {
+            ballotId: serverInitial.ids.ballotId,
+            debateId,
+            orderConfirmed: serverInitial.orderConfirmed,
+            evals: buildEvalPayload(
+              serverInitial.speakers,
+              serverInitial.ids,
+              serverInitial.rankOrder,
+            ),
+            reasonForDecision: serverInitial.rfd,
+            ...(serverInitial.winner ? { winner: serverInitial.winner } : {}),
+          },
+          createRecordId,
+        )
+      : undefined,
+  );
+  const acknowledgedRef = useRef<PreparedBallotSave | undefined>(acknowledged);
   const retryAttemptRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const storageRef = useRef(storage);
@@ -124,37 +147,26 @@ export function useBallotDraft({
     }
   }, []);
 
-  const saveToServer = useCallback(async () => {
-    if (savingRef.current) return;
-    savingRef.current = true;
-    clearRetry();
-    const generation = dirtyGenerationRef.current;
-    setSyncStatus('saving');
-
-    const speakersToSave = speakersRef.current;
-    const idsToSave = idsRef.current;
-    const rankOrderToSave = rankOrderRef.current;
-    const winnerToSave = winnerRef.current;
-    const rfdToSave = rfdRef.current;
-
-    try {
-      const result = await saveBallot({
-        ...(idsToSave.ballotId ? { ballotId: idsToSave.ballotId } : {}),
-        debateId,
-        orderConfirmed: orderConfirmedRef.current,
-        evals: buildEvalPayload(speakersToSave, idsToSave, rankOrderToSave),
-        reasonForDecision: rfdToSave,
-        ...(winnerToSave ? { winner: winnerToSave } : {}),
-      });
-      const nextIds: BallotIds = {
-        ballotId: result.ballotId,
-        evalIds: {
-          ...(result.evalIds['aff1'] ? { aff1: result.evalIds['aff1'] } : {}),
-          ...(result.evalIds['aff2'] ? { aff2: result.evalIds['aff2'] } : {}),
-          ...(result.evalIds['neg1'] ? { neg1: result.evalIds['neg1'] } : {}),
-          ...(result.evalIds['neg2'] ? { neg2: result.evalIds['neg2'] } : {}),
+  const prepareCurrentSave = useCallback(
+    (submittedAt?: number) => {
+      const input = prepareBallotSave(
+        {
+          ...(idsRef.current.ballotId ? { ballotId: idsRef.current.ballotId } : {}),
+          debateId,
+          orderConfirmed: [...orderConfirmedRef.current],
+          evals: buildEvalPayload(speakersRef.current, idsRef.current, rankOrderRef.current),
+          reasonForDecision: rfdRef.current,
+          ...(winnerRef.current ? { winner: winnerRef.current } : {}),
+          ...(submittedAt ? { submittedAt } : {}),
         },
+        createRecordId,
+      );
+      const nextIds: BallotIds = {
+        ballotId: input.ballotId,
+        evalIds: { ...idsRef.current.evalIds },
       };
+      for (const evaluation of input.evals)
+        nextIds.evalIds[evaluation.position] = evaluation.evalId;
       idsRef.current = nextIds;
       setIds(nextIds);
       persistLocal({
@@ -164,29 +176,55 @@ export function useBallotDraft({
         winner: winnerRef.current,
         rfd: rfdRef.current,
       });
-      retryAttemptRef.current = 0;
-      setSyncError(undefined);
-      if (dirtyGenerationRef.current === generation) {
-        setSyncStatus('saved');
-      } else {
-        setSyncStatus('pending');
+      return input;
+    },
+    [debateId, persistLocal],
+  );
+
+  const saveToServer = useCallback(async () => {
+    if (submittingRef.current) return;
+    if (savePromiseRef.current) return await savePromiseRef.current;
+    const run = async (): Promise<void> => {
+      clearRetry();
+      const generation = dirtyGenerationRef.current;
+      setSyncStatus('saving');
+      try {
+        const input = prepareCurrentSave();
+        await saveBallot(input, acknowledgedRef.current);
+        acknowledgedRef.current = input;
+        retryAttemptRef.current = 0;
+        setSyncError(undefined);
+        setSyncStatus(dirtyGenerationRef.current === generation ? 'saved' : 'pending');
+      } catch (error: unknown) {
+        setSyncStatus('error');
+        setSyncError(errorMessage(error, 'Could not save your ballot'));
+        if (mountedRef.current && !submittingRef.current) {
+          const delay =
+            RETRY_DELAYS_MS[Math.min(retryAttemptRef.current, RETRY_DELAYS_MS.length - 1)]!;
+          retryAttemptRef.current += 1;
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            void saveToServerRef.current();
+          }, delay);
+        }
+      } finally {
+        if (
+          mountedRef.current &&
+          !submittingRef.current &&
+          dirtyGenerationRef.current !== generation
+        ) {
+          scheduleAfterSaveRef.current();
+        }
       }
-    } catch (error: unknown) {
-      setSyncStatus('error');
-      setSyncError(errorMessage(error, 'Could not save your ballot'));
-      const delay = RETRY_DELAYS_MS[Math.min(retryAttemptRef.current, RETRY_DELAYS_MS.length - 1)]!;
-      retryAttemptRef.current += 1;
-      retryTimerRef.current = setTimeout(() => {
-        retryTimerRef.current = null;
-        void saveToServerRef.current();
-      }, delay);
+    };
+    const request = run();
+    savePromiseRef.current = request;
+    try {
+      await request;
     } finally {
-      savingRef.current = false;
-      if (dirtyGenerationRef.current !== generation) {
-        scheduleAfterSaveRef.current();
-      }
+      if (savePromiseRef.current === request) savePromiseRef.current = null;
     }
-  }, [clearRetry, debateId, persistLocal]);
+  }, [clearRetry, prepareCurrentSave]);
 
   useEffect(() => {
     saveToServerRef.current = saveToServer;
@@ -246,7 +284,11 @@ export function useBallotDraft({
   }, [initial, persistLocal, scheduleDebouncedSave, startedFromLocal]);
 
   useEffect(() => {
-    return () => clearRetry();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearRetry();
+    };
   }, [clearRetry]);
 
   const debateSpeakerKey = debate
@@ -390,23 +432,29 @@ export function useBallotDraft({
   }
 
   async function submit(): Promise<void> {
-    if (!orderComplete || !canSubmitBallot(speakers, winner, rankOrder) || !winner) return;
+    if (
+      submittingRef.current ||
+      !orderComplete ||
+      !canSubmitBallot(speakers, winner, rankOrder) ||
+      !winner
+    )
+      return;
+    submittingRef.current = true;
     setSubmitting(true);
     cancelDebouncedSave();
     clearRetry();
     try {
-      await saveBallot({
-        ...(ids.ballotId ? { ballotId: ids.ballotId } : {}),
-        debateId,
-        orderConfirmed: orderConfirmedRef.current,
-        evals: buildEvalPayload(speakers, ids, rankOrder),
-        reasonForDecision: rfd,
-        submittedAt: Date.now(),
-        winner,
-      });
+      // Let the earlier write finish, then submit the latest refs and acknowledged IDs.
+      await savePromiseRef.current;
+      cancelDebouncedSave();
+      clearRetry();
+      const input = prepareCurrentSave(Date.now());
+      await saveBallot(input, acknowledgedRef.current);
+      acknowledgedRef.current = input;
       clearLocalDraft(judgeId, debateId, storageRef.current);
       navigate('dashboard');
     } catch (error: unknown) {
+      submittingRef.current = false;
       setSubmitting(false);
       setSyncStatus('error');
       setSyncError(errorMessage(error, 'Could not submit your ballot'));

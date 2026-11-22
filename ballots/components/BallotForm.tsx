@@ -26,12 +26,7 @@ export function BallotForm({ debateId, judgeId, judgeName: _judgeName }: Props):
   const { initial } = useBallotDraftLoader(debateId);
 
   return (
-    <BallotFormEditor
-      key={`${debateId}-${initial.ids.ballotId ?? 'draft'}`}
-      debateId={debateId}
-      judgeId={judgeId}
-      initial={initial}
-    />
+    <BallotFormEditor key={debateId} debateId={debateId} judgeId={judgeId} initial={initial} />
   );
 }
 
@@ -143,166 +138,170 @@ function BallotFormEditor({
           </div>
         </div>
 
-        {/* Decision */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4">
-          <fieldset className="border-none p-0 m-0">
-            <legend className="sr-only">Decision</legend>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-              {(['aff', 'neg'] as const).map((side) => (
-                <label
-                  key={side}
-                  className={cn(
-                    'inline-flex w-full items-center justify-center gap-2 px-4 py-3 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors sm:w-auto sm:py-2',
-                    draft.winner === side
-                      ? side === 'aff'
-                        ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'
-                        : 'border-neg bg-neg-bg dark:border-neg-d dark:bg-neg-bg-d text-neg dark:text-neg-d'
-                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300',
-                  )}
-                >
-                  <input
-                    className="sr-only"
-                    type="radio"
-                    name="winner"
-                    value={side}
-                    checked={draft.winner === side}
-                    onChange={() => draft.updateWinner(side)}
-                  />
-                  {side === 'aff' ? 'Affirmative wins' : 'Negative wins'}
-                </label>
-              ))}
-            </div>
-            <div className="mt-3">
-              <AutoTextarea
-                value={draft.rfd}
-                onChange={draft.updateRfd}
-                placeholder="Reason for decision…"
-              />
-            </div>
-          </fieldset>
-        </div>
-
-        {/* Speakers — one column per side; Team Policy has two seats each. */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(['aff', 'neg'] as const).map((side) => (
-            <div key={side}>
-              <SideLabel side={side}>{side === 'aff' ? 'Affirmative' : 'Negative'}</SideLabel>
-              {event === 'tp' && seatsForSide(side).every((pos) => draft.speakers[pos].userId) && (
-                <fieldset
-                  className="mb-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800"
-                  aria-label={`${side === 'aff' ? 'Affirmative' : 'Negative'} speaking order`}
-                >
-                  <legend className="sr-only">Who speaks first?</legend>
-                  <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    Who speaks first?
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {(side === 'aff' ? draft.debate?.affTeam : draft.debate?.negTeam)?.map(
-                      (student) => {
-                        const selected =
-                          draft.orderConfirmed.includes(side) &&
-                          draft.speakers[side === 'aff' ? 'aff1' : 'neg1'].userId === student.id;
-                        return (
-                          <label
-                            key={student.id}
-                            className={cn(
-                              'relative flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold transition-colors focus-within:ring-2 focus-within:ring-nf-accent focus-within:ring-offset-2',
-                              selected
-                                ? 'border-nf-blue bg-blue-50 text-nf-blue dark:border-nf-blue-d dark:bg-slate-700 dark:text-white'
-                                : 'border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300',
-                            )}
-                          >
-                            <input
-                              className="sr-only"
-                              type="radio"
-                              name={`${side}-first-speaker`}
-                              value={student.id}
-                              checked={selected}
-                              onChange={() => draft.selectFirstSpeaker(side, student.id)}
-                            />
-                            {student.name ?? 'Student'}
-                          </label>
-                        );
-                      },
+        <fieldset disabled={draft.submitting} className="min-w-0 border-none p-0 m-0">
+          {/* Decision */}
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4">
+            <fieldset className="border-none p-0 m-0">
+              <legend className="sr-only">Decision</legend>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                {(['aff', 'neg'] as const).map((side) => (
+                  <label
+                    key={side}
+                    className={cn(
+                      'inline-flex w-full items-center justify-center gap-2 px-4 py-3 border-2 rounded-xl cursor-pointer font-semibold text-sm transition-colors sm:w-auto sm:py-2',
+                      draft.winner === side
+                        ? side === 'aff'
+                          ? 'border-aff bg-aff-bg dark:border-aff-d dark:bg-aff-bg-d text-aff dark:text-aff-d'
+                          : 'border-neg bg-neg-bg dark:border-neg-d dark:bg-neg-bg-d text-neg dark:text-neg-d'
+                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300',
                     )}
-                  </div>
-                </fieldset>
-              )}
-              {seatsForSide(side).map((pos) => (
-                <SpeakerEvalCard
-                  key={pos}
-                  pos={pos}
-                  label={
-                    event === 'ld'
-                      ? 'Debater'
-                      : draft.orderConfirmed.includes(side) ||
-                          !draft.speakers[side === 'aff' ? 'aff2' : 'neg2'].userId
-                        ? positionLabel(event, pos)
-                        : 'Speaker'
-                  }
-                  speaker={draft.speakers[pos]}
-                  students={draft.students}
-                  avatarURLs={avatarURLs}
-                  activeCount={draft.activePositions.length}
-                  currentRank={draft.rankOrder.indexOf(pos) + 1}
-                  locked={draft.speakersLocked}
-                  onUpdate={(patch) => draft.updateSpeaker(pos, patch)}
-                  onRank={(rank) => draft.assignRank(pos, rank)}
-                  onGuideOpen={(category) => {
-                    setGuideCategory(category);
-                    setGuideOpen(true);
-                  }}
+                  >
+                    <input
+                      className="sr-only"
+                      type="radio"
+                      name="winner"
+                      value={side}
+                      checked={draft.winner === side}
+                      onChange={() => draft.updateWinner(side)}
+                    />
+                    {side === 'aff' ? 'Affirmative wins' : 'Negative wins'}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-3">
+                <AutoTextarea
+                  value={draft.rfd}
+                  onChange={draft.updateRfd}
+                  placeholder="Reason for decision…"
                 />
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {draft.activePositions.length > 1 && (
-          <div className="flex justify-end mt-1">
-            <button
-              type="button"
-              className="text-xs text-slate-400 dark:text-slate-500 hover:text-nf-accent dark:hover:text-nf-accent cursor-pointer bg-transparent border-none"
-              onClick={draft.suggestByPoints}
-            >
-              Auto-rank by points
-            </button>
+              </div>
+            </fieldset>
           </div>
-        )}
-        <div role="status" aria-live="polite">
-          {ranksDifferFromPoints && (
-            <div className="mt-3 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
-              <span aria-hidden="true" className="shrink-0">
-                ⓘ
-              </span>
-              <p>
-                Your speaker rankings differ from the point totals. That’s OK, but please
-                double-check that this reflects your intended order.
-              </p>
+
+          {/* Speakers — one column per side; Team Policy has two seats each. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(['aff', 'neg'] as const).map((side) => (
+              <div key={side}>
+                <SideLabel side={side}>{side === 'aff' ? 'Affirmative' : 'Negative'}</SideLabel>
+                {event === 'tp' &&
+                  seatsForSide(side).every((pos) => draft.speakers[pos].userId) && (
+                    <fieldset
+                      className="mb-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800"
+                      aria-label={`${side === 'aff' ? 'Affirmative' : 'Negative'} speaking order`}
+                    >
+                      <legend className="sr-only">Who speaks first?</legend>
+                      <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        Who speaks first?
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(side === 'aff' ? draft.debate?.affTeam : draft.debate?.negTeam)?.map(
+                          (student) => {
+                            const selected =
+                              draft.orderConfirmed.includes(side) &&
+                              draft.speakers[side === 'aff' ? 'aff1' : 'neg1'].userId ===
+                                student.id;
+                            return (
+                              <label
+                                key={student.id}
+                                className={cn(
+                                  'relative flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-lg border-2 px-3 py-2 text-center text-sm font-semibold transition-colors focus-within:ring-2 focus-within:ring-nf-accent focus-within:ring-offset-2',
+                                  selected
+                                    ? 'border-nf-blue bg-blue-50 text-nf-blue dark:border-nf-blue-d dark:bg-slate-700 dark:text-white'
+                                    : 'border-slate-200 text-slate-600 hover:border-slate-400 dark:border-slate-600 dark:text-slate-300',
+                                )}
+                              >
+                                <input
+                                  className="sr-only"
+                                  type="radio"
+                                  name={`${side}-first-speaker`}
+                                  value={student.id}
+                                  checked={selected}
+                                  onChange={() => draft.selectFirstSpeaker(side, student.id)}
+                                />
+                                {student.name ?? 'Student'}
+                              </label>
+                            );
+                          },
+                        )}
+                      </div>
+                    </fieldset>
+                  )}
+                {seatsForSide(side).map((pos) => (
+                  <SpeakerEvalCard
+                    key={pos}
+                    pos={pos}
+                    label={
+                      event === 'ld'
+                        ? 'Debater'
+                        : draft.orderConfirmed.includes(side) ||
+                            !draft.speakers[side === 'aff' ? 'aff2' : 'neg2'].userId
+                          ? positionLabel(event, pos)
+                          : 'Speaker'
+                    }
+                    speaker={draft.speakers[pos]}
+                    students={draft.students}
+                    avatarURLs={avatarURLs}
+                    activeCount={draft.activePositions.length}
+                    currentRank={draft.rankOrder.indexOf(pos) + 1}
+                    locked={draft.speakersLocked}
+                    onUpdate={(patch) => draft.updateSpeaker(pos, patch)}
+                    onRank={(rank) => draft.assignRank(pos, rank)}
+                    onGuideOpen={(category) => {
+                      setGuideCategory(category);
+                      setGuideOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {draft.activePositions.length > 1 && (
+            <div className="flex justify-end mt-1">
+              <button
+                type="button"
+                className="text-xs text-slate-400 dark:text-slate-500 hover:text-nf-accent dark:hover:text-nf-accent cursor-pointer bg-transparent border-none"
+                onClick={draft.suggestByPoints}
+              >
+                Auto-rank by points
+              </button>
             </div>
           )}
-        </div>
-        {/* Submit */}
-        <div className="mt-6 flex flex-col items-center gap-1.5">
-          <button
-            className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-bold rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            disabled={!draft.canSubmit || draft.submitting}
-            onClick={() => void draft.submit()}
-          >
-            {draft.submitting ? 'Submitting…' : 'Submit Ballot'}
-          </button>
-          {!draft.canSubmit && (
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              {!draft.orderComplete
-                ? 'Choose who speaks first for each team to submit.'
-                : draft.winner === undefined
-                  ? 'Select a winner to submit.'
-                  : !draft.allScored
-                    ? 'Score all 6 areas for each speaker to submit.'
-                    : 'Assign a rank to each speaker to submit.'}
-            </p>
-          )}
-        </div>
+          <div role="status" aria-live="polite">
+            {ranksDifferFromPoints && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
+                <span aria-hidden="true" className="shrink-0">
+                  ⓘ
+                </span>
+                <p>
+                  Your speaker rankings differ from the point totals. That’s OK, but please
+                  double-check that this reflects your intended order.
+                </p>
+              </div>
+            )}
+          </div>
+          {/* Submit */}
+          <div className="mt-6 flex flex-col items-center gap-1.5">
+            <button
+              className="w-full py-3 bg-nf-blue dark:bg-nf-blue-d enabled:hover:bg-nf-blue-mid text-white font-bold rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              disabled={!draft.canSubmit || draft.submitting}
+              onClick={() => void draft.submit()}
+            >
+              {draft.submitting ? 'Submitting…' : 'Submit Ballot'}
+            </button>
+            {!draft.canSubmit && (
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                {!draft.orderComplete
+                  ? 'Choose who speaks first for each team to submit.'
+                  : draft.winner === undefined
+                    ? 'Select a winner to submit.'
+                    : !draft.allScored
+                      ? 'Score all 6 areas for each speaker to submit.'
+                      : 'Assign a rank to each speaker to submit.'}
+              </p>
+            )}
+          </div>
+        </fieldset>
       </PageLayout>
 
       <SpeakerPointGuide
