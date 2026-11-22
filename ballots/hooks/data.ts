@@ -94,7 +94,7 @@ function useLiveData<T>(
 export function preloadDashboard(role: Role): void {
   const today = formatLocalYmd(new Date());
   if (role !== 'parent') ensureLive(`upcoming:${today}`, () => listUpcomingDebates(today));
-  if (role === 'student' || role === 'admin') {
+  if (role === 'student') {
     ensureLive('speaker-ballots', () => listForSpeaker());
   }
   if (role === 'parent' || role === 'admin') {
