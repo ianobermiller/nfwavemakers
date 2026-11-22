@@ -64,14 +64,19 @@ export interface AdminDebate extends Debate {
   ballotIds: string[];
 }
 
-interface StudentEvaluation {
-  eval: SpeakerEval;
-  ballot: Ballot;
+export interface ResultPage<T> {
+  items: T[];
+  hasMore: boolean;
 }
 
-export interface StudentEvaluations {
+export interface DebateBallotSummary {
+  debate: Debate;
+  ballotCount: number;
+}
+
+export interface StudentBallotSummary {
   student: User;
-  evals: StudentEvaluation[];
+  debateCount: number;
 }
 
 export interface Lesson {

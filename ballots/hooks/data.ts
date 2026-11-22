@@ -5,12 +5,9 @@ import {
   getDebateCard,
   getDebateDetail,
   getDraftForJudge,
-  listAdminBallotsByDebate,
-  listAdminBallotsByStudent,
   listAdminDebates,
   listAssignedDebates,
   listForSpeaker,
-  listStrandedBallots,
   listSubmittedByMe,
   listUpcomingDebates,
   listUsers,
@@ -156,21 +153,6 @@ export function useSpeakerBallots() {
 export function useDebateDetail(debateId: string) {
   const load = useCallback(async () => await getDebateDetail(debateId), [debateId]);
   return useLiveData(`debate-detail:${debateId}`, load, ballotCollections);
-}
-
-export function useAdminBallotsByDebate() {
-  const load = useCallback(async () => await listAdminBallotsByDebate(), []);
-  return useLiveData('admin-ballots-debate', load, ballotCollections);
-}
-
-export function useAdminBallotsByStudent() {
-  const load = useCallback(async () => await listAdminBallotsByStudent(), []);
-  return useLiveData('admin-ballots-student', load, ballotCollections);
-}
-
-export function useStrandedBallots() {
-  const load = useCallback(async () => await listStrandedBallots(), []);
-  return useLiveData('stranded-ballots', load, ballotCollections);
 }
 
 const lessonCollections = [collections.lessons];

@@ -7,7 +7,9 @@ import type {
   Debate,
   DebateWithBallots,
   SpeakerEval,
-  StudentEvaluations,
+  ResultPage,
+  DebateBallotSummary,
+  StudentBallotSummary,
   User,
 } from './model.ts';
 import { fetchBallotRelations, orEqualFilter, uniqueIds } from '../lib/ballotHydrate.ts';
@@ -714,41 +716,91 @@ export async function getDebateDetail(debateId: string): Promise<DebateWithBallo
   return { debate, ballots };
 }
 
-export async function listAdminBallotsByDebate(): Promise<DebateWithBallots[]> {
-  const debates = await listAdminDebates();
-  return await Promise.all(
-    debates.map(async (debate) => ({
-      debate,
-      ballots: await listBallots(
-        activeFilter(pb.filter('debate = {:debate} && submitted_at != ""', { debate: debate.id })),
-      ),
-    })),
-  );
+const ADMIN_BALLOT_PAGE_SIZE = 20;
+
+export interface DebateDateRange {
+  from: string;
+  to: string;
 }
 
-export async function listAdminBallotsByStudent(): Promise<StudentEvaluations[]> {
-  // One batched ballot load already includes speaker scores; reuse them here.
-  const [users, ballots] = await Promise.all([
-    listUsers(true),
-    listBallots(activeFilter('submitted_at != ""')),
-  ]);
-  return users
-    .filter((user) => user.role === 'student')
-    .map((student) => ({
-      student,
-      evals: ballots.flatMap((ballot) =>
-        ballot.speakerEvals
-          .filter((evaluation) => evaluation.speaker?.id === student.id)
-          .map((evaluation) => ({ eval: evaluation, ballot })),
-      ),
-    }))
-    .filter((row) => row.evals.length > 0);
+interface DebateSummaryRecord extends RecordModel {
+  ballot_count: number;
+  expand?: { debate?: DebateRecord };
 }
 
-export async function listStrandedBallots(): Promise<Ballot[]> {
-  return await listBallots(activeFilter('submitted_at != "" && debate = ""'), '-submitted_at', {
-    includeEvals: false,
-  });
+interface StudentSummaryRecord extends RecordModel {
+  debate_count: number;
+  expand?: { student?: UserRecord };
+}
+
+export async function listAdminBallotDebates(
+  page: number,
+  range: DebateDateRange,
+): Promise<ResultPage<DebateBallotSummary>> {
+  const filters: string[] = [];
+  if (range.from) filters.push(pb.filter('date >= {:from}', { from: range.from }));
+  if (range.to) filters.push(pb.filter('date <= {:to}', { to: range.to }));
+  const result = await pb
+    .collection<DebateSummaryRecord>('admin_ballot_debates')
+    .getList(page, ADMIN_BALLOT_PAGE_SIZE, {
+      filter: filters.join(' && '),
+      expand: 'debate.aff_team,debate.neg_team,debate.judges',
+      sort: '-date,-id',
+      skipTotal: true,
+    });
+  return {
+    items: result.items.flatMap((record) =>
+      record.expand?.debate
+        ? [{ debate: mapDebate(record.expand.debate), ballotCount: record.ballot_count }]
+        : [],
+    ),
+    hasMore: result.items.length === ADMIN_BALLOT_PAGE_SIZE,
+  };
+}
+
+export async function listAdminBallotStudents(
+  page: number,
+): Promise<ResultPage<StudentBallotSummary>> {
+  const result = await pb
+    .collection<StudentSummaryRecord>('admin_ballot_students')
+    .getList(page, ADMIN_BALLOT_PAGE_SIZE, { expand: 'student', sort: 'name,id', skipTotal: true });
+  return {
+    items: result.items.flatMap((record) =>
+      record.expand?.student
+        ? [{ student: mapUser(record.expand.student), debateCount: record.debate_count }]
+        : [],
+    ),
+    hasMore: result.items.length === ADMIN_BALLOT_PAGE_SIZE,
+  };
+}
+
+type AdminBallotScope =
+  | { kind: 'debate'; id: string }
+  | { kind: 'student'; id: string }
+  | { kind: 'stranded' };
+
+export async function listAdminBallotDetails(
+  scope: AdminBallotScope,
+  page: number,
+): Promise<ResultPage<Ballot>> {
+  const scopeFilter =
+    scope.kind === 'debate'
+      ? pb.filter('debate = {:id}', { id: scope.id })
+      : scope.kind === 'student'
+        ? pb.filter('speaker_evals_via_ballot.speaker ?= {:id}', { id: scope.id })
+        : 'debate = ""';
+  const result = await pb
+    .collection<BallotRecord>(collections.ballots)
+    .getList(page, ADMIN_BALLOT_PAGE_SIZE, {
+      filter: activeFilter(`submitted_at != "" && ${scopeFilter}`),
+      expand: 'judge',
+      sort: '-submitted_at,-id',
+      skipTotal: true,
+    });
+  return {
+    items: await hydrateBallotRecords(result.items, scope.kind !== 'stranded'),
+    hasMore: result.items.length === ADMIN_BALLOT_PAGE_SIZE,
+  };
 }
 
 export async function saveBallot(input: SaveBallotInput): Promise<SavedBallotIds> {

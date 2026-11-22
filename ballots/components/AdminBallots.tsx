@@ -1,12 +1,15 @@
-import { startTransition, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { cn } from 'cnfast';
-import { restoreBallot, softDeleteBallot } from '../data/api.ts';
-import type { Ballot, SpeakerEval } from '../data/model.ts';
 import {
-  useAdminBallotsByDebate,
-  useAdminBallotsByStudent,
-  useStrandedBallots,
-} from '../hooks/data.ts';
+  listAdminBallotDebates,
+  listAdminBallotStudents,
+  listAdminBallotDetails,
+  restoreBallot,
+  softDeleteBallot,
+  type DebateDateRange,
+} from '../data/api.ts';
+import type { Ballot, ResultPage, SpeakerEval } from '../data/model.ts';
+import { useAdminBallotQuery } from '../hooks/useAdminBallotQuery.ts';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { BackLink } from './BackLink.tsx';
 import { PageLayout } from '@/site/PageLayout.tsx';
@@ -16,9 +19,10 @@ import { formatSpeakerName, scoringTotal } from '../utils/format.ts';
 import { Avatar } from './Avatar.tsx';
 import { DebateCard } from './DebateCard.tsx';
 import { SpeakerNotes } from './SpeakerNotes.tsx';
+import { Input } from './ui/Input.tsx';
+import { Button } from './ui/Button.tsx';
 
 type TabView = 'debate' | 'student' | 'stranded';
-
 const TAB_TITLE: Record<TabView, string> = {
   debate: 'All Ballots',
   student: 'All Ballots — By Student',
@@ -27,317 +31,456 @@ const TAB_TITLE: Record<TabView, string> = {
 
 export function AdminBallots(): React.JSX.Element {
   const [view, setView] = useState<TabView>('debate');
-
   return (
     <PageLayout title={TAB_TITLE[view]}>
       <BackLink to="dashboard" label="Dashboard" />
       <h1 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">All Ballots</h1>
-      <div className="flex gap-2 mb-5">
-        {(['debate', 'student', 'stranded'] as const).map((t) => (
-          <button
-            key={t}
-            className={cn(
-              'px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors',
-              view === t
-                ? 'bg-nf-blue dark:bg-nf-blue-d text-white border-nf-blue dark:border-nf-blue-d'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-nf-accent',
-            )}
-            onClick={() => {
-              startTransition(() => setView(t));
-            }}
+      <div className="flex gap-2 mb-5" role="group" aria-label="Group ballots">
+        {(['debate', 'student', 'stranded'] as const).map((tab) => (
+          <Button
+            key={tab}
+            variant={view === tab ? 'primary' : 'neutral'}
+            size="md"
+            aria-pressed={view === tab}
+            onClick={() => setView(tab)}
           >
-            {t === 'debate' ? 'By Debate' : t === 'student' ? 'By Student' : 'Stranded'}
-          </button>
+            {tab === 'debate' ? 'By Debate' : tab === 'student' ? 'By Student' : 'Stranded'}
+          </Button>
         ))}
       </div>
-
       {view === 'debate' ? <ByDebate /> : view === 'student' ? <ByStudent /> : <Stranded />}
     </PageLayout>
   );
 }
 
-function ByDebate(): React.JSX.Element {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  const rows = useAdminBallotsByDebate().read();
-
-  const debates = rows;
-
-  if (debates.length === 0) {
+function QueryContent<T>({
+  query,
+  children,
+}: {
+  query: ReturnType<typeof useAdminBallotQuery<T>>;
+  children: (data: T) => ReactNode;
+}): React.JSX.Element {
+  const { state, retry } = query;
+  if (state.status === 'loading')
     return (
-      <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
-        No debates yet.
+      <p role="status" className="py-4 text-sm text-slate-500 dark:text-slate-400">
+        Loading ballots…
       </p>
     );
-  }
-
-  function toggle(id: string): void {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
   return (
-    <div className="flex flex-col gap-3">
-      {debates.map((row) => {
-        const d = row.debate;
-        const submittedBallots = row.ballots;
-        const isOpen = expanded.has(d.id);
-        return (
-          <div
-            key={d.id}
-            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
-          >
-            <DebateCard
-              id={`debate-btn-${d.id}`}
-              debateId={d.id}
-              debate={d}
-              badge={`${submittedBallots.length} ballot${submittedBallots.length !== 1 ? 's' : ''}`}
-              isExpanded={isOpen}
-              onClick={() => toggle(d.id)}
-              ariaControls={`debate-panel-${d.id}`}
-              className="rounded-none border-0 hover:border-0 hover:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700/50"
-            />
+    <>
+      {state.error && (
+        <div role="alert" className="my-3 text-sm text-red-600 dark:text-red-400">
+          <p>{state.error}</p>
+          <Button variant="text" onClick={retry}>
+            Try again
+          </Button>
+        </div>
+      )}
+      {state.status === 'ready' && children(state.data)}
+    </>
+  );
+}
 
-            <div
-              id={`debate-panel-${d.id}`}
-              role="region"
-              aria-labelledby={`debate-btn-${d.id}`}
-              hidden={!isOpen}
-              className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
-            >
-              {submittedBallots.length === 0 && (
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  No submitted ballots yet.
-                </p>
-              )}
-              {submittedBallots.map((ballot) => (
-                <BallotSummary key={ballot.id} ballot={ballot} />
-              ))}
-            </div>
+function Pagination({
+  page,
+  hasMore,
+  setPage,
+  label,
+}: {
+  page: number;
+  hasMore: boolean;
+  setPage: (page: number) => void;
+  label: string;
+}): React.JSX.Element | null {
+  if (page === 1 && !hasMore) return null;
+  return (
+    <nav aria-label={label} className="flex items-center justify-between gap-3 py-4">
+      <Button variant="neutral" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+        Previous
+      </Button>
+      <span className="text-xs text-slate-500 dark:text-slate-400">Page {page}</span>
+      <Button variant="neutral" size="sm" disabled={!hasMore} onClick={() => setPage(page + 1)}>
+        Next
+      </Button>
+    </nav>
+  );
+}
+
+function Empty({ children }: { children: ReactNode }): React.JSX.Element {
+  return <p className="py-8 text-sm text-slate-500 dark:text-slate-400">{children}</p>;
+}
+
+function ByDebate(): React.JSX.Element {
+  const [range, setRange] = useState<DebateDateRange>({ from: '', to: '' });
+  const [page, setPage] = useState(1);
+  return (
+    <>
+      <form
+        className="mb-5 grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const values = new FormData(event.currentTarget);
+          const from = values.get('from');
+          const to = values.get('to');
+          setRange({
+            from: typeof from === 'string' ? from : '',
+            to: typeof to === 'string' ? to : '',
+          });
+          setPage(1);
+        }}
+        onReset={() => {
+          setRange({ from: '', to: '' });
+          setPage(1);
+        }}
+      >
+        <label className="min-w-0 text-xs text-slate-600 dark:text-slate-300">
+          From
+          <Input
+            name="from"
+            type="date"
+            className="mt-1 min-w-0 [color-scheme:light] dark:[color-scheme:dark]"
+          />
+        </label>
+        <label className="min-w-0 text-xs text-slate-600 dark:text-slate-300">
+          Through
+          <Input
+            name="to"
+            type="date"
+            className="mt-1 min-w-0 [color-scheme:light] dark:[color-scheme:dark]"
+          />
+        </label>
+        <Button type="submit" size="md">
+          Apply
+        </Button>
+        <Button type="reset" variant="ghost" size="md">
+          Clear
+        </Button>
+      </form>
+      <DebatePage
+        key={`${page}:${range.from}:${range.to}`}
+        page={page}
+        range={range}
+        setPage={setPage}
+      />
+    </>
+  );
+}
+
+function DebatePage({
+  page,
+  range,
+  setPage,
+}: {
+  page: number;
+  range: DebateDateRange;
+  setPage: (page: number) => void;
+}): React.JSX.Element {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const load = useCallback(() => listAdminBallotDebates(page, range), [page, range]);
+  const query = useAdminBallotQuery(load, (collection, record, data, action) => {
+    if (collection === 'debates') return true;
+    if (collection === 'users')
+      return (
+        data?.items.some(({ debate }) =>
+          [...debate.affTeam, ...debate.negTeam, ...debate.judges].some(
+            (user) => user.id === record.id,
+          ),
+        ) === true
+      );
+    // An update can move a ballot off this page; events only carry the new debate.
+    return (
+      collection === 'ballots' &&
+      (action === 'update' ||
+        data?.items.some((row) => row.debate.id === record['debate']) === true)
+    );
+  });
+  return (
+    <QueryContent query={query}>
+      {(data) => (
+        <>
+          {data.items.length === 0 && <Empty>No debates in this date range.</Empty>}
+          <div className="flex flex-col gap-3">
+            {data.items.map(({ debate, ballotCount }) => {
+              const isOpen = expanded === debate.id;
+              return (
+                <div
+                  key={debate.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <DebateCard
+                    id={`debate-btn-${debate.id}`}
+                    debateId={debate.id}
+                    debate={debate}
+                    badge={`${ballotCount} ballot${ballotCount === 1 ? '' : 's'}`}
+                    isExpanded={isOpen}
+                    onClick={() => setExpanded(isOpen ? null : debate.id)}
+                    ariaControls={`debate-panel-${debate.id}`}
+                    className="rounded-none border-0 hover:border-0 hover:shadow-none hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  />
+                  {isOpen && (
+                    <div
+                      id={`debate-panel-${debate.id}`}
+                      role="region"
+                      aria-labelledby={`debate-btn-${debate.id}`}
+                      className="border-t border-slate-100 px-4 py-3 dark:border-slate-700"
+                    >
+                      <BallotDetails kind="debate" id={debate.id} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
+          <Pagination page={page} hasMore={data.hasMore} setPage={setPage} label="Debate pages" />
+        </>
+      )}
+    </QueryContent>
   );
 }
 
 function ByStudent(): React.JSX.Element {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const rows = useAdminBallotsByStudent().read();
+  const [page, setPage] = useState(1);
+  return <StudentPage key={page} page={page} setPage={setPage} />;
+}
 
-  const students = rows;
-
-  if (students.length === 0) {
-    return (
-      <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
-        No submitted ballots yet.
-      </p>
-    );
-  }
-
-  function toggle(id: string): void {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
+function StudentPage({
+  page,
+  setPage,
+}: {
+  page: number;
+  setPage: (page: number) => void;
+}): React.JSX.Element {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const load = useCallback(() => listAdminBallotStudents(page), [page]);
+  const query = useAdminBallotQuery(load, (collection) => collection !== 'debates');
   return (
-    <div className="flex flex-col gap-3">
-      {students.map(({ student, evals }) => {
-        const sid = student.id;
-        const name = student.name;
-        const isOpen = expanded.has(sid);
-        const displayName = name ? formatSpeakerName(name) : sid;
-
-        const byGroup = new Map<string, typeof evals>();
-        for (const ev of evals) {
-          const key = ev.ballot.debate?.id ?? ev.ballot.id;
-          const arr = byGroup.get(key) ?? [];
-          arr.push(ev);
-          byGroup.set(key, arr);
-        }
-
-        return (
-          <div
-            key={sid}
-            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
-          >
-            <button
-              id={`student-btn-${sid}`}
-              className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-              onClick={() => toggle(sid)}
-              aria-expanded={isOpen}
-              aria-controls={`student-panel-${sid}`}
-            >
-              <div className="flex items-center gap-3">
-                <Avatar name={name ?? sid} imageURL={student.avatarUrl ?? undefined} size="sm" />
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {displayName}
-                </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  {byGroup.size} debate{byGroup.size !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <span className="text-slate-400 text-xs shrink-0" aria-hidden="true">
-                {isOpen ? '▲' : '▼'}
-              </span>
-            </button>
-
-            <div
-              id={`student-panel-${sid}`}
-              role="region"
-              aria-labelledby={`student-btn-${sid}`}
-              hidden={!isOpen}
-              className="border-t border-slate-100 dark:border-slate-700 px-4 py-3 flex flex-col gap-4"
-            >
-              {[...byGroup.entries()].map(([groupKey, groupEvals]) => {
-                const ballot = groupEvals[0]?.ballot;
-                const debate = ballot?.debate;
-
-                const byJudge = new Map<string, typeof groupEvals>();
-                for (const ev of groupEvals) {
-                  const jkey = ev.ballot.judge?.id ?? ev.ballot.judge?.name ?? '—';
-                  const arr = byJudge.get(jkey) ?? [];
-                  arr.push(ev);
-                  byJudge.set(jkey, arr);
-                }
-
-                return (
-                  <div key={groupKey}>
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        {debate?.date ?? '—'}
+    <QueryContent query={query}>
+      {(data) => (
+        <>
+          {data.items.length === 0 && <Empty>No submitted ballots yet.</Empty>}
+          <div className="flex flex-col gap-3">
+            {data.items.map(({ student, debateCount }) => {
+              const isOpen = expanded === student.id;
+              return (
+                <div
+                  key={student.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <button
+                    id={`student-btn-${student.id}`}
+                    className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                    onClick={() => setExpanded(isOpen ? null : student.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={`student-panel-${student.id}`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Avatar
+                        name={student.name ?? student.id}
+                        imageURL={student.avatarUrl ?? undefined}
+                        size="sm"
+                      />
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {student.name ? formatSpeakerName(student.name) : student.id}
                       </span>
-                      {debate?.room && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {debate.room}
-                        </span>
-                      )}
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
+                        {debateCount} debate{debateCount === 1 ? '' : 's'}
+                      </span>
+                    </span>
+                    <span className="text-xs text-slate-400" aria-hidden="true">
+                      {isOpen ? '▲' : '▼'}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div
+                      id={`student-panel-${student.id}`}
+                      role="region"
+                      aria-labelledby={`student-btn-${student.id}`}
+                      className="border-t border-slate-100 px-4 py-3 dark:border-slate-700"
+                    >
+                      <BallotDetails kind="student" id={student.id} />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
-                      {[...byJudge.entries()].map(([jkey, judgeEvals]) => {
-                        const judgeName = judgeEvals[0]?.ballot.judge?.name;
-                        return (
-                          <div key={jkey}>
-                            {judgeName && (
-                              <span className="text-xs text-slate-400 dark:text-slate-500 italic">
-                                Judge: {judgeName}
-                              </span>
-                            )}
-                            {judgeEvals.map((ev) => (
-                              <StudentEvalCard
-                                key={ev.eval.id}
-                                ev={ev.eval}
-                                event={debate?.event}
-                              />
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
+          <Pagination page={page} hasMore={data.hasMore} setPage={setPage} label="Student pages" />
+        </>
+      )}
+    </QueryContent>
+  );
+}
+
+function BallotDetails({
+  kind,
+  id,
+}: {
+  kind: 'debate' | 'student';
+  id: string;
+}): React.JSX.Element {
+  const [page, setPage] = useState(1);
+  return <DetailPage key={page} kind={kind} id={id} page={page} setPage={setPage} />;
+}
+
+function DetailPage({
+  kind,
+  id,
+  page,
+  setPage,
+}: {
+  kind: 'debate' | 'student';
+  id: string;
+  page: number;
+  setPage: (page: number) => void;
+}): React.JSX.Element {
+  const load = useCallback(() => listAdminBallotDetails({ kind, id }, page), [kind, id, page]);
+  const query = useAdminBallotQuery(load, (collection, record, data) => {
+    const ballots = data?.items ?? [];
+    if (collection === 'ballots')
+      return (
+        kind === 'student' || record['debate'] === id || ballots.some((b) => b.id === record.id)
+      );
+    if (collection === 'speaker_evals')
+      return (
+        (kind === 'student' && record['speaker'] === id) ||
+        ballots.some((b) => b.id === record['ballot'])
+      );
+    if (collection === 'debates')
+      return kind === 'debate' ? record.id === id : ballots.some((b) => b.debate?.id === record.id);
+    return ballots.some(
+      (b) => b.judge?.id === record.id || b.speakerEvals.some((ev) => ev.speaker?.id === record.id),
+    );
+  });
+  return (
+    <QueryContent query={query}>
+      {(data) => (
+        <>
+          {data.items.length === 0 && <Empty>No submitted ballots yet.</Empty>}
+          <div className="flex flex-col gap-5">
+            {data.items.map((ballot) =>
+              kind === 'debate' ? (
+                <BallotSummary key={ballot.id} ballot={ballot} />
+              ) : (
+                <div key={ballot.id}>
+                  <p className="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    {ballot.debate?.date ?? 'No debate'} {ballot.debate?.room} · Judge:{' '}
+                    {ballot.judge?.name ?? '—'}
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {ballot.speakerEvals
+                      .filter((ev) => ev.speaker?.id === id)
+                      .map((ev) => (
+                        <StudentEvalCard key={ev.id} ev={ev} event={ballot.debate?.event} />
+                      ))}
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+          <Pagination page={page} hasMore={data.hasMore} setPage={setPage} label="Feedback pages" />
+        </>
+      )}
+    </QueryContent>
   );
 }
 
 interface StrandedBallotPayload {
   id: string;
-  judgeName?: string;
+  judgeName: string;
   submittedAt: number;
 }
 
 function Stranded(): React.JSX.Element {
-  const strandedLive = useStrandedBallots();
+  const [page, setPage] = useState(1);
+  return <StrandedPage key={page} page={page} setPage={setPage} />;
+}
 
+function StrandedPage({
+  page,
+  setPage,
+}: {
+  page: number;
+  setPage: (page: number) => void;
+}): React.JSX.Element {
+  const load = useCallback(() => listAdminBallotDetails({ kind: 'stranded' }, page), [page]);
+  const query = useAdminBallotQuery(
+    load,
+    (collection) => collection === 'ballots' || collection === 'users',
+  );
   const { pendingDeletes, softDelete, undo } = useUndoDelete<StrandedBallotPayload>(
     (payload) => softDeleteBallot(payload.id),
     (payload) => {
       void restoreBallot(payload.id);
     },
   );
-
-  const strandedBallots = strandedLive.read();
-  const pendingList = [...pendingDeletes.values()];
-
-  if (strandedBallots.length === 0 && pendingList.length === 0) {
-    return (
-      <p className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
-        No stranded ballots.
-      </p>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-3">
-      {pendingList.map((pd) => (
-        <div
-          key={pd.id}
-          className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-500 dark:text-slate-400"
-        >
-          <span>Ballot deleted.</span>
-          <button
-            className="shrink-0 text-nf-blue dark:text-nf-blue-d font-semibold hover:underline cursor-pointer border-none bg-transparent text-sm"
-            onClick={() => undo(pd.id)}
-          >
-            Undo
-          </button>
-        </div>
-      ))}
-      {strandedBallots.map((b) => (
-        <div
-          key={b.id}
-          className="flex items-center justify-between gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <Avatar
-              name={b.judge?.name ?? 'Unknown judge'}
-              imageURL={b.judge?.avatarUrl ?? undefined}
-              size="sm"
-            />
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                {b.judge?.name ?? 'Unknown judge'}
-              </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">
-                Submitted {new Date(b.submittedAt!).toLocaleDateString()}
-              </span>
-            </div>
+    <QueryContent query={query}>
+      {(data: ResultPage<Ballot>) => (
+        <>
+          {data.items.length === 0 && pendingDeletes.size === 0 && (
+            <Empty>No stranded ballots.</Empty>
+          )}
+          <div className="flex flex-col gap-3">
+            {[...pendingDeletes.values()].map((pending) => (
+              <div
+                key={pending.id}
+                className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:bg-slate-800"
+              >
+                <span>Ballot deleted.</span>
+                <Button variant="text" onClick={() => undo(pending.id)}>
+                  Undo
+                </Button>
+              </div>
+            ))}
+            {data.items
+              .filter((ballot) => !pendingDeletes.has(ballot.id))
+              .map((ballot) => (
+                <div
+                  key={ballot.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar
+                      name={ballot.judge?.name ?? 'Unknown judge'}
+                      imageURL={ballot.judge?.avatarUrl ?? undefined}
+                      size="sm"
+                    />
+                    <div className="text-sm text-slate-800 dark:text-slate-100">
+                      {ballot.judge?.name ?? 'Unknown judge'}
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Submitted{' '}
+                        {ballot.submittedAt
+                          ? new Date(ballot.submittedAt).toLocaleDateString()
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="danger"
+                    aria-label="Delete ballot"
+                    onClick={() =>
+                      void softDelete(ballot.id, {
+                        id: ballot.id,
+                        judgeName: ballot.judge?.name ?? 'Unknown judge',
+                        submittedAt: ballot.submittedAt ?? 0,
+                      })
+                    }
+                  >
+                    Delete
+                  </Button>
+                </div>
+              ))}
           </div>
-          <button
-            className="shrink-0 px-3 py-1.5 text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 font-medium cursor-pointer border-none bg-transparent transition-colors"
-            onClick={() =>
-              void softDelete(b.id, {
-                id: b.id,
-                ...(b.judge?.name != null && { judgeName: b.judge.name }),
-                submittedAt: b.submittedAt!,
-              })
-            }
-            aria-label="Delete ballot"
-          >
-            Delete
-          </button>
-        </div>
-      ))}
-    </div>
+          <Pagination
+            page={page}
+            hasMore={data.hasMore}
+            setPage={setPage}
+            label="Stranded ballot pages"
+          />
+        </>
+      )}
+    </QueryContent>
   );
 }
 

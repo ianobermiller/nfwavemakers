@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,7 +37,18 @@ function binaryPath() {
 }
 
 const binary = binaryPath();
+// Old test databases were populated by API schema replay without migration history.
+// Recreate that disposable data once when enabling the real migration runtime.
+if (!existsSync(join(dataDir, '..', 'pb_migrations'))) {
+  rmSync(dataDir, { recursive: true, force: true });
+}
 mkdirSync(dataDir, { recursive: true });
+// The binary resolves hooks and migrations beside pb_data, inside .pb-test.
+// Link the source trees there so tests exercise the real migration runtime.
+for (const directory of ['pb_hooks', 'pb_migrations']) {
+  const target = join(dataDir, '..', directory);
+  if (!existsSync(target)) symlinkSync(join(pocketbaseTree, directory), target, 'dir');
+}
 
 const superuser = spawnSync(binary, ['superuser', 'upsert', email, password, `--dir=${dataDir}`], {
   encoding: 'utf8',
