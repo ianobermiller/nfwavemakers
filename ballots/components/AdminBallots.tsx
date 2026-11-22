@@ -8,6 +8,7 @@ import {
   softDeleteBallot,
 } from '../data/api.ts';
 import type { Ballot, ResultPage, SpeakerEval } from '../data/model.ts';
+import { createCursorList } from '../lib/cursorList.ts';
 import { useAdminBallotQuery } from '../hooks/useAdminBallotQuery.ts';
 import { useUndoDelete } from '../hooks/useUndoDelete.ts';
 import { BackLink } from './BackLink.tsx';
@@ -54,7 +55,9 @@ export function AdminBallots(): React.JSX.Element {
 function QueryContent<T>({
   query,
   children,
+  errorAfter = false,
 }: {
+  errorAfter?: boolean;
   query: ReturnType<typeof useAdminBallotQuery<T>>;
   children: (data: T) => ReactNode;
 }): React.JSX.Element {
@@ -65,17 +68,19 @@ function QueryContent<T>({
         Loading ballots…
       </p>
     );
+  const error = state.error && (
+    <div role="alert" className="my-3 text-sm text-red-600 dark:text-red-400">
+      <p>{state.error}</p>
+      <Button variant="text" onClick={retry}>
+        Try again
+      </Button>
+    </div>
+  );
   return (
     <>
-      {state.error && (
-        <div role="alert" className="my-3 text-sm text-red-600 dark:text-red-400">
-          <p>{state.error}</p>
-          <Button variant="text" onClick={retry}>
-            Try again
-          </Button>
-        </div>
-      )}
+      {!errorAfter && error}
       {state.status === 'ready' && children(state.data)}
+      {errorAfter && error}
     </>
   );
 }
@@ -109,58 +114,35 @@ function Empty({ children }: { children: ReactNode }): React.JSX.Element {
   return <p className="py-8 text-sm text-slate-500 dark:text-slate-400">{children}</p>;
 }
 
-function SummaryPages({
-  children,
-}: {
-  children: (page: number, loadMore: (() => void) | undefined) => ReactNode;
-}): React.JSX.Element {
-  const [pages, setPages] = useState(1);
-  return (
-    <div className="flex flex-col gap-3">
-      {Array.from({ length: pages }, (_, index) => (
-        <div key={index}>
-          {children(index + 1, index === pages - 1 ? () => setPages(pages + 1) : undefined)}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function LoadMore({
   hasMore,
-  onClick,
+  query,
 }: {
   hasMore: boolean;
-  onClick: (() => void) | undefined;
+  query: { isLoadingMore: boolean; loadMore: () => void };
 }): React.JSX.Element | null {
-  if (!hasMore || !onClick) return null;
+  if (!hasMore) return null;
   return (
     <div className="py-3">
-      <Button variant="link" onClick={onClick}>
-        Load more
-      </Button>
+      {query.isLoadingMore ? (
+        <span role="status" className="text-sm text-slate-500 dark:text-slate-400">
+          Loading more…
+        </span>
+      ) : (
+        <Button variant="link" onClick={query.loadMore}>
+          Load more
+        </Button>
+      )}
     </div>
   );
 }
 
 function ByDebate(): React.JSX.Element {
-  return (
-    <SummaryPages>
-      {(page, loadMore) => <DebatePage page={page} loadMore={loadMore} />}
-    </SummaryPages>
-  );
-}
-
-function DebatePage({
-  page,
-  loadMore,
-}: {
-  page: number;
-  loadMore: (() => void) | undefined;
-}): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const load = useCallback(() => listAdminBallotDebates(page), [page]);
-  const query = useAdminBallotQuery(load, (collection, record, data, action) => {
+  const [source] = useState(() =>
+    createCursorList({ load: listAdminBallotDebates, key: (row) => row.debate.id }),
+  );
+  const query = useAdminBallotQuery(source.load, (collection, record, data, action) => {
     if (collection === 'debates') return true;
     if (collection === 'users')
       return (
@@ -178,10 +160,10 @@ function DebatePage({
     );
   });
   return (
-    <QueryContent query={query}>
+    <QueryContent query={query} errorAfter>
       {(data) => (
         <>
-          {page === 1 && data.items.length === 0 && <Empty>No debates yet.</Empty>}
+          {data.items.length === 0 && <Empty>No debates yet.</Empty>}
           <div className="flex flex-col gap-3">
             {data.items.map(({ debate, ballotCount }) => {
               const isOpen = expanded === debate.id;
@@ -214,7 +196,7 @@ function DebatePage({
               );
             })}
           </div>
-          <LoadMore hasMore={data.hasMore} onClick={loadMore} />
+          <LoadMore hasMore={data.hasMore} query={query} />
         </>
       )}
     </QueryContent>
@@ -222,28 +204,16 @@ function DebatePage({
 }
 
 function ByStudent(): React.JSX.Element {
-  return (
-    <SummaryPages>
-      {(page, loadMore) => <StudentPage page={page} loadMore={loadMore} />}
-    </SummaryPages>
-  );
-}
-
-function StudentPage({
-  page,
-  loadMore,
-}: {
-  page: number;
-  loadMore: (() => void) | undefined;
-}): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const load = useCallback(() => listAdminBallotStudents(page), [page]);
-  const query = useAdminBallotQuery(load, (collection) => collection !== 'debates');
+  const [source] = useState(() =>
+    createCursorList({ load: listAdminBallotStudents, key: (row) => row.student.id }),
+  );
+  const query = useAdminBallotQuery(source.load, (collection) => collection !== 'debates');
   return (
-    <QueryContent query={query}>
+    <QueryContent query={query} errorAfter>
       {(data) => (
         <>
-          {page === 1 && data.items.length === 0 && <Empty>No submitted ballots yet.</Empty>}
+          {data.items.length === 0 && <Empty>No submitted ballots yet.</Empty>}
           <div className="flex flex-col gap-3">
             {data.items.map(({ student, debateCount }) => {
               const isOpen = expanded === student.id;
@@ -290,7 +260,7 @@ function StudentPage({
               );
             })}
           </div>
-          <LoadMore hasMore={data.hasMore} onClick={loadMore} />
+          <LoadMore hasMore={data.hasMore} query={query} />
         </>
       )}
     </QueryContent>

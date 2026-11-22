@@ -112,11 +112,11 @@ test('admin summaries paginate without fetching feedback until expanded', async 
       release = resolve;
     });
     await page.route('**/api/collections/admin_ballot_debates/records*', async (route) => {
-      if (new URL(route.request().url()).searchParams.get('page') === '2') await gate;
+      if (new URL(route.request().url()).searchParams.get('filter')?.includes('id <')) await gate;
       await route.continue();
     });
     await page.getByRole('button', { name: 'Load more', exact: true }).click();
-    await expect(page.getByText('Loading ballots…')).toBeVisible();
+    await expect(page.getByText('Loading more…')).toBeVisible();
     await expect(cards).toHaveCount(20);
     await page.screenshot({
       path: '/tmp/nfw-ru86-load-more-loading.png',
@@ -189,13 +189,16 @@ test('admin summaries paginate without fetching feedback until expanded', async 
       fullPage: true,
       scale: 'css',
     });
+    let failedStudentRequests = 0;
     await page.route('**/api/collections/admin_ballot_students/records*', (route) => {
-      if (new URL(route.request().url()).searchParams.get('page') === '2')
+      if (new URL(route.request().url()).searchParams.get('filter')?.includes('id >')) {
+        failedStudentRequests += 1;
         return route.fulfill({
           status: 503,
           contentType: 'application/json',
           body: JSON.stringify({ message: 'Could not load more students' }),
         });
+      }
       return route.continue();
     });
     await page.getByRole('button', { name: 'Load more', exact: true }).click();
@@ -209,6 +212,11 @@ test('admin summaries paginate without fetching feedback until expanded', async 
       scale: 'css',
       animations: 'disabled',
     });
+    const failedBeforeRefresh = failedStudentRequests;
+    await pb
+      .collection('ballots')
+      .update(ballots[0] ?? '', { reason_for_decision: 'Updated while Load more awaits retry' });
+    await expect.poll(() => failedStudentRequests).toBeGreaterThan(failedBeforeRefresh);
     await page.unroute('**/api/collections/admin_ballot_students/records*');
     await page.getByRole('button', { name: 'Try again', exact: true }).click();
     await expect(page.locator(`#student-btn-${students[22]}`)).toBeVisible();
@@ -282,7 +290,7 @@ test('admin ballot views fit a phone and keep feedback inside the selected row',
   await expect(page.locator('[id^="debate-btn-"]').first()).toBeVisible();
   while ((await row.count()) === 0) {
     await page.getByRole('button', { name: 'Load more', exact: true }).click();
-    await expect(page.getByText('Loading ballots…')).toHaveCount(0);
+    await expect(page.getByText(/Loading (ballots|more)…/)).toHaveCount(0);
   }
   await expect(row).toBeVisible();
   await page.screenshot({ path: '/tmp/nfw-ru86-debates-mobile.png', fullPage: true, scale: 'css' });
@@ -302,12 +310,12 @@ test('admin ballot views fit a phone and keep feedback inside the selected row',
   await expect(page.locator('[id^="student-btn-"]').first()).toBeVisible();
   while ((await student.count()) === 0) {
     await page.getByRole('button', { name: 'Load more', exact: true }).click();
-    await expect(page.getByText('Loading ballots…')).toHaveCount(0);
+    await expect(page.getByText(/Loading (ballots|more)…/)).toHaveCount(0);
   }
   await expect(student).toBeVisible();
   await student.click();
   await expect(page.getByRole('region')).toBeVisible();
-  await expect(page.getByText('Loading ballots…')).toHaveCount(0);
+  await expect(page.getByText(/Loading (ballots|more)…/)).toHaveCount(0);
   await page.screenshot({
     path: '/tmp/nfw-ru86-student-open-mobile.png',
     fullPage: true,
@@ -317,7 +325,7 @@ test('admin ballot views fit a phone and keep feedback inside the selected row',
     true,
   );
   await page.getByRole('button', { name: 'Stranded', exact: true }).click();
-  await expect(page.getByText('Loading ballots…')).toHaveCount(0);
+  await expect(page.getByText(/Loading (ballots|more)…/)).toHaveCount(0);
   await page.screenshot({
     path: '/tmp/nfw-ru86-stranded-mobile.png',
     fullPage: true,
@@ -421,5 +429,160 @@ test('expanded feedback paginates and stranded ballot deletion can be undone', a
     for (const id of ballots) await pb.collection('ballots').delete(id);
     await pb.collection('debates').delete(debate.id);
     for (const id of judges) await pb.collection('users').delete(id);
+  }
+});
+
+test('summary cursors handle tied sort keys and live changes at the loaded boundary', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'chromium', 'Cursor fixture runs once.');
+  const pb = await database();
+  const judge = await pb.collection('users').getFirstListItem('email = "judge@example.com"');
+  const suffix = crypto.randomUUID().slice(0, 8);
+  const students: string[] = [];
+  const debates: string[] = [];
+  const ballots: string[] = [];
+  const ballotByStudent = new Map<string, string>();
+  const requests: URL[] = [];
+  page.on('request', (request) => {
+    if (/\/collections\/admin_ballot_(debates|students)\/records/.test(request.url()))
+      requests.push(new URL(request.url()));
+  });
+  async function add(label: string, studentId?: string, debateId?: string) {
+    const student = await pb.collection('users').create({
+      ...(studentId ? { id: studentId } : {}),
+      email: `cursor-${suffix}-${label}@example.com`,
+      name: 'AAA Cursor Student',
+      role: 'student',
+      category: 'tp',
+      approved: true,
+      verified: true,
+      password: 'cursor-test-password',
+      passwordConfirm: 'cursor-test-password',
+    });
+    students.push(student.id);
+    const debate = await pb.collection('debates').create({
+      ...(debateId ? { id: debateId } : {}),
+      date: '2049-01-10',
+      room: `Cursor ${suffix} ${label}`,
+      event: 'tp',
+      aff_team: [student.id],
+      neg_team: [],
+      judges: [judge.id],
+    });
+    debates.push(debate.id);
+    const ballot = await pb.collection('ballots').create({
+      debate: debate.id,
+      judge: judge.id,
+      submitted_at: '2049-01-10 12:00:00.000Z',
+      winner: 'aff',
+      reason_for_decision: `Cursor decision ${suffix} ${label}`,
+    });
+    ballots.push(ballot.id);
+    ballotByStudent.set(student.id, ballot.id);
+    await pb.collection('speaker_evals').create({
+      ballot: ballot.id,
+      speaker: student.id,
+      position: 'aff1',
+      notes: `Cursor feedback ${suffix} ${label}`,
+    });
+    return { student, debate };
+  }
+  const debateCards = page.locator('[id^="debate-btn-"]');
+  const studentCards = page.locator('[id^="student-btn-"]');
+  const ids = (kind: 'debate' | 'student') =>
+    page
+      .locator(`[id^="${kind}-btn-"]`)
+      .evaluateAll(
+        (elements, prefix) => elements.map((element) => element.id.slice(prefix.length)),
+        `${kind}-btn-`,
+      );
+  try {
+    for (let index = 0; index < 25; index += 1) await add(String(index));
+    const firstDebates = [...debates].sort().reverse().slice(0, 20);
+    const originalDebateBoundary = firstDebates[19] ?? '';
+    await signIn(page);
+    await expect(debateCards).toHaveCount(20);
+    expect(await ids('debate')).toEqual(firstDebates);
+    const first = page.locator(`#debate-btn-${firstDebates[0]}`);
+    await first.click();
+    await expect(
+      page.getByRole('region').getByText(new RegExp(`Cursor decision ${suffix}`)),
+    ).toBeVisible();
+    const inserted = await add('new-first', '000000000000001', 'zzzzzzzzzzzzzzz');
+    await expect(debateCards).toHaveCount(21);
+    expect(await ids('debate')).toEqual([inserted.debate.id, ...firstDebates]);
+    await expect(first).toHaveAttribute('aria-expanded', 'true');
+    await pb
+      .collection('debates')
+      .update(originalDebateBoundary, { deleted_at: new Date().toISOString() });
+    await expect(debateCards).toHaveCount(20);
+    await page.getByRole('button', { name: 'Load more', exact: true }).click();
+    const expectedDebates = debates
+      .filter((id) => id !== originalDebateBoundary)
+      .sort()
+      .reverse();
+    await expect(async () => {
+      const actual = await ids('debate');
+      expect(actual.filter((id) => debates.includes(id))).toEqual(expectedDebates);
+      expect(new Set(actual).size).toBe(actual.length);
+    }).toPass();
+    await expect(first).toHaveAttribute('aria-expanded', 'true');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: '/tmp/nfw-ru86-cursor-debates.png',
+      fullPage: false,
+      scale: 'css',
+      animations: 'disabled',
+    });
+
+    await page.getByRole('button', { name: 'By Student', exact: true }).click();
+    const firstStudents = [...students].sort().slice(0, 20);
+    await expect(studentCards).toHaveCount(20);
+    expect(await ids('student')).toEqual(firstStudents);
+    const originalStudentBoundary = firstStudents[19] ?? '';
+    await page.locator(`#student-btn-${firstStudents[0]}`).click();
+    await expect(
+      page.getByText(`Cursor feedback ${suffix} new-first`, { exact: true }),
+    ).toBeVisible();
+    await add('new-second', '000000000000002');
+    await expect(studentCards).toHaveCount(21);
+    expect(await ids('student')).toEqual([...firstStudents, '000000000000002'].sort());
+    await pb.collection('ballots').update(ballotByStudent.get(originalStudentBoundary) ?? '', {
+      deleted_at: new Date().toISOString(),
+    });
+    await expect(studentCards).toHaveCount(20);
+    await page.getByRole('button', { name: 'Load more', exact: true }).click();
+    const expectedStudents = students.filter((id) => id !== originalStudentBoundary).sort();
+    await expect(async () => {
+      const actual = await ids('student');
+      expect(actual.filter((id) => students.includes(id))).toEqual(expectedStudents);
+      expect(new Set(actual).size).toBe(actual.length);
+    }).toPass();
+    await expect(
+      page.getByText(`Cursor feedback ${suffix} new-first`, { exact: true }),
+    ).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: '/tmp/nfw-ru86-cursor-students.png',
+      fullPage: false,
+      scale: 'css',
+      animations: 'disabled',
+    });
+    expect(requests.some((request) => request.searchParams.get('filter')?.includes('id <'))).toBe(
+      true,
+    );
+    expect(requests.some((request) => request.searchParams.get('filter')?.includes('id >'))).toBe(
+      true,
+    );
+    for (const request of requests) {
+      expect(request.searchParams.get('page')).toBe('1');
+      expect(request.searchParams.get('perPage')).toBe('21');
+      expect(request.searchParams.get('skipTotal')).toBe('true');
+    }
+  } finally {
+    for (const id of ballots) await pb.collection('ballots').delete(id);
+    for (const id of debates) await pb.collection('debates').delete(id);
+    for (const id of students) await pb.collection('users').delete(id);
   }
 });

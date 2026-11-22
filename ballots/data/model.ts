@@ -69,6 +69,22 @@ export interface ResultPage<T> {
   hasMore: boolean;
 }
 
+export interface CursorRange<C> {
+  after: C | null;
+  through: C | null;
+}
+
+export interface CursorPage<T, C> extends ResultPage<T> {
+  cursor: C | null;
+}
+
+export type DebateBallotCursor = Pick<Debate, 'date' | 'id'>;
+
+export interface StudentBallotCursor {
+  name: string;
+  id: string;
+}
+
 export interface DebateBallotSummary {
   debate: Debate;
   ballotCount: number;

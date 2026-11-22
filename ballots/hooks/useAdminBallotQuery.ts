@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RecordModel } from 'pocketbase';
+import type { QueryRequest } from '../lib/cursorList.ts';
 import { collections, errorMessage, pb } from '../data/pocketbase.ts';
 
 type QueryState<T> =
@@ -15,7 +16,7 @@ const watched = [
 ];
 
 export function useAdminBallotQuery<T>(
-  load: () => Promise<T>,
+  load: (request: QueryRequest) => Promise<T>,
   affects: (
     collection: string,
     record: RecordModel,
@@ -24,6 +25,8 @@ export function useAdminBallotQuery<T>(
   ) => boolean,
 ) {
   const [state, setState] = useState<QueryState<T>>({ status: 'loading' });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const moreRef = useRef<() => void>(() => {});
   const retryRef = useRef<() => void>(() => {});
   const dataRef = useRef<T | undefined>(undefined);
   const affectsRef = useRef(affects);
@@ -35,42 +38,63 @@ export function useAdminBallotQuery<T>(
     let active = true;
     let running = false;
     let dirty = false;
+    let moreRequested = false;
+    let failedRequest: QueryRequest = 'refresh';
+    let failedMoreError: string | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let subscriptionError: string | undefined;
     dataRef.current = undefined;
 
     const isActive = (): boolean => active && pb.authStore.isValid;
     const needsRefresh = (): boolean => dirty;
-    const refresh = async (): Promise<void> => {
+    const needsMore = (): boolean => moreRequested;
+    const refresh = async (request: QueryRequest = 'refresh'): Promise<void> => {
       if (!isActive()) return;
       if (running) {
-        dirty = true;
+        if (request === 'more') {
+          moreRequested = true;
+          setIsLoadingMore(true);
+        } else dirty = true;
         return;
       }
       running = true;
-      dirty = false;
+      if (request === 'more') moreRequested = false;
+      else dirty = false;
+      setIsLoadingMore(request === 'more');
       try {
-        const data = await load();
+        const data = await load(request);
         if (isActive()) {
+          if (request === 'more') {
+            failedMoreError = undefined;
+            failedRequest = 'refresh';
+          }
           dataRef.current = data;
+          const visibleError = failedMoreError ?? subscriptionError;
           setState({
             status: 'ready',
             data,
-            ...(subscriptionError ? { error: subscriptionError } : {}),
+            ...(visibleError ? { error: visibleError } : {}),
           });
         }
       } catch (error: unknown) {
         if (isActive()) {
           const message = errorMessage(error, 'Couldn’t load ballots.');
+          if (request === 'more') failedMoreError = message;
+          if (failedMoreError === undefined) failedRequest = request;
+          else failedRequest = 'more';
           setState((previous) =>
             previous.status === 'ready'
-              ? { ...previous, error: message }
+              ? { ...previous, error: failedMoreError ?? message }
               : { status: 'error', error: message },
           );
         }
       } finally {
         running = false;
-        if (isActive() && needsRefresh()) schedule();
+        if (isActive()) {
+          setIsLoadingMore(needsMore());
+          if (needsRefresh()) schedule();
+          else if (needsMore()) void refresh('more');
+        }
       }
     };
 
@@ -111,20 +135,35 @@ export function useAdminBallotQuery<T>(
         });
     const subscriptions = watched.map(subscribe);
     retryRef.current = () => {
-      setState({ status: 'loading' });
+      const request = failedRequest;
+      failedMoreError = undefined;
+      setState((previous) =>
+        previous.status === 'ready'
+          ? { status: 'ready', data: previous.data }
+          : { status: 'loading' },
+      );
       subscriptionError = undefined;
       const retries = [...failedSubscriptions].map(subscribe);
       subscriptions.push(...retries);
-      void Promise.all(retries).then(() => refresh());
+      void Promise.all(retries).then(() => refresh(request));
+    };
+    moreRef.current = () => {
+      void refresh('more');
     };
     void Promise.all(subscriptions).then(() => refresh());
     return () => {
       active = false;
       retryRef.current = () => {};
+      moreRef.current = () => {};
       clearTimeout(timer);
       for (const subscription of subscriptions) void subscription.then((stop) => stop());
     };
   }, [load]);
 
-  return { state, retry: (): void => retryRef.current() };
+  return {
+    state,
+    isLoadingMore,
+    loadMore: (): void => moreRef.current(),
+    retry: (): void => retryRef.current(),
+  };
 }
