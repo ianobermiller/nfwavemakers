@@ -1,13 +1,16 @@
 import type { RecordModel } from 'pocketbase';
-import type { Lesson } from './model.ts';
+import type { Lesson, LessonMetadata } from './model.ts';
 import { collections, pb } from './pocketbase.ts';
 
-interface LessonRecord extends RecordModel {
-  body: string;
+interface LessonMetadataRecord extends RecordModel {
   date: string;
   number: number;
   title: string;
   year: number;
+}
+
+interface LessonRecord extends LessonMetadataRecord {
+  body: string;
 }
 
 export interface LessonInput {
@@ -18,23 +21,27 @@ export interface LessonInput {
   body: string;
 }
 
-function mapLesson(record: LessonRecord): Lesson {
+function mapLessonMetadata(record: LessonMetadataRecord): LessonMetadata {
   return {
     id: record.id,
     year: record.year,
     number: record.number,
     title: record.title,
     date: record.date,
-    body: record.body,
     slug: `${record.year}/${record.number}`,
   };
 }
 
-export async function listLessons(): Promise<Lesson[]> {
-  const records = await pb.collection<LessonRecord>(collections.lessons).getFullList({
+function mapLesson(record: LessonRecord): Lesson {
+  return { ...mapLessonMetadata(record), body: record.body };
+}
+
+export async function listLessons(): Promise<LessonMetadata[]> {
+  const records = await pb.collection<LessonMetadataRecord>(collections.lessons).getFullList({
+    fields: 'id,year,number,title,date',
     sort: '-year,-number',
   });
-  return records.map(mapLesson);
+  return records.map(mapLessonMetadata);
 }
 
 export async function getLessonBySlug(year: string, number: string): Promise<Lesson | null> {
@@ -98,9 +105,9 @@ export async function deleteLesson(id: string): Promise<void> {
 }
 
 export function adjacentLessons(
-  lessons: Lesson[],
-  lesson: Lesson,
-): { prev: Lesson | undefined; next: Lesson | undefined } {
+  lessons: LessonMetadata[],
+  lesson: LessonMetadata,
+): { prev: LessonMetadata | undefined; next: LessonMetadata | undefined } {
   const ordered = [...lessons]
     .filter((item) => item.year === lesson.year)
     .sort((a, b) => a.number - b.number);

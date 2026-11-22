@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { Component, Suspense, useEffect, type ReactNode } from 'react';
 import { adjacentLessons } from '../../ballots/data/lessons.ts';
 import { useAppUser } from '../../ballots/hooks/auth.tsx';
 import { useLessonBySlug, useLessons } from '../../ballots/hooks/data.ts';
-import type { Lesson } from '../../ballots/data/model.ts';
+import type { Lesson, LessonMetadata } from '../../ballots/data/model.ts';
+import { clearLiveErrors } from '../../ballots/lib/liveQuery.ts';
 import { navigate } from '../hooks/useHashRoute.ts';
 import { PageHero } from './PageHero.tsx';
 import { renderLessonMarkdown } from './renderLessonMarkdown.ts';
@@ -22,11 +23,9 @@ interface Props {
 
 export function LessonPage({ year, number }: Props): React.JSX.Element {
   const lessonLive = useLessonBySlug(year, number);
-  const lessonsLive = useLessons();
   const lesson = lessonLive.read();
-  const lessons = lessonsLive.read();
   if (lesson === null) return <MissingLesson />;
-  return <LoadedLesson lesson={lesson} lessons={lessons} />;
+  return <LoadedLesson lesson={lesson} />;
 }
 
 function MissingLesson(): React.JSX.Element {
@@ -50,13 +49,7 @@ function MissingLesson(): React.JSX.Element {
   );
 }
 
-function LoadedLesson({
-  lesson,
-  lessons,
-}: {
-  lesson: Lesson;
-  lessons: Lesson[];
-}): React.JSX.Element {
+function LoadedLesson({ lesson }: { lesson: Lesson }): React.JSX.Element {
   const user = useAppUser();
   const isAdmin = user?.role === 'admin';
 
@@ -65,7 +58,6 @@ function LoadedLesson({
   }, [lesson]);
 
   const body = renderLessonMarkdown(lesson.body);
-  const { prev, next } = adjacentLessons(lessons, lesson);
   const seasonLabel = `${lesson.year}–${String(lesson.year + 1).slice(2)}`;
   const dateLabel = new Date(lesson.date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -115,51 +107,120 @@ function LoadedLesson({
       <section className="px-5 py-16">
         <div className="mx-auto max-w-5xl">
           <div className={article} dangerouslySetInnerHTML={{ __html: body }} />
-          <nav
-            className="mt-10 grid max-w-3xl grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-slate-200 pt-4 font-semibold dark:border-white/10"
-            aria-label="Lesson"
-          >
-            {prev ? (
-              <a
-                href={`/lessons/${prev.slug}`}
-                className="text-nf-blue-mid no-underline hover:underline"
-                onClick={(event) => {
-                  event.preventDefault();
-                  navigate(`lessons/${prev.slug}`);
-                }}
-              >
-                ← Lesson {prev.number}
-              </a>
-            ) : (
-              <span />
-            )}
-            <a
-              href="/lessons"
-              className="text-center text-nf-blue-mid no-underline hover:underline"
-              onClick={(event) => {
-                event.preventDefault();
-                navigate('lessons');
-              }}
-            >
-              All lessons
-            </a>
-            {next ? (
-              <a
-                href={`/lessons/${next.slug}`}
-                className="text-right text-nf-blue-mid no-underline hover:underline"
-                onClick={(event) => {
-                  event.preventDefault();
-                  navigate(`lessons/${next.slug}`);
-                }}
-              >
-                Lesson {next.number} →
-              </a>
-            ) : (
-              <span />
-            )}
-          </nav>
+          <LessonNavigationBoundary key={lesson.id}>
+            <Suspense fallback={<LessonNavigationLinks message="Loading lesson navigation…" />}>
+              <LessonNavigation lesson={lesson} />
+            </Suspense>
+          </LessonNavigationBoundary>
         </div>
       </section>
     </SiteLayout>
   );
+}
+
+function LessonNavigation({ lesson }: { lesson: LessonMetadata }): React.JSX.Element {
+  const lessons = useLessons().read();
+  const { prev, next } = adjacentLessons(lessons, lesson);
+  return <LessonNavigationLinks prev={prev} next={next} />;
+}
+
+function LessonNavigationLinks({
+  prev,
+  next,
+  message,
+  children,
+}: {
+  prev?: LessonMetadata | undefined;
+  next?: LessonMetadata | undefined;
+  message?: string;
+  children?: ReactNode;
+}): React.JSX.Element {
+  return (
+    <nav
+      className="mt-10 grid max-w-3xl grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-slate-200 pt-4 font-semibold dark:border-white/10"
+      aria-label="Lesson"
+    >
+      {prev ? (
+        <a
+          href={`/lessons/${prev.slug}`}
+          className="text-nf-blue-mid no-underline hover:underline"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate(`lessons/${prev.slug}`);
+          }}
+        >
+          ← Lesson {prev.number}
+        </a>
+      ) : (
+        <span />
+      )}
+      <a
+        href="/lessons"
+        className="text-center text-nf-blue-mid no-underline hover:underline"
+        onClick={(event) => {
+          event.preventDefault();
+          navigate('lessons');
+        }}
+      >
+        All lessons
+      </a>
+      {next ? (
+        <a
+          href={`/lessons/${next.slug}`}
+          className="text-right text-nf-blue-mid no-underline hover:underline"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate(`lessons/${next.slug}`);
+          }}
+        >
+          Lesson {next.number} →
+        </a>
+      ) : (
+        <span />
+      )}
+      {message && (
+        <p
+          role="status"
+          className="col-span-3 text-center text-sm font-normal text-slate-500 dark:text-slate-400"
+        >
+          {message}
+        </p>
+      )}
+      {children}
+    </nav>
+  );
+}
+
+class LessonNavigationBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  private retry = (): void => {
+    clearLiveErrors();
+    this.setState({ failed: false });
+  };
+
+  override render(): ReactNode {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <LessonNavigationLinks>
+        <div
+          role="alert"
+          className="col-span-3 text-center text-sm font-normal text-slate-500 dark:text-slate-400"
+        >
+          <p>Couldn’t load lesson navigation.</p>
+          <button
+            type="button"
+            onClick={this.retry}
+            className="mt-2 cursor-pointer border-none bg-transparent text-nf-blue-mid underline dark:text-sky-300"
+          >
+            Retry navigation
+          </button>
+        </div>
+      </LessonNavigationLinks>
+    );
+  }
 }

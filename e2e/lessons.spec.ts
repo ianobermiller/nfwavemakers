@@ -32,6 +32,10 @@ async function waitForLoaded(
 }
 
 test.describe('Lessons', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+  });
+
   test('asks visitors to sign in before showing lesson notes', async ({ page }) => {
     await page.goto('/lessons');
     await expect(page.getByRole('heading', { name: 'Sign in or create account' })).toBeVisible();
@@ -55,12 +59,14 @@ test.describe('Lessons', () => {
     await expect(page.getByRole('link', { name: 'New lesson' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0);
     await page.getByRole('link', { name: /Finding Your Voice/ }).click();
-    await expect(page.getByRole('heading', { name: 'Finding Your Voice', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Finding Your Voice', exact: true }),
+    ).toBeVisible();
     await expect(page.getByText(/Your voice isn’t just how you sound/)).toBeVisible();
     await expect(page.getByRole('link', { name: 'Edit lesson' })).toHaveCount(0);
   });
 
-  test('admins manage lessons from the lessons page', async ({ page }) => {
+  test('admins manage lessons from the lessons page', async ({ page }, testInfo) => {
     const email = process.env['E2E_ADMIN_EMAIL'];
     if (!email) throw new Error('Missing E2E_ADMIN_EMAIL');
 
@@ -73,6 +79,11 @@ test.describe('Lessons', () => {
         timeout: 2_000,
       });
     });
+    await page.screenshot({
+      path: `/tmp/nfw-saa1-index-${testInfo.project.name}.png`,
+      fullPage: true,
+      scale: 'css',
+    });
 
     await page.getByRole('link', { name: 'New lesson' }).click();
     await expect(page.getByRole('heading', { name: 'New lesson' })).toBeVisible();
@@ -81,11 +92,101 @@ test.describe('Lessons', () => {
 
     await page.getByRole('button', { name: 'Edit' }).first().click();
     await expect(page.getByRole('heading', { name: 'Edit lesson' })).toBeVisible();
+    await expect(page.locator('#lesson-body')).not.toHaveValue('');
+    await page.screenshot({
+      path: `/tmp/nfw-saa1-editor-${testInfo.project.name}.png`,
+      scale: 'css',
+    });
     await page.getByRole('button', { name: '← Lessons' }).click();
     await expect(page.getByRole('heading', { name: 'Lessons' })).toBeVisible();
 
     await page.getByRole('link', { name: /Finding Your Voice/ }).click();
     await expect(page.getByRole('link', { name: 'Edit lesson' })).toBeVisible();
+  });
+
+  test('lesson listings request metadata without downloading bodies', async ({ page }) => {
+    const email = process.env['E2E_STUDENT_EMAIL'];
+    if (!email) throw new Error('Missing E2E_STUDENT_EMAIL');
+    await signIn(page, email);
+    const responsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/collections/lessons/records' && url.searchParams.has('fields');
+    });
+    await page.goto('/lessons');
+    const response = await responsePromise;
+    expect(new URL(response.url()).searchParams.get('fields')).toBe('id,year,number,title,date');
+    const payload = await response.json();
+    expect(payload.items.length).toBeGreaterThan(0);
+    for (const item of payload.items) {
+      expect(item).not.toHaveProperty('body');
+      expect(item).toHaveProperty('title');
+    }
+    await expect(page.getByRole('link', { name: /Finding Your Voice/ })).toBeVisible();
+  });
+
+  test('an article renders while navigation metadata is pending', async ({ page }, testInfo) => {
+    const email = process.env['E2E_STUDENT_EMAIL'];
+    if (!email) throw new Error('Missing E2E_STUDENT_EMAIL');
+    await signIn(page, email);
+    let releaseNavigation = (): void => {};
+    const navigationGate = new Promise<void>((resolve) => {
+      releaseNavigation = resolve;
+    });
+    await page.route('**/api/collections/lessons/records?**', async (route) => {
+      if (new URL(route.request().url()).searchParams.has('fields')) await navigationGate;
+      await route.continue();
+    });
+    await page.goto('/lessons/2026/1');
+    await expect(
+      page.getByRole('heading', { name: 'Finding Your Voice', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/Your voice isn’t just how you sound/)).toBeVisible();
+    await expect(page.getByText('Loading lesson navigation…')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'All lessons', exact: true })).toBeVisible();
+    await page.getByRole('navigation', { name: 'Lesson', exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: `/tmp/nfw-saa1-navigation-pending-${testInfo.project.name}.png`,
+      scale: 'css',
+    });
+    releaseNavigation();
+    await expect(page.getByRole('link', { name: 'Lesson 2 →' })).toBeVisible();
+    await expect(page.getByText('Loading lesson navigation…')).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: `/tmp/nfw-saa1-article-${testInfo.project.name}.png`,
+      scale: 'css',
+    });
+    await page.getByRole('link', { name: 'Lesson 2 →' }).click();
+    await expect(page.getByRole('link', { name: '← Lesson 1' })).toBeVisible();
+  });
+
+  test('navigation failure can retry without hiding the article', async ({ page }, testInfo) => {
+    const email = process.env['E2E_STUDENT_EMAIL'];
+    if (!email) throw new Error('Missing E2E_STUDENT_EMAIL');
+    await signIn(page, email);
+    let failNavigation = true;
+    await page.route('**/api/collections/lessons/records?**', async (route) => {
+      if (failNavigation && new URL(route.request().url()).searchParams.has('fields')) {
+        await route.fulfill({ status: 503, json: { message: 'Metadata temporarily unavailable' } });
+      } else await route.continue();
+    });
+    await page.goto('/lessons/2026/1');
+    await expect(
+      page.getByRole('heading', { name: 'Finding Your Voice', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/Your voice isn’t just how you sound/)).toBeVisible();
+    await expect(page.getByText('Couldn’t load lesson navigation.')).toBeVisible();
+    await page.getByRole('navigation', { name: 'Lesson', exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: `/tmp/nfw-saa1-navigation-error-${testInfo.project.name}.png`,
+      scale: 'css',
+    });
+    failNavigation = false;
+    await page.getByRole('button', { name: 'Retry navigation' }).click();
+    await expect(page.getByRole('link', { name: 'Lesson 2 →' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Finding Your Voice', exact: true }),
+    ).toBeVisible();
   });
 
   test('lesson bodies are not shipped in the public client bundle', async ({ request }) => {

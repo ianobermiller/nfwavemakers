@@ -94,14 +94,17 @@ export interface StudentBallotSummary {
   debateCount: number;
 }
 
-export interface Lesson {
+export interface LessonMetadata {
   id: string;
   year: number;
   number: number;
   title: string;
   date: string;
-  body: string;
   slug: string;
+}
+
+export interface Lesson extends LessonMetadata {
+  body: string;
 }
 
 export interface HistoryCursor {
