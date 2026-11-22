@@ -71,6 +71,7 @@ export interface ResultPage<T> {
 export interface CursorRange<C> {
   after: C | null;
   through: C | null;
+  pageSize?: number;
 }
 
 export interface CursorPage<T, C> extends ResultPage<T> {

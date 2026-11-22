@@ -2,6 +2,8 @@ import { useState } from 'react';
 import {
   listActiveBallotIdsForDebate,
   listAdminDebates,
+  ADMIN_SUMMARY_REFRESH_PAGE_SIZE,
+  hasAdminDebatesAfter,
   restoreDebate,
   softDeleteDebate,
 } from '../data/api.ts';
@@ -17,7 +19,11 @@ import { Button } from './ui/Button.tsx';
 
 export function AdminDebates(): React.JSX.Element {
   const [source] = useState(() =>
-    createCursorList({ load: listAdminDebates, key: (row) => row.id }),
+    createCursorList({
+      load: listAdminDebates,
+      key: (row) => row.id,
+      refresh: { pageSize: ADMIN_SUMMARY_REFRESH_PAGE_SIZE, hasAfter: hasAdminDebatesAfter },
+    }),
   );
   const query = useAdminBallotQuery(source.load, (collection, record, data) => {
     if (collection === 'debates' || collection === 'ballots') return true;

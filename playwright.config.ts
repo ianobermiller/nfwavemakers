@@ -44,11 +44,19 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/admin-refresh.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'mobile',
+      testIgnore: '**/admin-refresh.spec.ts',
       use: { ...devices['Pixel 7'], channel: 'chrome' },
+    },
+    {
+      name: 'admin-refresh',
+      testMatch: '**/admin-refresh.spec.ts',
+      dependencies: ['chromium', 'mobile'],
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
   webServer: [

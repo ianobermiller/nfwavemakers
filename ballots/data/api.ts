@@ -571,18 +571,17 @@ interface OpenDebateRecord extends RecordModel {
 export async function listAdminDebates({
   after,
   through,
+  pageSize = ADMIN_BALLOT_PAGE_SIZE,
 }: CursorRange<DebateBallotCursor>): Promise<CursorPage<AdminDebate, DebateBallotCursor>> {
-  const filters = [];
-  if (after) filters.push(pb.filter('(date < {:date} || (date = {:date} && id < {:id}))', after));
-  if (through)
-    filters.push(pb.filter('(date > {:date} || (date = {:date} && id >= {:id}))', through));
-  const result = await pb.collection<DebateSummaryRecord>('admin_debate_summaries').getList(1, 21, {
-    filter: filters.join(' && '),
-    expand: 'debate.aff_team,debate.neg_team,debate.judges',
-    sort: '-date,-id',
-    skipTotal: true,
-  });
-  const records = result.items.slice(0, 20);
+  const result = await pb
+    .collection<DebateSummaryRecord>('admin_debate_summaries')
+    .getList(1, pageSize + 1, {
+      filter: debateSummaryFilter({ after, through }),
+      expand: 'debate.aff_team,debate.neg_team,debate.judges',
+      sort: '-date,-id',
+      skipTotal: true,
+    });
+  const records = result.items.slice(0, pageSize);
   const last = records.at(-1);
   return {
     items: records.flatMap((record) =>
@@ -591,7 +590,7 @@ export async function listAdminDebates({
         : [],
     ),
     cursor: last ? { date: last.date, id: last.id } : null,
-    hasMore: result.items.length > 20,
+    hasMore: result.items.length > pageSize,
   };
 }
 
@@ -782,6 +781,50 @@ export async function getDebateDetail(debateId: string): Promise<DebateWithBallo
 }
 
 const ADMIN_BALLOT_PAGE_SIZE = 20;
+export const ADMIN_SUMMARY_REFRESH_PAGE_SIZE = 100;
+
+function debateSummaryFilter({ after, through }: CursorRange<DebateBallotCursor>): string {
+  const filters = [];
+  if (after) filters.push(pb.filter('(date < {:date} || (date = {:date} && id < {:id}))', after));
+  if (through)
+    filters.push(pb.filter('(date > {:date} || (date = {:date} && id >= {:id}))', through));
+  return filters.join(' && ');
+}
+
+function studentSummaryFilter({ after, through }: CursorRange<StudentBallotCursor>): string {
+  const filters = [];
+  if (after) filters.push(pb.filter('(name > {:name} || (name = {:name} && id > {:id}))', after));
+  if (through)
+    filters.push(pb.filter('(name < {:name} || (name = {:name} && id <= {:id}))', through));
+  return filters.join(' && ');
+}
+
+async function summaryExists(collection: string, filter: string): Promise<boolean> {
+  const result = await pb.collection(collection).getList(1, 1, {
+    filter,
+    fields: 'id',
+    skipTotal: true,
+  });
+  return result.items.length > 0;
+}
+
+export async function hasAdminDebatesAfter(after: DebateBallotCursor): Promise<boolean> {
+  return await summaryExists(
+    'admin_debate_summaries',
+    debateSummaryFilter({ after, through: null }),
+  );
+}
+
+export async function hasAdminBallotDebatesAfter(after: DebateBallotCursor): Promise<boolean> {
+  return await summaryExists('admin_ballot_debates', debateSummaryFilter({ after, through: null }));
+}
+
+export async function hasAdminBallotStudentsAfter(after: StudentBallotCursor): Promise<boolean> {
+  return await summaryExists(
+    'admin_ballot_students',
+    studentSummaryFilter({ after, through: null }),
+  );
+}
 
 interface DebateSummaryRecord extends RecordModel {
   date: string;
@@ -798,20 +841,17 @@ interface StudentSummaryRecord extends RecordModel {
 export async function listAdminBallotDebates({
   after,
   through,
+  pageSize = ADMIN_BALLOT_PAGE_SIZE,
 }: CursorRange<DebateBallotCursor>): Promise<CursorPage<DebateBallotSummary, DebateBallotCursor>> {
-  const filters = [];
-  if (after) filters.push(pb.filter('(date < {:date} || (date = {:date} && id < {:id}))', after));
-  if (through)
-    filters.push(pb.filter('(date > {:date} || (date = {:date} && id >= {:id}))', through));
   const result = await pb
     .collection<DebateSummaryRecord>('admin_ballot_debates')
-    .getList(1, ADMIN_BALLOT_PAGE_SIZE + 1, {
-      filter: filters.join(' && '),
+    .getList(1, pageSize + 1, {
+      filter: debateSummaryFilter({ after, through }),
       expand: 'debate.aff_team,debate.neg_team,debate.judges',
       sort: '-date,-id',
       skipTotal: true,
     });
-  const records = result.items.slice(0, ADMIN_BALLOT_PAGE_SIZE);
+  const records = result.items.slice(0, pageSize);
   const last = records.at(-1);
   return {
     items: records.flatMap((record) =>
@@ -820,29 +860,26 @@ export async function listAdminBallotDebates({
         : [],
     ),
     cursor: last ? { date: last.date, id: last.id } : null,
-    hasMore: result.items.length > ADMIN_BALLOT_PAGE_SIZE,
+    hasMore: result.items.length > pageSize,
   };
 }
 
 export async function listAdminBallotStudents({
   after,
   through,
+  pageSize = ADMIN_BALLOT_PAGE_SIZE,
 }: CursorRange<StudentBallotCursor>): Promise<
   CursorPage<StudentBallotSummary, StudentBallotCursor>
 > {
-  const filters = [];
-  if (after) filters.push(pb.filter('(name > {:name} || (name = {:name} && id > {:id}))', after));
-  if (through)
-    filters.push(pb.filter('(name < {:name} || (name = {:name} && id <= {:id}))', through));
   const result = await pb
     .collection<StudentSummaryRecord>('admin_ballot_students')
-    .getList(1, ADMIN_BALLOT_PAGE_SIZE + 1, {
-      filter: filters.join(' && '),
+    .getList(1, pageSize + 1, {
+      filter: studentSummaryFilter({ after, through }),
       expand: 'student',
       sort: 'name,id',
       skipTotal: true,
     });
-  const records = result.items.slice(0, ADMIN_BALLOT_PAGE_SIZE);
+  const records = result.items.slice(0, pageSize);
   const last = records.at(-1);
   return {
     items: records.flatMap((record) =>
@@ -851,7 +888,7 @@ export async function listAdminBallotStudents({
         : [],
     ),
     cursor: last ? { name: last.name, id: last.id } : null,
-    hasMore: result.items.length > ADMIN_BALLOT_PAGE_SIZE,
+    hasMore: result.items.length > pageSize,
   };
 }
 

@@ -4,6 +4,9 @@ import {
   listAdminBallotDebates,
   listAdminBallotStudents,
   listAdminBallotDetails,
+  ADMIN_SUMMARY_REFRESH_PAGE_SIZE,
+  hasAdminBallotDebatesAfter,
+  hasAdminBallotStudentsAfter,
   restoreBallot,
   softDeleteBallot,
 } from '../data/api.ts';
@@ -140,7 +143,11 @@ function LoadMore({
 function ByDebate(): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [source] = useState(() =>
-    createCursorList({ load: listAdminBallotDebates, key: (row) => row.debate.id }),
+    createCursorList({
+      load: listAdminBallotDebates,
+      key: (row) => row.debate.id,
+      refresh: { pageSize: ADMIN_SUMMARY_REFRESH_PAGE_SIZE, hasAfter: hasAdminBallotDebatesAfter },
+    }),
   );
   const query = useAdminBallotQuery(source.load, (collection, record, data, action) => {
     if (collection === 'debates') return true;
@@ -206,7 +213,11 @@ function ByDebate(): React.JSX.Element {
 function ByStudent(): React.JSX.Element {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [source] = useState(() =>
-    createCursorList({ load: listAdminBallotStudents, key: (row) => row.student.id }),
+    createCursorList({
+      load: listAdminBallotStudents,
+      key: (row) => row.student.id,
+      refresh: { pageSize: ADMIN_SUMMARY_REFRESH_PAGE_SIZE, hasAfter: hasAdminBallotStudentsAfter },
+    }),
   );
   const query = useAdminBallotQuery(source.load, (collection) => collection !== 'debates');
   return (

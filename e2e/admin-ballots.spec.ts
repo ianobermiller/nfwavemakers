@@ -577,8 +577,14 @@ test('summary cursors handle tied sort keys and live changes at the loaded bound
     );
     for (const request of requests) {
       expect(request.searchParams.get('page')).toBe('1');
-      expect(request.searchParams.get('perPage')).toBe('21');
       expect(request.searchParams.get('skipTotal')).toBe('true');
+      if (request.searchParams.get('fields') === 'id') {
+        expect(request.searchParams.get('perPage')).toBe('1');
+        expect(request.searchParams.has('expand')).toBe(false);
+      } else {
+        const retainedRange = /id >=|id <=/.test(request.searchParams.get('filter') ?? '');
+        expect(request.searchParams.get('perPage')).toBe(retainedRange ? '101' : '21');
+      }
     }
   } finally {
     for (const id of ballots) await pb.collection('ballots').delete(id);
